@@ -1,0 +1,68 @@
+# uni-app项目忽略文件
+
+# 依赖模块
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 构建输出
+unpackage/
+dist/
+build/
+
+# 环境配置
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE配置
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# HBuilderX相关
+.hbuilderx/
+
+# 微信小程序
+project.config.json
+project.private.config.json
+
+# 支付宝小程序
+mini.project.json
+
+# uniCloud相关
+uniCloud-alipay/cloudfunctions/*/node_modules/
+uniCloud-tcb/cloudfunctions/*/node_modules/
+
+# 上传到云端的文件，本地保留源码即可
+# uniCloud-*/cloudfunctions/*/package-lock.json
+
+# 本地测试用的临时文件
+test/
+*.test.js
+coverage/

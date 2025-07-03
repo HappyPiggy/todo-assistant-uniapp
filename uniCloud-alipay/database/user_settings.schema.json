@@ -1,0 +1,107 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "created_at"],
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID"
+    },
+    "sync_on_startup": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "启动时自动同步"
+    },
+    "sync_on_background": {
+      "bsonType": "bool",
+      "default": false,
+      "description": "后台自动同步"
+    },
+    "auto_sync_interval": {
+      "bsonType": "int",
+      "default": 300,
+      "description": "自动同步间隔（秒）"
+    },
+    "notification_enabled": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "启用通知"
+    },
+    "sound_enabled": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "启用声音"
+    },
+    "vibration_enabled": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "启用震动"
+    },
+    "theme": {
+      "bsonType": "string",
+      "enum": ["light", "dark", "auto"],
+      "default": "light",
+      "description": "主题"
+    },
+    "language": {
+      "bsonType": "string",
+      "enum": ["zh-CN", "en-US"],
+      "default": "zh-CN",
+      "description": "语言"
+    },
+    "default_todobook_color": {
+      "bsonType": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "default": "#007AFF",
+      "description": "默认项目册颜色"
+    },
+    "task_sort_order": {
+      "bsonType": "string",
+      "enum": ["created_at", "updated_at", "due_date", "priority", "title"],
+      "default": "created_at",
+      "description": "任务排序方式"
+    },
+    "task_sort_direction": {
+      "bsonType": "string",
+      "enum": ["asc", "desc"],
+      "default": "desc",
+      "description": "任务排序方向"
+    },
+    "show_completed_tasks": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "显示已完成任务"
+    },
+    "auto_archive_completed": {
+      "bsonType": "bool",
+      "default": false,
+      "description": "自动归档已完成任务"
+    },
+    "archive_after_days": {
+      "bsonType": "int",
+      "default": 30,
+      "description": "多少天后归档（天）"
+    },
+    "backup_enabled": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "启用备份"
+    },
+    "backup_frequency": {
+      "bsonType": "string",
+      "enum": ["daily", "weekly", "monthly"],
+      "default": "weekly",
+      "description": "备份频率"
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "description": "创建时间"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "description": "更新时间"
+    }
+  }
+}

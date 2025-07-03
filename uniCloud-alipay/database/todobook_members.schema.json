@@ -1,0 +1,80 @@
+{
+  "bsonType": "object",
+  "required": ["todobook_id", "user_id", "role", "joined_at"],
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "todobook_id": {
+      "bsonType": "string",
+      "description": "项目册ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID"
+    },
+    "role": {
+      "bsonType": "string",
+      "enum": ["owner", "admin", "member"],
+      "default": "member",
+      "description": "角色：owner所有者，admin管理员，member成员"
+    },
+    "permissions": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "string",
+        "enum": ["read", "write", "delete", "manage_members", "manage_settings"]
+      },
+      "default": ["read", "write"],
+      "description": "权限列表"
+    },
+    "joined_at": {
+      "bsonType": "timestamp",
+      "description": "加入时间"
+    },
+    "invited_by": {
+      "bsonType": "string",
+      "description": "邀请人用户ID"
+    },
+    "last_access_at": {
+      "bsonType": "timestamp",
+      "description": "最后访问时间"
+    },
+    "is_active": {
+      "bsonType": "bool",
+      "default": true,
+      "description": "是否活跃成员"
+    },
+    "nickname": {
+      "bsonType": "string",
+      "maxLength": 50,
+      "description": "在此项目册中的昵称"
+    },
+    "notification_settings": {
+      "bsonType": "object",
+      "properties": {
+        "task_assigned": {
+          "bsonType": "bool",
+          "default": true,
+          "description": "任务分配通知"
+        },
+        "task_completed": {
+          "bsonType": "bool",
+          "default": true,
+          "description": "任务完成通知"
+        },
+        "comment_added": {
+          "bsonType": "bool",
+          "default": true,
+          "description": "评论添加通知"
+        },
+        "member_joined": {
+          "bsonType": "bool",
+          "default": true,
+          "description": "成员加入通知"
+        }
+      },
+      "description": "通知设置"
+    }
+  }
+}

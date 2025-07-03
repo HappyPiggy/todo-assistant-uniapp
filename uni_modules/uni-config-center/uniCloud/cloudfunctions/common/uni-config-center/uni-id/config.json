@@ -1,0 +1,12 @@
+{
+	 "passwordSecret": [
+	    {
+	      "type": "hmac-sha256",
+	      "version": 1
+	    }
+	  ],
+	  
+	"tokenSecret": "abc123",
+	"tokenExpiresIn": 7200,
+	"tokenExpiresThreshold": 3600
+}
