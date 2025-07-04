@@ -94,7 +94,7 @@
 		computed: {
 			userInfo() {
 				const info = store.userInfo
-				console.log('【userInfo】', JSON.parse(JSON.stringify(info)), JSON.parse(JSON.stringify(store)))
+				console.log('【userInfo】', JSON.parse(JSON.stringify(store)))
 				return info
 			},
 			hasLogin(){

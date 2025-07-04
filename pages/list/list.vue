@@ -129,6 +129,10 @@
 </template>
 
 <script>
+	import {
+		store
+	} from '@/uni_modules/uni-id-pages/common/store.js'
+	
 	export default {
 		data() {
 			return {
@@ -151,14 +155,19 @@
 					book.title.toLowerCase().includes(keyword) ||
 					(book.description && book.description.toLowerCase().includes(keyword))
 				)
+			},
+			hasLogin() {
+				return store.hasLogin
 			}
 		},
 		onLoad() {
 			this.loadTodoBooks()
 		},
 		onShow() {
-			// 页面显示时刷新数据
-			this.refreshTodoBooks()
+			// 页面显示时刷新数据，稍微延迟确保token更新完成
+			setTimeout(() => {
+				this.refreshTodoBooks()
+			}, 200)
 		},
 		onPullDownRefresh() {
 			this.refreshTodoBooks()
@@ -167,6 +176,24 @@
 			this.loadMore()
 		},
 		methods: {
+			// 等待token更新的工具方法
+			async waitForValidToken(maxRetries = 5, retryInterval = 1000) {
+				for (let i = 0; i < maxRetries; i++) {
+					const currentUser = uniCloud.getCurrentUserInfo()
+					
+					if (currentUser.token && currentUser.tokenExpired > Date.now()) {
+						console.log('【调试】Token验证通过，重试次数:', i)
+						return true
+					}
+					
+					console.log(`【调试】等待token更新，第${i + 1}次检查...`)
+					await new Promise(resolve => setTimeout(resolve, retryInterval))
+				}
+				
+				console.error('【调试】Token验证失败，超过最大重试次数')
+				return false
+			},
+
 			async loadTodoBooks(refresh = false) {
 				if (refresh) {
 					this.page = 1
@@ -176,10 +203,57 @@
 
 				if (!this.hasMore) return
 
+				// 检查登录状态
+				if (!this.hasLogin) {
+					uni.showToast({
+						title: '请先登录',
+						icon: 'none'
+					})
+					setTimeout(() => {
+						uni.navigateTo({
+							url: '/pages/login/login-withpwd'
+						})
+					}, 1500)
+					return
+				}
+
 				try {
 					this.loading = refresh ? false : true
 					
-					const todoBookCo = uniCloud.importObject('todobook-co')
+					// 等待token有效性
+					const hasValidToken = await this.waitForValidToken()
+					if (!hasValidToken) {
+						uni.showToast({
+							title: '登录状态异常，请重新登录',
+							icon: 'none'
+						})
+						setTimeout(() => {
+							uni.navigateTo({
+								url: '/pages/login/login-withpwd'
+							})
+						}, 1500)
+						return
+					}
+					
+					// 获取当前token信息进行调试
+					const currentUser = uniCloud.getCurrentUserInfo()
+					console.log('【调试】前端token信息:', {
+						tokenExpired: currentUser.tokenExpired,
+						uid: currentUser.uid,
+						token: currentUser.token ? currentUser.token.substring(0, 20) + '...' : 'null',
+						tokenLength: currentUser.token ? currentUser.token.length : 0,
+						now: Date.now(),
+						isTokenValid: currentUser.tokenExpired > Date.now()
+					})
+					
+					// 确保使用正确的服务空间
+					const todoBookCo = uniCloud.importObject('todobook-co', {
+						spaceInfo: {
+							spaceId: '', // 使用默认服务空间
+							provider: 'alipay'
+						}
+					})
+					console.log('【调试】调用云对象前的最终检查')
 					const result = await todoBookCo.getTodoBooks({
 						include_archived: false,
 						limit: 10,
@@ -200,10 +274,23 @@
 
 						this.page++
 					} else {
-						uni.showToast({
-							title: result.message || '加载失败',
-							icon: 'error'
-						})
+						// 如果是token验证失败，跳转到登录页
+						if (result.code === 30202) {
+							uni.showToast({
+								title: '登录已过期，请重新登录',
+								icon: 'none'
+							})
+							setTimeout(() => {
+								uni.navigateTo({
+									url: '/pages/login/login-withpwd'
+								})
+							}, 1500)
+						} else {
+							uni.showToast({
+								title: result.message || '加载失败',
+								icon: 'error'
+							})
+						}
 					}
 				} catch (error) {
 					console.error('加载项目册失败:', error)

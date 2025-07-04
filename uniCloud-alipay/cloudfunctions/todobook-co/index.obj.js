@@ -12,11 +12,28 @@ module.exports = {
    * 获取用户的项目册列表
    */
   async getTodoBooks(options = {}) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const cloudInfo = this.getCloudInfo()
+    console.log('【调试】云对象调用信息:', {
+      token: cloudInfo.token ? cloudInfo.token.substring(0, 20) + '...' : 'null',
+      tokenLength: cloudInfo.token ? cloudInfo.token.length : 0,
+      clientIP: cloudInfo.clientIP,
+      userAgent: cloudInfo.userAgent
+    })
+    
+    const payload = await this.uniID.checkToken(cloudInfo.token)
+    console.log('【调试】Token验证结果:', {
+      code: payload.code,
+      errCode: payload.errCode,
+      errMsg: payload.errMsg,
+      uid: payload.uid,
+      tokenExpired: payload.tokenExpired
+    })
+    
     if (payload.code && payload.code > 0) {
+      console.error('Token验证失败:', payload)
       return {
         code: payload.code,
-        message: payload.message
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
