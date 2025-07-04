@@ -82,7 +82,8 @@
 
 <script>
 	import {
-		store
+		store,
+		mutations
 	} from '@/uni_modules/uni-id-pages/common/store.js'
 	export default {
 		data() {
@@ -94,7 +95,7 @@
 		computed: {
 			userInfo() {
 				const info = store.userInfo
-				console.log('【userInfo】', JSON.parse(JSON.stringify(store)))
+				// console.log('【userInfo】', JSON.parse(JSON.stringify(store)))
 				return info
 			},
 			hasLogin(){
@@ -204,16 +205,25 @@
 					url: '/pages/ucenter/about/about'
 				})
 			},
+
+			async changeLoginState(){
+				if(this.hasLogin){
+					await mutations.logout()
+				}else{
+					uni.redirectTo({
+						url: '/uni_modules/uni-id-pages/pages/login/login-withoutpwd',
+					});
+				}
+			},
+
+
 			logout() {
 				uni.showModal({
 					title: '确认退出',
 					content: '确定要退出登录吗？',
 					success: (res) => {
 						if (res.confirm) {
-							// 清除本地数据
-							this.clearLocalData()
-							// 调用uni-id的退出登录
-							store.logout()
+							this.changeLoginState()
 							uni.showToast({
 								title: '已退出登录',
 								icon: 'success'
@@ -222,14 +232,15 @@
 					}
 				})
 			},
-			clearLocalData() {
-				// 清除同步状态
-				this.syncStatus = 'idle'
-				this.lastSyncTime = '从未同步'
-				uni.removeStorageSync('syncStatus')
-				uni.removeStorageSync('lastSyncTime')
-				// TODO: 清除其他本地数据
-			},
+
+			// clearLocalData() {
+			// 	// 清除同步状态
+			// 	this.syncStatus = 'idle'
+			// 	this.lastSyncTime = '从未同步'
+			// 	uni.removeStorageSync('syncStatus')
+			// 	uni.removeStorageSync('lastSyncTime')
+			// 	// TODO: 清除其他本地数据
+			// },
 			loadSyncStatus() {
 				const syncStatus = uni.getStorageSync('syncStatus')
 				const lastSyncTime = uni.getStorageSync('lastSyncTime')

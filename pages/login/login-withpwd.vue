@@ -122,72 +122,10 @@
 					data.username = this.username
 				}
 
-				console.log('【调试】开始登录，请求数据:', data)
-				
 				uniIdCo.login(data).then(e => {
 					console.log('【调试】登录云函数返回结果:', JSON.stringify(e, null, 2))
-					
-					// 检查登录前的token状态
-					const beforeToken = uniCloud.getCurrentUserInfo()
-					console.log('【调试】登录成功前的token状态:', {
-						token: beforeToken.token ? beforeToken.token.substring(0, 20) + '...' : 'null',
-						tokenExpired: beforeToken.tokenExpired,
-						uid: beforeToken.uid
-					})
-					
-					// 手动处理token存储（如果uniCloud SDK没有自动处理）
-					if (e.newToken && e.newToken.token) {
-						console.log('【调试】手动存储token:', {
-							tokenLength: e.newToken.token.length,
-							tokenExpired: e.newToken.tokenExpired,
-							uid: e.uid
-						})
-						
-						// 手动存储token
-						uni.setStorageSync('uni_id_token', e.newToken.token)
-						uni.setStorageSync('uni_id_token_expired', e.newToken.tokenExpired)
-						
-						// 立即验证存储结果
-						setTimeout(() => {
-							const storedToken = uni.getStorageSync('uni_id_token')
-							const storedExpired = uni.getStorageSync('uni_id_token_expired')
-							console.log('【调试】token存储验证:', {
-								storedToken: storedToken ? storedToken.substring(0, 20) + '...' : 'null',
-								storedExpired: storedExpired,
-								getCurrentUserInfo: uniCloud.getCurrentUserInfo()
-							})
-						}, 100)
-					}
-					
+					e.uniIdRedirectUrl = 'pages/list/list'
 					this.loginSuccess(e)
-					
-					// 延迟检查登录后的token状态
-					setTimeout(() => {
-						const afterToken = uniCloud.getCurrentUserInfo()
-						console.log('【调试】登录成功后的token状态:', {
-							token: afterToken.token ? afterToken.token.substring(0, 20) + '...' : 'null',
-							tokenExpired: afterToken.tokenExpired,
-							uid: afterToken.uid,
-							isTokenValid: afterToken.tokenExpired > Date.now()
-						})
-						
-						// 手动跳转到首页，确保登录页面关闭
-						console.log('【调试】准备跳转到首页')
-						uni.switchTab({
-							url: '/pages/list/list',
-							success: () => {
-								console.log('【调试】成功跳转到首页')
-							},
-							fail: (err) => {
-								console.error('【调试】跳转首页失败:', err)
-								// 如果switchTab失败，尝试使用reLaunch
-								uni.reLaunch({
-									url: '/pages/list/list'
-								})
-							}
-						})
-					}, 1500)
-					
 				}).catch(e => {
 					console.error('【调试】登录失败:', e)
 					if (e.errCode == 'uni-id-captcha-required') {

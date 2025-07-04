@@ -12,15 +12,15 @@ module.exports = {
    * 获取用户的项目册列表
    */
   async getTodoBooks(options = {}) {
-    const cloudInfo = this.getCloudInfo()
-    console.log('【调试】云对象调用信息:', {
-      token: cloudInfo.token ? cloudInfo.token.substring(0, 20) + '...' : 'null',
-      tokenLength: cloudInfo.token ? cloudInfo.token.length : 0,
-      clientIP: cloudInfo.clientIP,
-      userAgent: cloudInfo.userAgent
-    })
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
     
-    const payload = await this.uniID.checkToken(cloudInfo.token)
+    const payload = await this.uniID.checkToken(token)
     console.log('【调试】Token验证结果:', {
       code: payload.code,
       errCode: payload.errCode,
@@ -42,18 +42,24 @@ module.exports = {
     const { include_archived = false, limit = 20, skip = 0 } = options
 
     try {
+      // 先获取用户参与的项目册ID列表
+      const memberResult = await db.collection('todobook_members')
+        .where({ user_id: uid, is_active: true })
+        .field({ todobook_id: true })
+        .get()
+      
+      const memberBookIds = memberResult.data.map(item => item.todobook_id)
+      
       // 构建查询条件
       const whereCondition = {
         $or: [
-          { creator_id: uid },
-          { 
-            _id: db.command.in(
-              db.collection('todobook_members')
-                .where({ user_id: uid, is_active: true })
-                .field({ todobook_id: true })
-            )
-          }
+          { creator_id: uid }
         ]
+      }
+      
+      // 如果用户参与了其他项目册，添加到查询条件中
+      if (memberBookIds.length > 0) {
+        whereCondition.$or.push({ _id: db.command.in(memberBookIds) })
       }
 
       if (!include_archived) {
@@ -128,7 +134,15 @@ module.exports = {
    * 创建项目册
    */
   async createTodoBook(bookData) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -209,7 +223,15 @@ module.exports = {
    * 更新项目册
    */
   async updateTodoBook(bookId, updateData) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -221,8 +243,32 @@ module.exports = {
     const db = uniCloud.database()
 
     try {
-      // 检查权限
-      const hasPermission = await this.checkPermission(uid, bookId, 'write')
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: bookId, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: bookId,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('write')
+        }
+      }
+      
       if (!hasPermission) {
         return {
           code: 403,
@@ -270,7 +316,15 @@ module.exports = {
    * 删除项目册
    */
   async deleteTodoBook(bookId) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -282,8 +336,32 @@ module.exports = {
     const db = uniCloud.database()
 
     try {
-      // 检查权限
-      const hasPermission = await this.checkPermission(uid, bookId, 'delete')
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: bookId, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: bookId,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('delete')
+        }
+      }
+      
       if (!hasPermission) {
         return {
           code: 403,
@@ -318,7 +396,15 @@ module.exports = {
    * 获取项目册详情
    */
   async getTodoBookDetail(bookId) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -330,8 +416,32 @@ module.exports = {
     const db = uniCloud.database()
 
     try {
-      // 检查权限
-      const hasPermission = await this.checkPermission(uid, bookId, 'read')
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: bookId, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: bookId,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('read')
+        }
+      }
+      
       if (!hasPermission) {
         return {
           code: 403,
@@ -339,7 +449,7 @@ module.exports = {
         }
       }
 
-      const [bookResult, membersResult, tasksResult] = await Promise.all([
+      const [bookDetailResult, membersResult, tasksResult] = await Promise.all([
         // 获取项目册信息
         db.collection('todobooks').doc(bookId).get(),
         
@@ -356,7 +466,7 @@ module.exports = {
           .get()
       ])
 
-      if (!bookResult.data.length) {
+      if (!bookDetailResult.data.length) {
         return {
           code: 404,
           message: '项目册不存在'
@@ -371,7 +481,7 @@ module.exports = {
       return {
         code: 0,
         data: {
-          book: bookResult.data[0],
+          book: bookDetailResult.data[0],
           members: membersResult.data,
           tasks: tasksResult.data
         }
@@ -389,7 +499,15 @@ module.exports = {
    * 创建任务
    */
   async createTodoItem(itemData) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -418,8 +536,32 @@ module.exports = {
     }
 
     try {
-      // 检查权限
-      const hasPermission = await this.checkPermission(uid, todobook_id, 'write')
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('write')
+        }
+      }
+      
       if (!hasPermission) {
         return {
           code: 403,
@@ -494,7 +636,15 @@ module.exports = {
    * 更新任务状态
    */
   async updateTodoItemStatus(itemId, status) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -516,7 +666,33 @@ module.exports = {
       }
 
       const item = itemResult.data[0]
-      const hasPermission = await this.checkPermission(uid, item.todobook_id, 'write')
+      
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: item.todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: item.todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('write')
+        }
+      }
+      
       if (!hasPermission) {
         return {
           code: 403,

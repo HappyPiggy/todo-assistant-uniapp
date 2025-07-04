@@ -13,7 +13,15 @@ module.exports = {
    * 开始同步操作
    */
   async startSync(syncOptions = {}) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -83,7 +91,15 @@ module.exports = {
    * 上传本地数据到云端
    */
   async uploadData(syncId, localData) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -154,7 +170,15 @@ module.exports = {
    * 下载云端数据
    */
   async downloadData(syncId, lastSyncTime) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -179,21 +203,30 @@ module.exports = {
         updated_at: db.command.gt(new Date(lastSyncTime))
       } : {}
 
+      // 先获取用户参与的项目册ID列表
+      const memberResult = await db.collection('todobook_members')
+        .where({ user_id: uid, is_active: true })
+        .field({ todobook_id: true })
+        .get()
+      
+      const memberBookIds = memberResult.data.map(item => item.todobook_id)
+      
+      // 构建查询条件
+      const whereCondition = {
+        ...syncFilter,
+        $or: [
+          { creator_id: uid }
+        ]
+      }
+      
+      // 如果用户参与了其他项目册，添加到查询条件中
+      if (memberBookIds.length > 0) {
+        whereCondition.$or.push({ _id: db.command.in(memberBookIds) })
+      }
+
       // 获取用户的项目册
       const todoBooksResult = await db.collection('todobooks')
-        .where({
-          ...syncFilter,
-          $or: [
-            { creator_id: uid },
-            { 
-              _id: db.command.in(
-                db.collection('todobook_members')
-                  .where({ user_id: uid, is_active: true })
-                  .field({ todobook_id: true })
-              )
-            }
-          ]
-        })
+        .where(whereCondition)
         .get()
 
       // 获取用户相关的任务
@@ -236,7 +269,15 @@ module.exports = {
    * 完成同步操作
    */
   async completeSync(syncId) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
@@ -286,7 +327,15 @@ module.exports = {
    * 获取同步历史
    */
   async getSyncHistory(limit = 10) {
-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
     if (payload.code && payload.code > 0) {
       return {
         code: payload.code,
