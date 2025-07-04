@@ -61,6 +61,30 @@
 - 自定义图标字体在 `static/customicons.css`
 - 使用 uni-scss 变量进行 SCSS 预处理
 
+## 数据库 Schema 规范
+
+### 核心表结构
+- `todobooks` - 项目册表（用户创建的待办清单集合）
+- `todoitems` - 任务项表（具体的待办事项）
+- `todobook_members` - 成员表（项目册的协作成员）
+- `user_settings` - 用户设置表（个人偏好配置）
+
+### 权限控制规则
+所有表均已配置完整的权限系统：
+- **基本权限**：read、create、update、delete、count
+- **权限表达式**：使用 `get()` 方法进行表关联验证，不使用 `where()` 
+- **用户权限**：`doc.creator_id == auth.uid` 确保用户只能操作自己的数据
+- **关联权限**：通过 `get(\`database.table.\${doc.field_id}\`)` 验证关联表权限
+
+### 强制默认值配置
+关键字段已配置 `forceDefaultValue`：
+- `creator_id` → `{"$env": "uid"}` （自动设为当前用户）
+- `created_at/updated_at` → `{"$env": "now"}` （自动设为当前时间）
+
+### 索引优化
+- 所有表都配置了基于查询模式的复合索引
+- `user_settings.user_id` 设为唯一索引防止重复
+
 ## 重要说明
 
 - 项目配置为 Vue 3（manifest.json 中 `"vueVersion": "3"`）
@@ -68,3 +92,4 @@
 - 没有传统的 npm 构建系统 - 依赖 HBuilderX 工具链
 - uniCloud 后端需要正确的云函数部署
 - 认证状态通过 uni-id-pages 存储系统管理
+- 数据库 Schema 已按 DB Schema 概述规范配置，确保数据安全性

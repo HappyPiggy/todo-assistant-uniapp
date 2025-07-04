@@ -1,6 +1,13 @@
 {
   "bsonType": "object",
   "required": ["todobook_id", "title", "creator_id", "created_at"],
+  "permission": {
+    "read": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "create": "auth.uid != null",
+    "update": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "delete": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "count": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid"
+  },
   "properties": {
     "_id": {
       "description": "ID，系统自动生成"
@@ -26,7 +33,10 @@
     },
     "creator_id": {
       "bsonType": "string",
-      "description": "创建者用户ID"
+      "description": "创建者用户ID",
+      "forceDefaultValue": {
+        "$env": "uid"
+      }
     },
     "assignee_id": {
       "bsonType": "string",
@@ -34,11 +44,17 @@
     },
     "created_at": {
       "bsonType": "timestamp",
-      "description": "创建时间"
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     },
     "updated_at": {
       "bsonType": "timestamp",
-      "description": "更新时间"
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     },
     "due_date": {
       "bsonType": "timestamp",
@@ -66,6 +82,7 @@
         "bsonType": "string",
         "maxLength": 20
       },
+      "default": [],
       "description": "标签列表"
     },
     "sort_order": {
@@ -193,7 +210,10 @@
     },
     "last_activity_at": {
       "bsonType": "timestamp",
-      "description": "最后活动时间"
+      "description": "最后活动时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     }
   }
 }

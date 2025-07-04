@@ -1,49 +1,59 @@
 <template>
 	<view class="detail-page">
-		<!-- 项目册头部信息 -->
-		<view class="book-header" v-if="todoBook">
-			<view class="header-top">
-				<view class="book-icon" :style="{ backgroundColor: todoBook.color }">
-					<uni-icons color="#ffffff" size="32" :type="todoBook.icon" />
+		<!-- 项目册基本信息 -->
+		<unicloud-db 
+			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
+			ref="bookDetailDB"
+			:collection="bookColList"
+			:where="bookWhere"
+			:getone="true"
+			@load="onBookLoad">
+			
+			<!-- 项目册头部信息 -->
+			<view class="book-header" v-if="!bookLoading && bookData">
+				<view class="header-top">
+					<view class="book-icon" :style="{ backgroundColor: bookData.color }">
+						<uni-icons color="#ffffff" size="32" :type="bookData.icon" />
+					</view>
+					<view class="book-meta">
+						<text class="book-title">{{ bookData.title }}</text>
+						<text class="book-description" v-if="bookData.description">{{ bookData.description }}</text>
+					</view>
+					<view class="header-actions" @click="showBookMenu">
+						<uni-icons color="#999999" size="24" type="more-filled" />
+					</view>
 				</view>
-				<view class="book-meta">
-					<text class="book-title">{{ todoBook.title }}</text>
-					<text class="book-description" v-if="todoBook.description">{{ todoBook.description }}</text>
-				</view>
-				<view class="header-actions" @click="showBookMenu">
-					<uni-icons color="#999999" size="24" type="more-filled" />
-				</view>
-			</view>
 
-			<view class="progress-section">
-				<view class="progress-info">
-					<text class="progress-text">完成进度</text>
-					<text class="progress-percent">{{ overallProgress }}%</text>
+				<view class="progress-section">
+					<view class="progress-info">
+						<text class="progress-text">完成进度</text>
+						<text class="progress-percent">{{ overallProgress }}%</text>
+					</view>
+					<view class="progress-bar">
+						<view class="progress-fill" :style="{ width: overallProgress + '%', backgroundColor: bookData.color }"></view>
+					</view>
 				</view>
-				<view class="progress-bar">
-					<view class="progress-fill" :style="{ width: overallProgress + '%', backgroundColor: todoBook.color }"></view>
-				</view>
-			</view>
 
-			<view class="stats-section">
-				<view class="stat-item">
-					<text class="stat-number">{{ taskStats.total }}</text>
-					<text class="stat-label">总任务</text>
-				</view>
-				<view class="stat-item">
-					<text class="stat-number">{{ taskStats.completed }}</text>
-					<text class="stat-label">已完成</text>
-				</view>
-				<view class="stat-item">
-					<text class="stat-number">{{ taskStats.in_progress }}</text>
-					<text class="stat-label">进行中</text>
-				</view>
-				<view class="stat-item">
-					<text class="stat-number">{{ members.length }}</text>
-					<text class="stat-label">成员</text>
+				<view class="stats-section">
+					<view class="stat-item">
+						<text class="stat-number">{{ taskStats.total }}</text>
+						<text class="stat-label">总任务</text>
+					</view>
+					<view class="stat-item">
+						<text class="stat-number">{{ taskStats.completed }}</text>
+						<text class="stat-label">已完成</text>
+					</view>
+					<view class="stat-item">
+						<text class="stat-number">{{ taskStats.in_progress }}</text>
+						<text class="stat-label">进行中</text>
+					</view>
+					<view class="stat-item">
+						<text class="stat-number">{{ memberCount }}</text>
+						<text class="stat-label">成员</text>
+					</view>
 				</view>
 			</view>
-		</view>
+		</unicloud-db>
 
 		<!-- 任务筛选标签 -->
 		<view class="filter-tabs">
@@ -67,84 +77,97 @@
 
 		<!-- 任务列表 -->
 		<view class="tasks-container">
-			<!-- 加载状态 -->
-			<view v-if="loading" class="loading-section">
-				<uni-load-more status="loading" />
-			</view>
-
-			<!-- 空状态 -->
-			<view v-else-if="filteredTasks.length === 0" class="empty-section">
-				<view class="empty-icon">
-					<uni-icons color="#cccccc" size="60" type="list" />
+			<unicloud-db 
+				v-slot:default="{data: tasksData, loading: tasksLoading, error: tasksError}" 
+				ref="tasksDB"
+				:collection="tasksColList"
+				:where="tasksWhere"
+				@load="onTasksLoad">
+				
+				<!-- 加载状态 -->
+				<view v-if="tasksLoading" class="loading-section">
+					<uni-load-more status="loading" />
 				</view>
-				<text class="empty-text">{{ getEmptyText() }}</text>
-				<view class="empty-action" @click="addTask" v-if="activeFilter === 'all'">
-					<text class="action-text">创建第一个任务</text>
+
+				<!-- 错误状态 -->
+				<view v-else-if="tasksError" class="error-section">
+					<text class="error-text">{{ tasksError.message }}</text>
 				</view>
-			</view>
 
-			<!-- 任务卡片列表 -->
-			<view v-else class="tasks-list">
-				<view 
-					v-for="task in filteredTasks" 
-					:key="task._id"
-					class="task-card"
-					@click="openTask(task)">
-					
-					<view class="task-header">
-						<view class="task-checkbox" @click.stop="toggleTaskStatus(task)">
-							<uni-icons 
-								v-if="task.status === 'completed'"
-								color="#28a745" 
-								size="20" 
-								type="checkmarkempty" />
-							<uni-icons 
-								v-else-if="task.status === 'in_progress'"
-								color="#ffc107" 
-								size="20" 
-								type="loop" />
-							<uni-icons 
-								v-else
-								color="#cccccc" 
-								size="20" 
-								type="circle" />
-						</view>
-						<view class="task-content">
-							<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
-							<text class="task-description" v-if="task.description">{{ task.description }}</text>
-						</view>
-						<view class="task-priority" :class="task.priority">
-							<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
-						</view>
+				<!-- 空状态 -->
+				<view v-else-if="filteredTasks.length === 0" class="empty-section">
+					<view class="empty-icon">
+						<uni-icons color="#cccccc" size="60" type="list" />
 					</view>
-
-					<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || task.tags.length > 0">
-						<view class="meta-left">
-							<view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
-								<uni-icons color="#999999" size="14" type="calendar" />
-								<text class="due-text">{{ formatDueDate(task.due_date) }}</text>
-							</view>
-							<view class="subtasks" v-if="task.subtask_count > 0">
-								<uni-icons color="#999999" size="14" type="list" />
-								<text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
-							</view>
-						</view>
-						<view class="task-tags" v-if="task.tags && task.tags.length > 0">
-							<view v-for="tag in task.tags.slice(0, 2)" :key="tag" class="tag-item">
-								<text class="tag-text">{{ tag }}</text>
-							</view>
-							<text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
-						</view>
-					</view>
-
-					<view class="task-progress" v-if="task.progress > 0 && task.status !== 'completed'">
-						<view class="progress-bar-small">
-							<view class="progress-fill-small" :style="{ width: task.progress + '%' }"></view>
-						</view>
-						<text class="progress-text-small">{{ task.progress }}%</text>
+					<text class="empty-text">{{ getEmptyText() }}</text>
+					<view class="empty-action" @click="addTask" v-if="activeFilter === 'all'">
+						<text class="action-text">创建第一个任务</text>
 					</view>
 				</view>
-			</view>
+
+				<!-- 任务卡片列表 -->
+				<view v-else class="tasks-list">
+					<view 
+						v-for="task in filteredTasks" 
+						:key="task._id"
+						class="task-card"
+						@click="openTask(task)">
+						
+						<view class="task-header">
+							<view class="task-checkbox" @click.stop="toggleTaskStatus(task)">
+								<uni-icons 
+									v-if="task.status === 'completed'"
+									color="#28a745" 
+									size="20" 
+									type="checkmarkempty" />
+								<uni-icons 
+									v-else-if="task.status === 'in_progress'"
+									color="#ffc107" 
+									size="20" 
+									type="loop" />
+								<uni-icons 
+									v-else
+									color="#cccccc" 
+									size="20" 
+									type="circle" />
+							</view>
+							<view class="task-content">
+								<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
+								<text class="task-description" v-if="task.description">{{ task.description }}</text>
+							</view>
+							<view class="task-priority" :class="task.priority">
+								<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
+							</view>
+						</view>
+
+						<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || (task.tags && task.tags.length > 0)">
+							<view class="meta-left">
+								<view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
+									<uni-icons color="#999999" size="14" type="calendar" />
+									<text class="due-text">{{ formatDueDate(task.due_date) }}</text>
+								</view>
+								<view class="subtasks" v-if="task.subtask_count > 0">
+									<uni-icons color="#999999" size="14" type="list" />
+									<text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
+								</view>
+							</view>
+							<view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
+								<view v-for="tag in task.tags.slice(0, 2)" :key="tag" class="tag-item">
+									<text class="tag-text">{{ tag }}</text>
+								</view>
+								<text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+							</view>
+						</view>
+
+						<view class="task-progress" v-if="task.progress > 0 && task.status !== 'completed'">
+							<view class="progress-bar-small">
+								<view class="progress-fill-small" :style="{ width: task.progress + '%' }"></view>
+							</view>
+							<text class="progress-text-small">{{ task.progress }}%</text>
+						</view>
+					</view>
+				</view>
+			</unicloud-db>
 		</view>
 
 		<!-- 项目册菜单弹窗 -->
@@ -180,14 +203,14 @@
 </template>
 
 <script>
+	const db = uniCloud.database()
+	
 	export default {
 		data() {
 			return {
 				bookId: '',
-				todoBook: null,
-				members: [],
 				tasks: [],
-				loading: true,
+				memberCount: 0,
 				activeFilter: 'all',
 				filterTabs: [
 					{ key: 'all', label: '全部', count: 0 },
@@ -198,6 +221,26 @@
 			}
 		},
 		computed: {
+			bookWhere() {
+				return `_id == "${this.bookId}"`
+			},
+			bookColList() {
+				return [
+					db.collection('todobooks').where(this.bookWhere).getTemp()
+				]
+			},
+			tasksWhere() {
+				return `todobook_id == "${this.bookId}"`
+			},
+			tasksColList() {
+				return [
+					db.collection('todoitems')
+						.where(this.tasksWhere)
+						.field('_id,todobook_id,parent_id,title,description,creator_id,assignee_id,created_at,updated_at,due_date,completed_at,status,priority,tags,sort_order,level,progress,estimated_hours,actual_hours,subtask_count,completed_subtask_count,is_recurring,last_activity_at')
+						.orderBy('sort_order asc, created_at desc')
+						.getTemp()
+				]
+			},
 			filteredTasks() {
 				if (this.activeFilter === 'all') {
 					return this.tasks
@@ -225,56 +268,76 @@
 		},
 		onLoad(options) {
 			this.bookId = options.id
-			if (this.bookId) {
-				this.loadTodoBookDetail()
-			}
+			// 等待 unicloud-db 组件自动加载数据
 		},
 		onShow() {
 			// 返回时刷新数据
-			if (this.bookId) {
-				this.loadTodoBookDetail()
+			if (this.bookId && this.$refs.bookDetailDB && this.$refs.tasksDB) {
+				this.$refs.bookDetailDB.loadData()
+				this.$refs.tasksDB.loadData()
 			}
 		},
 		onPullDownRefresh() {
-			this.loadTodoBookDetail()
+			this.refreshData()
 		},
 		methods: {
-			async loadTodoBookDetail() {
-				if (!this.bookId) return
-
-				try {
-					this.loading = true
-					
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					const result = await todoBookCo.getTodoBookDetail(this.bookId)
-
-					if (result.code === 0) {
-						this.todoBook = result.data.book
-						this.members = result.data.members
-						this.tasks = result.data.tasks
-
-						// 更新筛选标签计数
-						this.updateFilterCounts()
-
-						// 设置页面标题
-						uni.setNavigationBarTitle({
-							title: this.todoBook.title
-						})
-					} else {
-						uni.showToast({
-							title: result.message || '加载失败',
-							icon: 'error'
-						})
-					}
-				} catch (error) {
-					console.error('加载项目册详情失败:', error)
-					uni.showToast({
-						title: '加载失败',
-						icon: 'error'
+			// 处理项目册信息加载完成
+			onBookLoad(data) {
+				if (data && data.title) {
+					// 设置页面标题
+					uni.setNavigationBarTitle({
+						title: data.title
 					})
-				} finally {
-					this.loading = false
-					uni.stopPullDownRefresh()
+					
+					// 加载成员数量
+					this.loadMemberCount()
+				}
+				uni.stopPullDownRefresh()
+			},
+
+			// 处理任务列表加载完成
+			onTasksLoad(data) {
+				console.log('原始任务数据:', data)
+				// 确保数据格式正确，特别是 tags 字段
+				this.tasks = (data || []).map(task => {
+					console.log('处理任务:', task._id, '标签类型:', typeof task.tags, '标签值:', task.tags)
+					return {
+						...task,
+						tags: Array.isArray(task.tags) ? task.tags : [],
+						attachments: Array.isArray(task.attachments) ? task.attachments : [],
+						comments: Array.isArray(task.comments) ? task.comments : []
+					}
+				})
+				console.log('处理后的任务数据:', this.tasks)
+				this.updateFilterCounts()
+				uni.stopPullDownRefresh()
+			},
+
+			// 加载成员数量
+			async loadMemberCount() {
+				try {
+					const result = await db.collection('todobook_members')
+						.where({
+							todobook_id: this.bookId,
+							is_active: true
+						})
+						.count()
+					
+					this.memberCount = result.result.total || 1
+				} catch (error) {
+					console.error('获取成员数量失败:', error)
+					this.memberCount = 1
+				}
+			},
+
+			// 刷新数据
+			async refreshData() {
+				if (this.$refs.bookDetailDB && this.$refs.tasksDB) {
+					await Promise.all([
+						this.$refs.bookDetailDB.loadData(),
+						this.$refs.tasksDB.loadData()
+					])
+					this.loadMemberCount()
 				}
 			},
 
@@ -293,34 +356,71 @@
 				const newStatus = task.status === 'completed' ? 'todo' : 
 					(task.status === 'todo' ? 'in_progress' : 'completed')
 
+				const updates = {
+					status: newStatus,
+					updated_at: new Date(),
+					last_activity_at: new Date()
+				}
+
+				// 如果任务完成，设置完成时间和进度
+				if (newStatus === 'completed') {
+					updates.completed_at = new Date()
+					updates.progress = 100
+				} else {
+					updates.completed_at = null
+					if (newStatus === 'todo') {
+						updates.progress = 0
+					} else if (newStatus === 'in_progress') {
+						updates.progress = Math.max(task.progress || 0, 10)
+					}
+				}
+
 				try {
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					const result = await todoBookCo.updateTodoItemStatus(task._id, newStatus)
+					const result = await db.collection('todoitems')
+						.doc(task._id)
+						.update(updates)
 
-					if (result.code === 0) {
+					if (result.result.updated > 0) {
 						// 更新本地数据
-						task.status = newStatus
-						if (newStatus === 'completed') {
-							task.completed_at = new Date()
-							task.progress = 100
-						} else {
-							task.completed_at = null
-							task.progress = newStatus === 'in_progress' ? Math.max(task.progress || 0, 10) : 0
-						}
-
+						Object.assign(task, updates)
 						this.updateFilterCounts()
+						
+						// 更新项目册的完成计数
+						this.updateBookCompletedCount(task, newStatus)
 					} else {
-						uni.showToast({
-							title: result.message || '更新失败',
-							icon: 'error'
-						})
+						throw new Error('更新失败')
 					}
 				} catch (error) {
 					console.error('更新任务状态失败:', error)
 					uni.showToast({
-						title: '更新失败',
+						title: error.message || '更新失败',
 						icon: 'error'
 					})
+				}
+			},
+
+			// 更新项目册的完成计数
+			async updateBookCompletedCount(task, newStatus) {
+				try {
+					const oldStatus = task.status
+					let increment = 0
+					
+					if (newStatus === 'completed' && oldStatus !== 'completed') {
+						increment = 1
+					} else if (newStatus !== 'completed' && oldStatus === 'completed') {
+						increment = -1
+					}
+					
+					if (increment !== 0) {
+						await db.collection('todobooks')
+							.doc(this.bookId)
+							.update({
+								completed_count: db.command.inc(increment),
+								last_activity_at: new Date()
+							})
+					}
+				} catch (error) {
+					console.error('更新项目册统计失败:', error)
 				}
 			},
 
@@ -605,11 +705,23 @@
 		padding: 0 20rpx;
 	}
 
-	/* 加载和空状态 */
+	/* 加载、错误和空状态 */
 	.loading-section {
 		padding: 60rpx 0;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.error-section {
+		padding: 80rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.error-text {
+		font-size: 28rpx;
+		color: #ff4757;
+		text-align: center;
 	}
 
 	.empty-section {

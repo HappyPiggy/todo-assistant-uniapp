@@ -1,10 +1,22 @@
 <template>
 	<view class="edit-todobook">
-		<view v-if="loading" class="loading-section">
-			<uni-load-more status="loading" />
-		</view>
+		<unicloud-db 
+			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
+			ref="bookDetailDB"
+			:collection="bookColList"
+			:where="bookWhere"
+			:getone="true"
+			@load="onBookLoad">
+			
+			<view v-if="bookLoading" class="loading-section">
+				<uni-load-more status="loading" />
+			</view>
 
-		<view v-else-if="todoBook" class="edit-content">
+			<view v-else-if="bookError" class="error-section">
+				<text class="error-text">{{ bookError.message }}</text>
+			</view>
+
+			<view v-else-if="bookData" class="edit-content">
 			<uni-forms ref="form" :model="formData" :rules="rules" label-position="top">
 				<!-- 基本信息 -->
 				<view class="form-section">
@@ -98,19 +110,19 @@
 					<view class="stats-grid">
 						<view class="stat-item">
 							<text class="stat-label">总任务数</text>
-							<text class="stat-value">{{ todoBook.item_count || 0 }}</text>
+							<text class="stat-value">{{ bookData.item_count || 0 }}</text>
 						</view>
 						<view class="stat-item">
 							<text class="stat-label">已完成</text>
-							<text class="stat-value">{{ todoBook.completed_count || 0 }}</text>
+							<text class="stat-value">{{ bookData.completed_count || 0 }}</text>
 						</view>
 						<view class="stat-item">
 							<text class="stat-label">成员数</text>
-							<text class="stat-value">{{ todoBook.member_count || 1 }}</text>
+							<text class="stat-value">{{ bookData.member_count || 1 }}</text>
 						</view>
 						<view class="stat-item">
 							<text class="stat-label">完成率</text>
-							<text class="stat-value">{{ completionRate }}%</text>
+							<text class="stat-value">{{ calculateCompletionRate(bookData) }}%</text>
 						</view>
 					</view>
 				</view>
@@ -133,19 +145,19 @@
 					</view>
 					<view class="card-stats">
 						<view class="stat-item">
-							<text class="stat-number">{{ todoBook.item_count || 0 }}</text>
+							<text class="stat-number">{{ bookData.item_count || 0 }}</text>
 							<text class="stat-label">总任务</text>
 						</view>
 						<view class="stat-item">
-							<text class="stat-number">{{ todoBook.completed_count || 0 }}</text>
+							<text class="stat-number">{{ bookData.completed_count || 0 }}</text>
 							<text class="stat-label">已完成</text>
 						</view>
 						<view class="stat-item">
-							<text class="stat-number">{{ todoBook.member_count || 1 }}</text>
+							<text class="stat-number">{{ bookData.member_count || 1 }}</text>
 							<text class="stat-label">成员</text>
 						</view>
 						<view class="stat-item">
-							<text class="stat-number">{{ completionRate }}%</text>
+							<text class="stat-number">{{ calculateCompletionRate(bookData) }}%</text>
 							<text class="stat-label">进度</text>
 						</view>
 					</view>
@@ -193,10 +205,10 @@
 					</view>
 				</view>
 			</view>
-		</view>
+		</unicloud-db>
 
 		<!-- 底部按钮 -->
-		<view class="button-section" v-if="!loading">
+		<view class="button-section" v-if="bookId">
 			<button class="cancel-btn" @click="cancel">取消</button>
 			<button class="save-btn" @click="saveTodoBook" :loading="saving">
 				{{ saving ? '保存中...' : '保存修改' }}
@@ -206,13 +218,13 @@
 </template>
 
 <script>
+	const db = uniCloud.database()
+	
 	export default {
 		data() {
 			return {
 				bookId: '',
-				loading: true,
 				saving: false,
-				todoBook: null,
 				isOwner: false,
 				formData: {
 					title: '',
@@ -261,64 +273,47 @@
 			}
 		},
 		computed: {
-			completionRate() {
-				if (!this.todoBook || this.todoBook.item_count === 0) return 0
-				return Math.round((this.todoBook.completed_count / this.todoBook.item_count) * 100)
+			bookWhere() {
+				return `_id == "${this.bookId}"`
+			},
+			bookColList() {
+				return [
+					db.collection('todobooks').where(this.bookWhere).getTemp()
+				]
 			}
 		},
 		onLoad(options) {
 			this.bookId = options.id
-			if (this.bookId) {
-				this.loadTodoBook()
-			}
+			// 等待 unicloud-db 组件自动加载数据
 		},
 		methods: {
-			async loadTodoBook() {
-				if (!this.bookId) return
+			// 处理项目册数据加载完成
+			onBookLoad(data) {
+				if (data) {
+					// 检查是否为所有者
+					const currentUser = uniCloud.getCurrentUserInfo()
+					this.isOwner = data.creator_id === currentUser.uid
 
-				try {
-					this.loading = true
-					
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					const result = await todoBookCo.getTodoBookDetail(this.bookId)
-
-					if (result.code === 0) {
-						this.todoBook = result.data.book
-						
-						// 检查用户权限
-						this.checkUserPermission(result.data.members)
-						
-						// 填充表单数据
-						this.formData = {
-							title: this.todoBook.title,
-							description: this.todoBook.description || '',
-							color: this.todoBook.color || '#007AFF',
-							icon: this.todoBook.icon || 'folder',
-							shareType: this.todoBook.share_type || 'private'
-						}
-
-						// 设置页面标题
-						uni.setNavigationBarTitle({
-							title: '编辑 ' + this.todoBook.title
-						})
-					} else {
-						throw new Error(result.message || '加载失败')
+					// 填充表单数据
+					this.formData = {
+						title: data.title,
+						description: data.description || '',
+						color: data.color || '#007AFF',
+						icon: data.icon || 'folder',
+						shareType: data.share_type || 'private'
 					}
-				} catch (error) {
-					console.error('加载项目册失败:', error)
-					uni.showToast({
-						title: error.message || '加载失败',
-						icon: 'error'
+
+					// 设置页面标题
+					uni.setNavigationBarTitle({
+						title: '编辑 ' + data.title
 					})
-				} finally {
-					this.loading = false
 				}
 			},
 
-			checkUserPermission(members) {
-				// 检查当前用户是否为所有者
-				// 这里需要获取当前用户ID，暂时设为true
-				this.isOwner = true
+			// 计算完成率
+			calculateCompletionRate(bookData) {
+				if (!bookData || bookData.item_count === 0) return 0
+				return Math.round((bookData.completed_count / bookData.item_count) * 100)
 			},
 
 			selectColor(color) {
@@ -340,13 +335,12 @@
 				this.saving = true
 
 				try {
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					
 					const updateData = {
 						title: this.formData.title.trim(),
 						description: this.formData.description.trim(),
 						color: this.formData.color,
-						icon: this.formData.icon
+						icon: this.formData.icon,
+						updated_at: new Date()
 					}
 
 					// 只有所有者才能修改共享设置
@@ -355,9 +349,11 @@
 						updateData.share_type = this.formData.shareType
 					}
 
-					const result = await todoBookCo.updateTodoBook(this.bookId, updateData)
+					const result = await db.collection('todobooks')
+						.doc(this.bookId)
+						.update(updateData)
 
-					if (result.code === 0) {
+					if (result.result.updated > 0) {
 						uni.showToast({
 							title: '保存成功',
 							icon: 'success'
@@ -367,7 +363,7 @@
 							uni.navigateBack()
 						}, 1500)
 					} else {
-						throw new Error(result.message || '保存失败')
+						throw new Error('保存失败')
 					}
 				} catch (error) {
 					console.error('保存项目册失败:', error)
@@ -396,7 +392,7 @@
 			deleteTodoBook() {
 				uni.showModal({
 					title: '确认删除',
-					content: `确定要删除项目册"${this.todoBook.title}"吗？删除后无法恢复，包含的所有任务也将被删除。`,
+					content: `确定要删除项目册"${this.formData.title}"吗？删除后无法恢复，包含的所有任务也将被删除。`,
 					confirmColor: '#dc3545',
 					success: async (res) => {
 						if (res.confirm) {
@@ -405,27 +401,36 @@
 									title: '删除中...'
 								})
 
-								const todoBookCo = uniCloud.importObject('todobook-co')
-								const result = await todoBookCo.deleteTodoBook(this.bookId)
+								// 使用 unicloud-db 删除相关数据
+								const deletePromises = [
+									// 删除项目册
+									db.collection('todobooks').doc(this.bookId).remove(),
+									// 删除成员关系
+									db.collection('todobook_members').where({
+										todobook_id: this.bookId
+									}).remove(),
+									// 删除任务
+									db.collection('todoitems').where({
+										todobook_id: this.bookId
+									}).remove()
+								]
+
+								await Promise.all(deletePromises)
 
 								uni.hideLoading()
+								uni.showToast({
+									title: '删除成功',
+									icon: 'success'
+								})
 
-								if (result.code === 0) {
-									uni.showToast({
-										title: '删除成功',
-										icon: 'success'
+								setTimeout(() => {
+									uni.reLaunch({
+										url: '/pages/list/list'
 									})
-
-									setTimeout(() => {
-										uni.reLaunch({
-											url: '/pages/list/list'
-										})
-									}, 1500)
-								} else {
-									throw new Error(result.message)
-								}
+								}, 1500)
 							} catch (error) {
 								uni.hideLoading()
+								console.error('删除失败:', error)
 								uni.showToast({
 									title: error.message || '删除失败',
 									icon: 'error'
@@ -489,6 +494,18 @@
 		padding: 60rpx 0;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.error-section {
+		padding: 80rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.error-text {
+		font-size: 28rpx;
+		color: #ff4757;
+		text-align: center;
 	}
 
 	.edit-content {

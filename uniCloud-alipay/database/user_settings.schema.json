@@ -1,13 +1,23 @@
 {
   "bsonType": "object",
   "required": ["user_id", "created_at"],
+  "permission": {
+    "read": "doc.user_id == auth.uid",
+    "create": "auth.uid != null",
+    "update": "doc.user_id == auth.uid",
+    "delete": "doc.user_id == auth.uid",
+    "count": "doc.user_id == auth.uid"
+  },
   "properties": {
     "_id": {
       "description": "ID，系统自动生成"
     },
     "user_id": {
       "bsonType": "string",
-      "description": "用户ID"
+      "description": "用户ID",
+      "forceDefaultValue": {
+        "$env": "uid"
+      }
     },
     "sync_on_startup": {
       "bsonType": "bool",
@@ -97,11 +107,17 @@
     },
     "created_at": {
       "bsonType": "timestamp",
-      "description": "创建时间"
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     },
     "updated_at": {
       "bsonType": "timestamp",
-      "description": "更新时间"
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     }
   }
 }

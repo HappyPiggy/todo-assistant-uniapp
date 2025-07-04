@@ -126,6 +126,8 @@
 </template>
 
 <script>
+	const db = uniCloud.database()
+	
 	export default {
 		data() {
 			return {
@@ -167,17 +169,25 @@
 		methods: {
 			async loadAvailableParents() {
 				try {
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					const result = await todoBookCo.getTodoBookDetail(this.bookId)
+					// 使用 unicloud-db 直接查询任务列表
+					const result = await db.collection('todoitems')
+						.where({
+							todobook_id: this.bookId,
+							parent_id: null, // 只获取顶级任务
+							status: db.command.neq('completed') // 排除已完成任务
+						})
+						.field({
+							_id: true,
+							title: true
+						})
+						.orderBy('created_at', 'desc')
+						.get()
 
-					if (result.code === 0) {
-						// 只显示顶级任务作为可选父任务
-						this.availableParents = result.data.tasks
-							.filter(task => !task.parent_id && task.status !== 'completed')
-							.map(task => ({
-								value: task._id,
-								text: task.title
-							}))
+					if (result.result.data && result.result.data.length > 0) {
+						this.availableParents = result.result.data.map(task => ({
+							value: task._id,
+							text: task.title
+						}))
 					}
 				} catch (error) {
 					console.error('加载可选父任务失败:', error)
@@ -195,15 +205,28 @@
 				this.creating = true
 
 				try {
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					
+					// 准备任务数据
 					const taskData = {
 						todobook_id: this.bookId,
 						title: this.formData.title.trim(),
 						description: this.formData.description.trim(),
+						// creator_id 由数据库 schema 的 forceDefaultValue 自动填充，不需要手动设置
+						// assignee_id 默认指派给创建者，由后端处理
+						// created_at, updated_at, last_activity_at 由数据库 schema 自动填充
+						status: 'todo',
 						priority: this.formData.priority,
 						parent_id: this.formData.parent_id || null,
-						due_date: this.formData.due_date || null
+						due_date: this.formData.due_date ? new Date(this.formData.due_date) : null,
+						tags: this.formData.tags || [],
+						sort_order: 0,
+						level: this.formData.parent_id ? 1 : 0, // 有父任务则为二级任务
+						progress: 0,
+						actual_hours: 0,
+						attachments: [],
+						comments: [],
+						subtask_count: 0,
+						completed_subtask_count: 0,
+						is_recurring: false
 					}
 
 					// 添加预估工时
@@ -211,14 +234,18 @@
 						taskData.estimated_hours = parseFloat(this.formData.estimated_hours)
 					}
 
-					// 添加标签
-					if (this.formData.tags.length > 0) {
-						taskData.tags = this.formData.tags
-					}
+					// 创建任务
+					const result = await db.collection('todoitems').add(taskData)
 
-					const result = await todoBookCo.createTodoItem(taskData)
-
-					if (result.code === 0) {
+					if (result.result.inserted > 0) {
+						// 更新项目册的任务计数
+						await this.updateBookTaskCount()
+						
+						// 如果有父任务，更新父任务的子任务计数
+						if (this.formData.parent_id) {
+							await this.updateParentTaskCount(this.formData.parent_id)
+						}
+						
 						uni.showToast({
 							title: '创建成功',
 							icon: 'success'
@@ -228,7 +255,7 @@
 							uni.navigateBack()
 						}, 1500)
 					} else {
-						throw new Error(result.message || '创建失败')
+						throw new Error('创建失败')
 					}
 				} catch (error) {
 					console.error('创建任务失败:', error)
@@ -283,6 +310,35 @@
 			closeTagDialog() {
 				this.$refs.tagPopup.close()
 				this.newTag = ''
+			},
+			
+			// 更新项目册的任务计数
+			async updateBookTaskCount() {
+				try {
+					await db.collection('todobooks')
+						.doc(this.bookId)
+						.update({
+							item_count: db.command.inc(1),
+							last_activity_at: new Date()
+						})
+				} catch (error) {
+					console.error('更新项目册任务计数失败:', error)
+				}
+			},
+			
+			// 更新父任务的子任务计数
+			async updateParentTaskCount(parentId) {
+				try {
+					await db.collection('todoitems')
+						.doc(parentId)
+						.update({
+							subtask_count: db.command.inc(1),
+							updated_at: new Date(),
+							last_activity_at: new Date()
+						})
+				} catch (error) {
+					console.error('更新父任务子任务计数失败:', error)
+				}
 			}
 		}
 	}

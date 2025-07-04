@@ -1,6 +1,12 @@
 {
   "bsonType": "object",
   "required": ["todobook_id", "user_id", "role", "joined_at"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "create": "auth.uid != null && get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "update": "doc.user_id == auth.uid || get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "delete": "doc.user_id == auth.uid || get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid"
+  },
   "properties": {
     "_id": {
       "description": "ID，系统自动生成"

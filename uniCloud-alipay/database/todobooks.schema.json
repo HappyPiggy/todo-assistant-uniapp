@@ -1,6 +1,13 @@
 {
   "bsonType": "object",
   "required": ["title", "creator_id", "created_at"],
+  "permission": {
+    "read": "doc.creator_id == auth.uid",
+    "create": "auth.uid != null",
+    "update": "doc.creator_id == auth.uid",
+    "delete": "doc.creator_id == auth.uid",
+    "count": "doc.creator_id == auth.uid"
+  },
   "properties": {
     "_id": {
       "description": "ID，系统自动生成"
@@ -18,15 +25,24 @@
     },
     "creator_id": {
       "bsonType": "string",
-      "description": "创建者用户ID"
+      "description": "创建者用户ID",
+      "forceDefaultValue": {
+        "$env": "uid"
+      }
     },
     "created_at": {
       "bsonType": "timestamp",
-      "description": "创建时间"
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     },
     "updated_at": {
       "bsonType": "timestamp",
-      "description": "更新时间"
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     },
     "color": {
       "bsonType": "string",
@@ -84,7 +100,10 @@
     },
     "last_activity_at": {
       "bsonType": "timestamp",
-      "description": "最后活动时间"
+      "description": "最后活动时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
     }
   }
 }

@@ -132,6 +132,8 @@
 </template>
 
 <script>
+	const db = uniCloud.database()
+	
 	export default {
 		data() {
 			return {
@@ -202,20 +204,40 @@
 				this.creating = true
 
 				try {
-					const todoBookCo = uniCloud.importObject('todobook-co')
-					
+					// 准备项目册数据
 					const bookData = {
 						title: this.formData.title.trim(),
 						description: this.formData.description.trim(),
+						// creator_id 由数据库 schema 的 forceDefaultValue 自动填充
+						// created_at, updated_at 由数据库 schema 自动填充
 						color: this.formData.color,
 						icon: this.formData.icon,
 						is_shared: this.formData.shareType !== 'private',
-						share_type: this.formData.shareType
+						share_type: this.formData.shareType,
+						member_count: 1,
+						item_count: 0,
+						completed_count: 0,
+						sort_order: 0,
+						is_archived: false
+						// last_activity_at 由数据库 schema 自动填充
 					}
 
-					const result = await todoBookCo.createTodoBook(bookData)
+					// 创建项目册
+					const result = await db.collection('todobooks').add(bookData)
+					
+					if (result.result.inserted > 0) {
+						const bookId = result.result.insertedId
+						
+						// 添加创建者为所有者成员
+						await db.collection('todobook_members').add({
+							todobook_id: bookId,
+							// user_id 由数据库 schema 的 forceDefaultValue 自动填充
+							role: 'owner',
+							permissions: ['read', 'write', 'delete', 'manage_members', 'manage_settings'],
+							// joined_at, last_access_at 由数据库 schema 自动填充
+							is_active: true
+						})
 
-					if (result.code === 0) {
 						uni.showToast({
 							title: '创建成功',
 							icon: 'success'
@@ -225,7 +247,7 @@
 							uni.navigateBack()
 						}, 1500)
 					} else {
-						throw new Error(result.message || '创建失败')
+						throw new Error('创建失败')
 					}
 				} catch (error) {
 					console.error('创建项目册失败:', error)

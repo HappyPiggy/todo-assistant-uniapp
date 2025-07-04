@@ -14,79 +14,96 @@
 
 		<!-- 项目册列表 -->
 		<view class="todobooks-container">
-			<!-- 加载状态 -->
-			<view v-if="loading" class="loading-section">
-				<uni-load-more status="loading" />
-			</view>
-
-			<!-- 空状态 -->
-			<view v-else-if="filteredTodoBooks.length === 0" class="empty-section">
-				<view class="empty-icon">
-					<uni-icons color="#cccccc" size="80" type="folder" />
+			<unicloud-db 
+				v-slot:default="{data, loading, error}" 
+				ref="todoBooksDB"
+				:collection="collection"
+				:where="where"
+				:orderby="'sort_order asc, updated_at desc'"
+				:page-size="pageSize"
+				:page-current="page"
+				:options="loadOptions"
+				@load="onDataLoad">
+				
+				<!-- 加载状态 -->
+				<view v-if="loading" class="loading-section">
+					<uni-load-more status="loading" />
 				</view>
-				<text class="empty-text">{{ searchKeyword ? '没有找到相关项目册' : '还没有项目册，点击右下角创建吧' }}</text>
-			</view>
 
-			<!-- 项目册卡片列表 -->
-			<view v-else class="todobooks-list">
-				<view 
-					v-for="book in filteredTodoBooks" 
-					:key="book._id" 
-					class="todobook-card"
-					@click="openTodoBook(book)">
-					
-					<view class="card-header">
-						<view class="book-icon" :style="{ backgroundColor: book.color }">
-							<uni-icons color="#ffffff" size="24" :type="book.icon" />
-						</view>
-						<view class="book-info">
-							<text class="book-title">{{ book.title }}</text>
-							<text class="book-description" v-if="book.description">{{ book.description }}</text>
-						</view>
-						<view class="book-actions" @click.stop="showBookActions(book)">
-							<uni-icons color="#999999" size="20" type="more-filled" />
-						</view>
+				<!-- 错误状态 -->
+				<view v-else-if="error" class="error-section">
+					<text class="error-text">{{ error.message }}</text>
+				</view>
+
+				<!-- 空状态 -->
+				<view v-else-if="processedData.length === 0" class="empty-section">
+					<view class="empty-icon">
+						<uni-icons color="#cccccc" size="80" type="folder" />
 					</view>
+					<text class="empty-text">{{ searchKeyword ? '没有找到相关项目册' : '还没有项目册，点击右下角创建吧' }}</text>
+				</view>
 
-					<view class="card-stats">
-						<view class="stat-item">
-							<text class="stat-number">{{ book.task_stats?.total || 0 }}</text>
-							<text class="stat-label">总任务</text>
+				<!-- 项目册卡片列表 -->
+				<view v-else class="todobooks-list">
+					<view 
+						v-for="book in processedData" 
+						:key="book._id" 
+						class="todobook-card"
+						@click="openTodoBook(book)">
+						
+						<view class="card-header">
+							<view class="book-icon" :style="{ backgroundColor: book.color }">
+								<uni-icons color="#ffffff" size="24" :type="book.icon" />
+							</view>
+							<view class="book-info">
+								<text class="book-title">{{ book.title }}</text>
+								<text class="book-description" v-if="book.description">{{ book.description }}</text>
+							</view>
+							<view class="book-actions" @click.stop="showBookActions(book)">
+								<uni-icons color="#999999" size="20" type="more-filled" />
+							</view>
 						</view>
-						<view class="stat-item">
-							<text class="stat-number">{{ book.task_stats?.completed || 0 }}</text>
-							<text class="stat-label">已完成</text>
-						</view>
-						<view class="stat-item">
-							<text class="stat-number">{{ book.member_count || 1 }}</text>
-							<text class="stat-label">成员</text>
-						</view>
-						<view class="stat-item">
-							<text class="stat-number">{{ calculateProgress(book.task_stats) }}%</text>
-							<text class="stat-label">进度</text>
-						</view>
-					</view>
 
-					<view class="card-progress">
-						<view class="progress-bar">
-							<view class="progress-fill" :style="{ width: calculateProgress(book.task_stats) + '%', backgroundColor: book.color }"></view>
+						<view class="card-stats">
+							<view class="stat-item">
+								<text class="stat-number">{{ book.task_stats?.total || 0 }}</text>
+								<text class="stat-label">总任务</text>
+							</view>
+							<view class="stat-item">
+								<text class="stat-number">{{ book.task_stats?.completed || 0 }}</text>
+								<text class="stat-label">已完成</text>
+							</view>
+							<view class="stat-item">
+								<text class="stat-number">{{ book.member_count || 1 }}</text>
+								<text class="stat-label">成员</text>
+							</view>
+							<view class="stat-item">
+								<text class="stat-number">{{ calculateProgress(book.task_stats) }}%</text>
+								<text class="stat-label">进度</text>
+							</view>
 						</view>
-					</view>
 
-					<view class="card-footer">
-						<text class="last-activity">{{ formatTime(book.last_activity_at || book.updated_at) }}</text>
-						<view v-if="book.is_shared" class="share-badge">
-							<uni-icons color="#28a745" size="14" type="checkmarkempty" />
-							<text class="share-text">共享</text>
+						<view class="card-progress">
+							<view class="progress-bar">
+								<view class="progress-fill" :style="{ width: calculateProgress(book.task_stats) + '%', backgroundColor: book.color }"></view>
+							</view>
+						</view>
+
+						<view class="card-footer">
+							<text class="last-activity">{{ formatTime(book.last_activity_at || book.updated_at) }}</text>
+							<view v-if="book.is_shared" class="share-badge">
+								<uni-icons color="#28a745" size="14" type="checkmarkempty" />
+								<text class="share-text">共享</text>
+							</view>
 						</view>
 					</view>
 				</view>
-			</view>
-		</view>
 
-		<!-- 下拉刷新 -->
-		<view class="refresh-section" v-if="!loading">
-			<uni-load-more :status="loadMoreStatus" @clickLoadMore="loadMore" />
+				<!-- 下拉刷新 -->
+				<view class="refresh-section" v-if="!loading && hasMore">
+					<uni-load-more :status="loadMoreStatus" @clickLoadMore="loadMore" />
+				</view>
+			</unicloud-db>
 		</view>
 
 		<!-- 浮动添加按钮 -->
@@ -133,41 +150,63 @@
 		store
 	} from '@/uni_modules/uni-id-pages/common/store.js'
 	
+	const db = uniCloud.database()
+	
 	export default {
 		data() {
 			return {
 				searchKeyword: '',
-				loading: true,
-				todoBooks: [],
 				currentBook: null,
 				loadMoreStatus: 'more',
 				page: 1,
-				hasMore: true
+				hasMore: true,
+				pageSize: 10,
+				processedData: [],
+				loadOptions: {
+					noData: '<p style="text-align:center;color:#666">加载中...</p>'
+				}
 			}
 		},
 		computed: {
-			filteredTodoBooks() {
-				if (!this.searchKeyword) {
-					return this.todoBooks
-				}
-				const keyword = this.searchKeyword.toLowerCase()
-				return this.todoBooks.filter(book => 
-					book.title.toLowerCase().includes(keyword) ||
-					(book.description && book.description.toLowerCase().includes(keyword))
-				)
-			},
 			hasLogin() {
 				return store.hasLogin
+			},
+			where() {
+				// 简化查询条件：只查询用户创建的项目册，参与的项目册通过单独查询获取
+				let whereStr = `creator_id == $env.uid && is_archived == false`
+				
+				// 添加搜索条件
+				if (this.searchKeyword) {
+					const keyword = this.searchKeyword.replace(/'/g, "\\'") // 转义单引号
+					whereStr += ` && (title.indexOf('${keyword}') != -1 || description.indexOf('${keyword}') != -1)`
+				}
+				
+				return whereStr
+			},
+			collection() {
+				// 只查询项目册主表
+				return 'todobooks'
 			}
 		},
 		onLoad() {
-			this.loadTodoBooks()
+			// 检查登录状态
+			if (!this.hasLogin) {
+				uni.showToast({
+					title: '请先登录',
+					icon: 'none'
+				})
+				setTimeout(() => {
+					uni.navigateTo({
+						url: '/pages/login/login-withpwd'
+					})
+				}, 1500)
+			}
 		},
 		onShow() {
-			// 页面显示时刷新数据，稍微延迟确保token更新完成
-			setTimeout(() => {
-				this.refreshTodoBooks()
-			}, 200)
+			// 页面显示时刷新数据
+			if (this.hasLogin && this.$refs.todoBooksDB) {
+				this.$refs.todoBooksDB.loadData()
+			}
 		},
 		onPullDownRefresh() {
 			this.refreshTodoBooks()
@@ -176,143 +215,170 @@
 			this.loadMore()
 		},
 		methods: {
-			// 等待token更新的工具方法
-			async waitForValidToken(maxRetries = 5, retryInterval = 1000) {
-				for (let i = 0; i < maxRetries; i++) {
-					const currentUser = uniCloud.getCurrentUserInfo()
-					const storedToken = uni.getStorageSync('uni_id_token')
-					
-					if (currentUser.tokenExpired > Date.now()) {
-						return true
-					}
-					
-					console.log(`【调试】等待token更新，第${i + 1}次检查...`, currentUser.tokenExpired, storedToken ? storedToken.substring(0, 20) + '...' : 'null')
-					await new Promise(resolve => setTimeout(resolve, retryInterval))
-				}
-				
-				console.error('【调试】Token验证失败，超过最大重试次数')
-				return false
-			},
-
-			async loadTodoBooks(refresh = false) {
-				if (refresh) {
-					this.page = 1
-					this.hasMore = true
-					this.loadMoreStatus = 'more'
-				}
-
-				if (!this.hasMore) return
-
-				// 检查登录状态
-				if (!this.hasLogin) {
-					uni.showToast({
-						title: '请先登录',
-						icon: 'none'
-					})
-					setTimeout(() => {
-						uni.navigateTo({
-							url: '/pages/login/login-withpwd'
-						})
-					}, 1500)
+			// 处理数据加载完成
+			async onDataLoad(data) {
+				if (!data || data.length === 0) {
+					this.processedData = []
+					this.hasMore = false
+					this.loadMoreStatus = 'noMore'
+					uni.stopPullDownRefresh()
 					return
 				}
-
+				
+				// 处理数据，只有项目册主表数据
+				const ownedBooks = Array.isArray(data) ? data : [data]
+				
+				// 查询用户参与的项目册
+				let participatedBooks = []
 				try {
-					this.loading = refresh ? false : true
-					
-					// 等待token有效性
-					const hasValidToken = await this.waitForValidToken()
-					if (!hasValidToken) {
-						uni.showToast({
-							title: '登录状态异常，请重新登录',
-							icon: 'none'
+					// 获取用户参与的项目册 ID 列表
+					const memberResult = await db.collection('todobook_members')
+						.where({
+							user_id: db.env.uid,
+							is_active: true
 						})
-						setTimeout(() => {
-							uni.navigateTo({
-								url: '/pages/login/login-withpwd'
-							})
-						}, 1500)
-						return
-					}
+						.field({ todobook_id: true })
+						.get()
 					
-					// 确保使用正确的服务空间
-					const todoBookCo = uniCloud.importObject('todobook-co', {
-						spaceInfo: {
-							spaceId: '', // 使用默认服务空间
-							provider: 'alipay'
-						}
-					})
-					const result = await todoBookCo.getTodoBooks({
-						include_archived: false,
-						limit: 10,
-						skip: (this.page - 1) * 10
-					})
-
-					if (result.code === 0) {
-						if (refresh) {
-							this.todoBooks = result.data
-						} else {
-							this.todoBooks.push(...result.data)
-						}
-
-						if (result.data.length < 10) {
-							this.hasMore = false
-							this.loadMoreStatus = 'noMore'
-						}
-
-						this.page++
-					} else {
-						// 如果是token验证失败，跳转到登录页
-						if (result.code === 30202) {
-							uni.showToast({
-								title: '登录已过期，请重新登录',
-								icon: 'none'
-							})
-							setTimeout(() => {
-								uni.navigateTo({
-									url: '/pages/login/login-withpwd'
-								})
-							}, 1500)
-						} else {
-							uni.showToast({
-								title: result.message || '加载失败',
-								icon: 'error'
-							})
+					if (memberResult.result.data && memberResult.result.data.length > 0) {
+						const bookIds = memberResult.result.data.map(item => item.todobook_id)
+						
+						// 查询这些项目册的详细信息
+						if (bookIds.length > 0) {
+							let participatedWhere = `_id in [${bookIds.map(id => `"${id}"`).join(',')}] && is_archived == false`
+							
+							// 添加搜索条件
+							if (this.searchKeyword) {
+								const keyword = this.searchKeyword.replace(/'/g, "\\'")
+								participatedWhere += ` && (title.indexOf('${keyword}') != -1 || description.indexOf('${keyword}') != -1)`
+							}
+							
+							const participatedResult = await db.collection('todobooks')
+								.where(participatedWhere)
+								.orderBy('sort_order asc, updated_at desc')
+								.get()
+							
+							if (participatedResult.result.data) {
+								participatedBooks = participatedResult.result.data
+							}
 						}
 					}
 				} catch (error) {
-					console.error('加载项目册失败:', error)
-					uni.showToast({
-						title: '加载失败',
-						icon: 'error'
-					})
-				} finally {
-					this.loading = false
-					uni.stopPullDownRefresh()
+					console.error('查询参与的项目册失败:', error)
 				}
+				
+				// 合并用户创建的和参与的项目册，去重
+				const allBooks = [...ownedBooks]
+				participatedBooks.forEach(book => {
+					if (!allBooks.find(b => b._id === book._id)) {
+						allBooks.push(book)
+					}
+				})
+				
+				// 如果没有项目册，直接返回空数据
+				if (allBooks.length === 0) {
+					this.processedData = []
+					this.hasMore = false
+					this.loadMoreStatus = 'noMore'
+					uni.stopPullDownRefresh()
+					return
+				}
+				
+				// 获取所有项目册的 ID
+				const bookIds = allBooks.map(book => book._id)
+				
+				// 查询成员统计和任务统计
+				const [memberStats, taskStats] = await Promise.all([
+					this.getMemberStats(bookIds),
+					this.getTaskStats(bookIds)
+				])
+				
+				// 创建成员统计映射
+				const memberMap = {}
+				if (memberStats && memberStats.length > 0) {
+					memberStats.forEach(item => {
+						memberMap[item.todobook_id] = item.member_count
+					})
+				}
+				
+				// 创建任务统计映射
+				const taskMap = {}
+				if (taskStats && taskStats.length > 0) {
+					taskStats.forEach(item => {
+						if (!taskMap[item.todobook_id]) {
+							taskMap[item.todobook_id] = {
+								total: 0,
+								todo: 0,
+								in_progress: 0,
+								completed: 0
+							}
+						}
+						taskMap[item.todobook_id][item.status] = item.count
+						taskMap[item.todobook_id].total += item.count
+					})
+				}
+				
+				// 整合数据
+				this.processedData = allBooks.map(book => {
+					return {
+						...book,
+						member_count: memberMap[book._id] || 1,
+						task_stats: taskMap[book._id] || {
+							total: 0,
+							todo: 0,
+							in_progress: 0,
+							completed: 0
+						}
+					}
+				})
+				
+				// 更新分页状态
+				if (allBooks.length < this.pageSize) {
+					this.hasMore = false
+					this.loadMoreStatus = 'noMore'
+				} else {
+					this.loadMoreStatus = 'more'
+				}
+				
+				uni.stopPullDownRefresh()
 			},
 
 			async refreshTodoBooks() {
-				await this.loadTodoBooks(true)
+				this.page = 1
+				this.hasMore = true
+				this.loadMoreStatus = 'more'
+				this.processedData = []
+				
+				if (this.$refs.todoBooksDB) {
+					await this.$refs.todoBooksDB.loadData()
+				}
 			},
 
 			async loadMore() {
 				if (this.hasMore && this.loadMoreStatus !== 'loading') {
 					this.loadMoreStatus = 'loading'
-					await this.loadTodoBooks()
+					this.page++
+					
+					if (this.$refs.todoBooksDB) {
+						await this.$refs.todoBooksDB.loadMore()
+					}
 				}
 			},
 
 			onSearchInput(value) {
 				this.searchKeyword = value
+				// 触发重新查询
+				this.refreshTodoBooks()
 			},
 
 			onSearchCancel() {
 				this.searchKeyword = ''
+				this.refreshTodoBooks()
 			},
 
 			onSearchConfirm() {
-				// 搜索确认，可以添加搜索历史等功能
+				// 搜索确认，触发查询
+				this.refreshTodoBooks()
 			},
 
 			openTodoBook(book) {
@@ -351,7 +417,7 @@
 				})
 			},
 
-			archiveTodoBook() {
+			async archiveTodoBook() {
 				this.hideActionSheet()
 				uni.showModal({
 					title: '确认归档',
@@ -359,22 +425,25 @@
 					success: async (res) => {
 						if (res.confirm) {
 							try {
-								const todoBookCo = uniCloud.importObject('todobook-co')
-								const result = await todoBookCo.updateTodoBook(this.currentBook._id, {
-									is_archived: true,
-									archived_at: new Date()
-								})
+								// 使用 unicloud-db 直接更新
+								const updateResult = await db.collection('todobooks')
+									.doc(this.currentBook._id)
+									.update({
+										is_archived: true,
+										archived_at: new Date()
+									})
 
-								if (result.code === 0) {
+								if (updateResult.result.updated > 0) {
 									uni.showToast({
 										title: '归档成功',
 										icon: 'success'
 									})
 									this.refreshTodoBooks()
 								} else {
-									throw new Error(result.message)
+									throw new Error('归档失败')
 								}
 							} catch (error) {
+								console.error('归档失败:', error)
 								uni.showToast({
 									title: error.message || '归档失败',
 									icon: 'error'
@@ -385,7 +454,7 @@
 				})
 			},
 
-			deleteTodoBook() {
+			async deleteTodoBook() {
 				this.hideActionSheet()
 				uni.showModal({
 					title: '确认删除',
@@ -398,22 +467,31 @@
 									title: '删除中...'
 								})
 
-								const todoBookCo = uniCloud.importObject('todobook-co')
-								const result = await todoBookCo.deleteTodoBook(this.currentBook._id)
+								// 使用 unicloud-db 删除相关数据
+								const deletePromises = [
+									// 删除项目册
+									db.collection('todobooks').doc(this.currentBook._id).remove(),
+									// 删除成员关系
+									db.collection('todobook_members').where({
+										todobook_id: this.currentBook._id
+									}).remove(),
+									// 删除任务
+									db.collection('todoitems').where({
+										todobook_id: this.currentBook._id
+									}).remove()
+								]
+
+								await Promise.all(deletePromises)
 
 								uni.hideLoading()
-
-								if (result.code === 0) {
-									uni.showToast({
-										title: '删除成功',
-										icon: 'success'
-									})
-									this.refreshTodoBooks()
-								} else {
-									throw new Error(result.message)
-								}
+								uni.showToast({
+									title: '删除成功',
+									icon: 'success'
+								})
+								this.refreshTodoBooks()
 							} catch (error) {
 								uni.hideLoading()
+								console.error('删除失败:', error)
 								uni.showToast({
 									title: error.message || '删除失败',
 									icon: 'error'
@@ -448,6 +526,81 @@
 					return `${days}天前`
 				} else {
 					return time.toLocaleDateString()
+				}
+			},
+			
+			// 获取成员统计
+			async getMemberStats(bookIds) {
+				try {
+					const result = await db.collection('todobook_members')
+						.where({
+							todobook_id: db.command.in(bookIds),
+							is_active: true
+						})
+						.field({ todobook_id: true })
+						.get()
+					
+					// 手动统计每个项目册的成员数
+					const memberCounts = {}
+					if (result.result.data) {
+						result.result.data.forEach(member => {
+							if (!memberCounts[member.todobook_id]) {
+								memberCounts[member.todobook_id] = 0
+							}
+							memberCounts[member.todobook_id]++
+						})
+					}
+					
+					return Object.keys(memberCounts).map(todobook_id => ({
+						todobook_id,
+						member_count: memberCounts[todobook_id]
+					}))
+				} catch (error) {
+					console.error('获取成员统计失败:', error)
+					return []
+				}
+			},
+			
+			// 获取任务统计
+			async getTaskStats(bookIds) {
+				try {
+					const result = await db.collection('todoitems')
+						.where({
+							todobook_id: db.command.in(bookIds)
+						})
+						.field({ todobook_id: true, status: true })
+						.get()
+					
+					// 手动统计每个项目册的任务状态
+					const taskCounts = {}
+					if (result.result.data) {
+						result.result.data.forEach(task => {
+							if (!taskCounts[task.todobook_id]) {
+								taskCounts[task.todobook_id] = {}
+							}
+							if (!taskCounts[task.todobook_id][task.status]) {
+								taskCounts[task.todobook_id][task.status] = 0
+							}
+							taskCounts[task.todobook_id][task.status]++
+						})
+					}
+					
+					// 转换为数组格式
+					const results = []
+					Object.keys(taskCounts).forEach(todobook_id => {
+						Object.keys(taskCounts[todobook_id]).forEach(status => {
+							results.push({
+								todobook_id,
+								status,
+								count: taskCounts[todobook_id][status]
+							})
+						})
+					})
+					
+					return results
+				} catch (error) {
+					console.error('获取任务统计失败:', error)
+					return []
 				}
 			}
 		}
@@ -507,6 +660,19 @@
 	.empty-text {
 		font-size: 28rpx;
 		color: #999999;
+		text-align: center;
+	}
+
+	/* 错误状态 */
+	.error-section {
+		padding: 80rpx 40rpx;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.error-text {
+		font-size: 28rpx;
+		color: #ff4757;
 		text-align: center;
 	}
 

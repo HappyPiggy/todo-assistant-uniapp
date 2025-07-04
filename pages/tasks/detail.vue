@@ -108,7 +108,7 @@
 			</view>
 
 			<!-- 标签 -->
-			<view class="tags-section" v-if="task.tags && task.tags.length > 0">
+			<view class="tags-section" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
 				<view class="section-header">
 					<text class="section-title">标签</text>
 				</view>
