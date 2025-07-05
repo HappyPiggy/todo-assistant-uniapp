@@ -418,16 +418,19 @@
 			},
 
 			async archiveTodoBook() {
+				// 先保存要归档的项目册引用
+				const bookToArchive = this.currentBook
 				this.hideActionSheet()
+				
 				uni.showModal({
 					title: '确认归档',
 					content: '归档后的项目册将移动到归档列表中，确定要归档吗？',
 					success: async (res) => {
 						if (res.confirm) {
 							try {
-								// 使用 unicloud-db 直接更新
+								// 使用保存的引用而不是 this.currentBook
 								const updateResult = await db.collection('todobooks')
-									.doc(this.currentBook._id)
+									.doc(bookToArchive._id)
 									.update({
 										is_archived: true,
 										archived_at: new Date()
@@ -455,7 +458,10 @@
 			},
 
 			async deleteTodoBook() {
+				// 先保存要删除的项目册引用
+				const bookToDelete = this.currentBook
 				this.hideActionSheet()
+				
 				uni.showModal({
 					title: '确认删除',
 					content: '删除后无法恢复，确定要删除这个项目册吗？',
@@ -467,17 +473,17 @@
 									title: '删除中...'
 								})
 
-								// 使用 unicloud-db 删除相关数据
+								// 使用保存的引用而不是 this.currentBook
 								const deletePromises = [
 									// 删除项目册
-									db.collection('todobooks').doc(this.currentBook._id).remove(),
+									db.collection('todobooks').doc(bookToDelete._id).remove(),
 									// 删除成员关系
 									db.collection('todobook_members').where({
-										todobook_id: this.currentBook._id
+										todobook_id: bookToDelete._id
 									}).remove(),
 									// 删除任务
 									db.collection('todoitems').where({
-										todobook_id: this.currentBook._id
+										todobook_id: bookToDelete._id
 									}).remove()
 								]
 

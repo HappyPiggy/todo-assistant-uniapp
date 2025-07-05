@@ -1,5 +1,23 @@
 <template>
 	<view class="create-task">
+		<!-- 父任务查询 -->
+		<unicloud-db 
+			ref="parentTasksDB"
+			v-slot:default="{ data, loading, error }"
+			:collection="parentTasksCollection"
+			field="_id,title"
+			@load="onParentTasksLoaded">
+		</unicloud-db>
+		
+		<!-- 任务创建 -->
+		<unicloud-db 
+			ref="createTaskDB"
+			:collection="todoitemsCollection"
+			action="add"
+			@success="onTaskCreated"
+			@error="onCreateError">
+		</unicloud-db>
+		
 		<uni-forms ref="form" :model="formData" :rules="rules" label-position="top">
 			<!-- 基本信息 -->
 			<view class="form-section">
@@ -160,37 +178,36 @@
 				]
 			}
 		},
-		onLoad(options) {
-			this.bookId = options.bookId
-			if (this.bookId) {
-				this.loadAvailableParents()
-			}
-		},
-		methods: {
-			async loadAvailableParents() {
-				try {
-					// 使用 unicloud-db 直接查询任务列表
-					const result = await db.collection('todoitems')
+		computed: {
+			parentTasksCollection() {
+				if (!this.bookId) return null
+				return [
+					db.collection('todoitems')
 						.where({
 							todobook_id: this.bookId,
-							parent_id: null, // 只获取顶级任务
-							status: db.command.neq('completed') // 排除已完成任务
+							parent_id: null,
+							status: db.command.neq('completed')
 						})
-						.field({
-							_id: true,
-							title: true
-						})
+						.field('_id,title')
 						.orderBy('created_at', 'desc')
-						.get()
-
-					if (result.result.data && result.result.data.length > 0) {
-						this.availableParents = result.result.data.map(task => ({
-							value: task._id,
-							text: task.title
-						}))
-					}
-				} catch (error) {
-					console.error('加载可选父任务失败:', error)
+						.getTemp()
+				]
+			},
+			todoitemsCollection() {
+				return db.collection('todoitems')
+			}
+		},
+		onLoad(options) {
+			this.bookId = options.bookId
+		},
+		methods: {
+			onParentTasksLoaded(data) {
+				// 父任务数据加载完成
+				if (data && data.length > 0) {
+					this.availableParents = data.map(task => ({
+						value: task._id,
+						text: task.title
+					}))
 				}
 			},
 
@@ -210,20 +227,15 @@
 						todobook_id: this.bookId,
 						title: this.formData.title.trim(),
 						description: this.formData.description.trim(),
-						// creator_id 由数据库 schema 的 forceDefaultValue 自动填充，不需要手动设置
-						// assignee_id 默认指派给创建者，由后端处理
-						// created_at, updated_at, last_activity_at 由数据库 schema 自动填充
 						status: 'todo',
 						priority: this.formData.priority,
 						parent_id: this.formData.parent_id || null,
 						due_date: this.formData.due_date ? new Date(this.formData.due_date) : null,
 						tags: this.formData.tags || [],
 						sort_order: 0,
-						level: this.formData.parent_id ? 1 : 0, // 有父任务则为二级任务
+						level: this.formData.parent_id ? 1 : 0,
 						progress: 0,
 						actual_hours: 0,
-						attachments: [],
-						comments: [],
 						subtask_count: 0,
 						completed_subtask_count: 0,
 						is_recurring: false
@@ -234,38 +246,44 @@
 						taskData.estimated_hours = parseFloat(this.formData.estimated_hours)
 					}
 
-					// 创建任务
-					const result = await db.collection('todoitems').add(taskData)
-
-					if (result.result.inserted > 0) {
-						// 更新项目册的任务计数
-						await this.updateBookTaskCount()
-						
-						// 如果有父任务，更新父任务的子任务计数
-						if (this.formData.parent_id) {
-							await this.updateParentTaskCount(this.formData.parent_id)
-						}
-						
-						uni.showToast({
-							title: '创建成功',
-							icon: 'success'
-						})
-
-						setTimeout(() => {
-							uni.navigateBack()
-						}, 1500)
-					} else {
-						throw new Error('创建失败')
-					}
+					// 使用 unicloud-db 组件创建任务
+					await this.$refs.createTaskDB.add(taskData)
 				} catch (error) {
 					console.error('创建任务失败:', error)
-					uni.showToast({
-						title: error.message || '创建失败',
-						icon: 'error'
-					})
-				} finally {
 					this.creating = false
 				}
+			},
+			
+			onTaskCreated(e) {
+				// 任务创建成功事件处理
+				this.creating = false
+				
+				// 更新项目册的任务计数
+				this.updateBookTaskCount()
+				
+				// 如果有父任务，更新父任务的子任务计数
+				if (this.formData.parent_id) {
+					this.updateParentTaskCount(this.formData.parent_id)
+				}
+				
+				uni.showToast({
+					title: '创建成功',
+					icon: 'success'
+				})
+
+				setTimeout(() => {
+					uni.navigateBack()
+				}, 1500)
+			},
+			
+			onCreateError(e) {
+				// 任务创建失败事件处理
+				this.creating = false
+				console.error('创建任务失败:', e)
+				uni.showToast({
+					title: e.message || '创建失败',
+					icon: 'error'
+				})
 			},
 
 			cancel() {

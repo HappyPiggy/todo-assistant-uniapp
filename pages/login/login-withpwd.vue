@@ -124,7 +124,12 @@
 
 				uniIdCo.login(data).then(e => {
 					console.log('【调试】登录云函数返回结果:', JSON.stringify(e, null, 2))
-					e.uniIdRedirectUrl = 'pages/list/list'
+					// 直接跳转到 tabBar 页面
+					uni.switchTab({
+						url: '/pages/list/list'
+					})
+					// 仍然调用 loginSuccess 但不自动跳转
+					e.autoBack = false
 					this.loginSuccess(e)
 				}).catch(e => {
 					console.error('【调试】登录失败:', e)

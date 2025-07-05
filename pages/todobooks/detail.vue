@@ -225,14 +225,28 @@
 				return `_id == "${this.bookId}"`
 			},
 			bookColList() {
-				return [
-					db.collection('todobooks').where(this.bookWhere).getTemp()
-				]
+				console.log("bookColList - bookId:", this.bookId, "type:", typeof this.bookId)
+				if (!this.bookId) {
+					console.warn("bookId is empty or undefined")
+					return []
+				}
+				try {
+					const result = [
+						db.collection('todobooks').doc(this.bookId).getTemp()
+					]
+					console.log("bookColList - success:", result)
+					return result
+				} catch (error) {
+					console.error("bookColList - error:", error)
+					console.error("error details:", JSON.stringify(error, null, 2))
+					return []
+				}
 			},
 			tasksWhere() {
 				return `todobook_id == "${this.bookId}"`
 			},
 			tasksColList() {
+				console.error("tasksColList", this.bookId)
 				return [
 					db.collection('todoitems')
 						.where(this.tasksWhere)

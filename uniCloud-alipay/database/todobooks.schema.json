@@ -2,11 +2,11 @@
   "bsonType": "object",
   "required": ["title", "creator_id", "created_at"],
   "permission": {
-    "read": "doc.creator_id == auth.uid",
+    "read": "auth.uid != null && doc.creator_id == auth.uid",
     "create": "auth.uid != null",
-    "update": "doc.creator_id == auth.uid",
-    "delete": "doc.creator_id == auth.uid",
-    "count": "doc.creator_id == auth.uid"
+    "update": "auth.uid != null && doc.creator_id == auth.uid",
+    "delete": "auth.uid != null && doc.creator_id == auth.uid",
+    "count": "auth.uid != null"
   },
   "properties": {
     "_id": {

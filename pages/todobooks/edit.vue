@@ -278,7 +278,7 @@
 			},
 			bookColList() {
 				return [
-					db.collection('todobooks').where(this.bookWhere).getTemp()
+					db.collection('todobooks').doc(this.bookId).getTemp()
 				]
 			}
 		},

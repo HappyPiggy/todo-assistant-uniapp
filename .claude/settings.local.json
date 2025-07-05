@@ -20,7 +20,8 @@
       "Bash(git remote set-url:*)",
       "Bash(chmod:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:doc.dcloud.net.cn)"
     ],
     "deny": []
   }

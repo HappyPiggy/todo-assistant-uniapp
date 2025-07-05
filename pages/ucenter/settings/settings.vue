@@ -4,6 +4,7 @@
 		<uni-list class="mt10" :border="false">
 			<uni-list-item title="个人信息" to="/uni_modules/uni-id-pages/pages/userinfo/userinfo" link="navigateTo"></uni-list-item>
 			<uni-list-item v-if="userInfo.mobile" title="修改密码" :to="'/pages/ucenter/login-page/pwd-retrieve/pwd-retrieve?phoneNumber='+ userInfo.mobile" link="navigateTo"></uni-list-item>
+		   <button @click="openDebugPage" class="debug-btn clear-btn">数据库调试</button>
 		</uni-list>
 		<uni-list class="mt10" :border="false">
 		<!-- #ifndef H5 -->
@@ -16,6 +17,7 @@
 			<uni-list-item v-if="supportMode.includes('facial')" title="人脸识别" @click="startSoterAuthentication('facial')" link></uni-list-item>
 		<!-- #endif -->
 			<uni-list-item v-if="i18nEnable" title="切换语言" @click="changeLanguage" :rightText="currentLanguage" link></uni-list-item>
+			<!-- <uni-list-item title="数据库调试" @click="openDebugPage" link></uni-list-item> -->
 		</uni-list>
 		
 		<!-- 退出/登录 按钮 -->
@@ -237,6 +239,11 @@
 					fail: () => {},
 					complete: () => {}
 				});
+			},
+			openDebugPage(){
+				uni.navigateTo({
+					url: '/pages/debug/debug'
+				})
 			}
 		}
 	}

@@ -2,11 +2,11 @@
   "bsonType": "object",
   "required": ["todobook_id", "title", "creator_id", "created_at"],
   "permission": {
-    "read": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
+    "read": "auth.uid != null && doc.creator_id == auth.uid",
     "create": "auth.uid != null",
-    "update": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
-    "delete": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid",
-    "count": "get(`database.todobooks.${doc.todobook_id}`).creator_id == auth.uid"
+    "update": "auth.uid != null && doc.creator_id == auth.uid",
+    "delete": "auth.uid != null && doc.creator_id == auth.uid",
+    "count": "auth.uid != null"
   },
   "properties": {
     "_id": {
@@ -82,7 +82,6 @@
         "bsonType": "string",
         "maxLength": 20
       },
-      "default": [],
       "description": "标签列表"
     },
     "sort_order": {
@@ -198,7 +197,6 @@
         "interval": {
           "bsonType": "int",
           "minimum": 1,
-          "default": 1,
           "description": "循环间隔"
         },
         "end_date": {

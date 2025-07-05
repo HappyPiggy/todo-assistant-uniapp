@@ -155,11 +155,11 @@
 				},
 				colorOptions: [
 					{ value: '#007AFF', name: '蓝色' },
-					{ value: '#28a745', name: '绿色' },
-					{ value: '#ff9500', name: '橙色' },
+					{ value: '#28A745', name: '绿色' },
+					{ value: '#FF9500', name: '橙色' },
 					{ value: '#FF3B30', name: '红色' },
 					{ value: '#AF52DE', name: '紫色' },
-					{ value: '#FF9500', name: '黄色' },
+					{ value: '#FFCC00', name: '黄色' },
 					{ value: '#5AC8FA', name: '青色' },
 					{ value: '#FF2D92', name: '粉色' }
 				],
@@ -225,16 +225,14 @@
 					// 创建项目册
 					const result = await db.collection('todobooks').add(bookData)
 					
-					if (result.result.inserted > 0) {
-						const bookId = result.result.insertedId
+					if (result.result && result.result.id) {
+						const bookId = result.result.id
 						
 						// 添加创建者为所有者成员
 						await db.collection('todobook_members').add({
 							todobook_id: bookId,
-							// user_id 由数据库 schema 的 forceDefaultValue 自动填充
 							role: 'owner',
 							permissions: ['read', 'write', 'delete', 'manage_members', 'manage_settings'],
-							// joined_at, last_access_at 由数据库 schema 自动填充
 							is_active: true
 						})
 
@@ -251,8 +249,9 @@
 					}
 				} catch (error) {
 					console.error('创建项目册失败:', error)
+					console.error('错误详情:', JSON.stringify(error, null, 2))
 					uni.showToast({
-						title: error.message || '创建失败',
+						title: error.message || error.errMsg || '创建失败',
 						icon: 'error'
 					})
 				} finally {
