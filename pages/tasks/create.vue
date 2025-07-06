@@ -1,23 +1,5 @@
 <template>
 	<view class="create-task">
-		<!-- 父任务查询 -->
-		<unicloud-db 
-			ref="parentTasksDB"
-			v-slot:default="{ data, loading, error }"
-			:collection="parentTasksCollection"
-			field="_id,title"
-			@load="onParentTasksLoaded">
-		</unicloud-db>
-		
-		<!-- 任务创建 -->
-		<unicloud-db 
-			ref="createTaskDB"
-			:collection="todoitemsCollection"
-			action="add"
-			@success="onTaskCreated"
-			@error="onCreateError">
-		</unicloud-db>
-		
 		<uni-forms ref="form" :model="formData" :rules="rules" label-position="top">
 			<!-- 基本信息 -->
 			<view class="form-section">
@@ -178,28 +160,6 @@
 				]
 			}
 		},
-		computed: {
-			parentTasksCollection() {
-				if (!this.bookId || typeof this.bookId !== 'string') {
-					console.warn("bookId is empty, undefined or not string:", this.bookId)
-					return null
-				}
-				return [
-					db.collection('todoitems')
-						.where({
-							todobook_id: this.bookId,
-							parent_id: null,
-							status: db.command.neq('completed')
-						})
-						.field('_id,title')
-						.orderBy('created_at', 'desc')
-						.getTemp()
-				]
-			},
-			todoitemsCollection() {
-				return db.collection('todoitems')
-			}
-		},
 		onLoad(options) {
 			if (!options.bookId) {
 				uni.showToast({
@@ -210,15 +170,35 @@
 				return
 			}
 			this.bookId = options.bookId
+			this.loadParentTasks()
 		},
 		methods: {
-			onParentTasksLoaded(data) {
-				// 父任务数据加载完成
-				if (data && data.length > 0) {
-					this.availableParents = data.map(task => ({
-						value: task._id,
-						text: task.title
-					}))
+			// 加载父任务数据
+			async loadParentTasks() {
+				if (!this.bookId || typeof this.bookId !== 'string') {
+					console.warn("bookId is empty, undefined or not string:", this.bookId)
+					return
+				}
+				
+				try {
+					const res = await db.collection('todoitems')
+						.where({
+							todobook_id: this.bookId,
+							parent_id: null,
+							status: db.command.neq('completed')
+						})
+						.field('_id,title')
+						.orderBy('created_at', 'desc')
+						.get()
+						
+					if (res.result.data && res.result.data.length > 0) {
+						this.availableParents = res.result.data.map(task => ({
+							value: task._id,
+							text: task.title
+						}))
+					}
+				} catch (error) {
+					console.error('加载父任务失败:', error)
 				}
 			},
 
@@ -241,7 +221,7 @@
 						description: this.formData.description.trim(),
 						priority: this.formData.priority,
 						parent_id: this.formData.parent_id || null,
-						due_date: this.formData.due_date ? new Date(this.formData.due_date) : null,
+						due_date: this.formData.due_date ? new Date(this.formData.due_date).getTime() : null,
 						tags: this.formData.tags || [],
 						level: this.formData.parent_id ? 1 : 0
 					}
@@ -251,11 +231,14 @@
 						taskData.estimated_hours = parseFloat(this.formData.estimated_hours)
 					}
 
-					// 使用 unicloud-db 组件创建任务
-					await this.$refs.createTaskDB.add(taskData)
+					// 直接操作数据库创建任务
+					const result = await db.collection('todoitems').add(taskData)
+					
+					// 创建成功处理
+					this.onTaskCreated(result)
 				} catch (error) {
 					console.error('创建任务失败:', error)
-					this.creating = false
+					this.onCreateError(error)
 				}
 			},
 			
@@ -338,11 +321,20 @@
 			// 更新项目册的任务计数
 			async updateBookTaskCount() {
 				try {
+					// 先查询当前计数
+					const bookRes = await db.collection('todobooks')
+						.doc(this.bookId)
+						.field('item_count')
+						.get()
+						
+					const currentCount = bookRes.result.data[0]?.item_count || 0
+					
+					// 更新计数
 					await db.collection('todobooks')
 						.doc(this.bookId)
 						.update({
-							item_count: db.command.inc(1),
-							last_activity_at: new Date()
+							item_count: currentCount + 1,
+							last_activity_at: Date.now()
 						})
 				} catch (error) {
 					console.error('更新项目册任务计数失败:', error)
@@ -352,12 +344,21 @@
 			// 更新父任务的子任务计数
 			async updateParentTaskCount(parentId) {
 				try {
+					// 先查询当前计数
+					const taskRes = await db.collection('todoitems')
+						.doc(parentId)
+						.field('subtask_count')
+						.get()
+						
+					const currentCount = taskRes.result.data[0]?.subtask_count || 0
+					
+					// 更新计数
 					await db.collection('todoitems')
 						.doc(parentId)
 						.update({
-							subtask_count: db.command.inc(1),
-							updated_at: new Date(),
-							last_activity_at: new Date()
+							subtask_count: currentCount + 1,
+							updated_at: Date.now(),
+							last_activity_at: Date.now()
 						})
 				} catch (error) {
 					console.error('更新父任务子任务计数失败:', error)

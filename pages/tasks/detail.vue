@@ -310,11 +310,11 @@
 				try {
 					const updateData = {
 						status: newStatus,
-						updated_at: new Date()
+						updated_at: Date.now()
 					}
 					
 					if (newStatus === 'completed') {
-						updateData.completed_at = new Date()
+						updateData.completed_at = Date.now()
 						updateData.progress = 100
 					} else {
 						updateData.completed_at = null
@@ -357,11 +357,11 @@
 				try {
 					const updateData = {
 						status: newStatus,
-						updated_at: new Date()
+						updated_at: Date.now()
 					}
 					
 					if (newStatus === 'completed') {
-						updateData.completed_at = new Date()
+						updateData.completed_at = Date.now()
 						updateData.progress = 100
 					} else {
 						updateData.completed_at = null

@@ -338,7 +338,7 @@
 						description: this.formData.description.trim(),
 						color: this.formData.color,
 						icon: this.formData.icon,
-						updated_at: new Date()
+						updated_at: Date.now()
 					}
 
 					// 只有所有者才能修改共享设置

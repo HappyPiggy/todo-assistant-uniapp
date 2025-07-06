@@ -352,13 +352,13 @@
 
 				const updates = {
 					status: newStatus,
-					updated_at: new Date(),
-					last_activity_at: new Date()
+					updated_at: Date.now(),
+					last_activity_at: Date.now()
 				}
 
 				// 如果任务完成，设置完成时间和进度
 				if (newStatus === 'completed') {
-					updates.completed_at = new Date()
+					updates.completed_at = Date.now()
 					updates.progress = 100
 				} else {
 					updates.completed_at = null
@@ -410,7 +410,7 @@
 							.doc(this.bookId)
 							.update({
 								completed_count: db.command.inc(increment),
-								last_activity_at: new Date()
+								last_activity_at: Date.now()
 							})
 					}
 				} catch (error) {

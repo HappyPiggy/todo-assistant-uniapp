@@ -274,7 +274,7 @@ const todoBookActions = {
         if (task) {
           task.status = status
           if (status === 'completed') {
-            task.completed_at = new Date()
+            task.completed_at = Date.now()
             task.progress = 100
           } else {
             task.completed_at = null

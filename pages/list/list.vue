@@ -352,7 +352,7 @@
 									.doc(bookToArchive._id)
 									.update({
 										is_archived: true,
-										archived_at: new Date()
+										archived_at: Date.now()
 									})
 
 								if (updateResult.result.updated > 0) {
