@@ -4,7 +4,8 @@
 		<unicloud-db 
 			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
 			ref="bookDetailDB"
-			:collection="bookColList"
+			collection="todobooks"
+			:where="`_id == '${bookId}'`"
 			:getone="true"
 			@load="onBookLoad">
 			
@@ -79,7 +80,10 @@
 			<unicloud-db 
 				v-slot:default="{data: tasksData, loading: tasksLoading, error: tasksError}" 
 				ref="tasksDB"
-				:collection="tasksColList"
+				collection="todoitems"
+				:where="`todobook_id == '${bookId}'`"
+				field="_id,todobook_id,parent_id,title,description,creator_id,assignee_id,created_at,updated_at,due_date,completed_at,status,priority,tags,sort_order,level,progress,estimated_hours,actual_hours,subtask_count,completed_subtask_count,is_recurring,last_activity_at"
+				orderby="sort_order asc, created_at desc"
 				@load="onTasksLoad">
 				
 				<!-- 加载状态 -->
@@ -219,37 +223,6 @@
 			}
 		},
 		computed: {
-			bookColList() {
-				console.log("bookColList - bookId:", this.bookId, "type:", typeof this.bookId)
-				if (!this.bookId || typeof this.bookId !== 'string') {
-					console.warn("bookId is empty, undefined or not string:", this.bookId)
-					return null
-				}
-				try {
-					// 简化查询，仅保留必要的 where 条件
-					const query = db.collection('todobooks').where(`_id == "${this.bookId}"`).getTemp()
-					console.log("bookColList - query created successfully")
-					return [query]
-				} catch (error) {
-					console.error("bookColList - error creating query:", error)
-					return null
-				}
-			},
-			tasksColList() {
-				console.log("tasksColList - bookId:", this.bookId)
-				if (!this.bookId || typeof this.bookId !== 'string') {
-					console.warn("tasksColList - bookId is empty, undefined or not string:", this.bookId)
-					return []
-				}
-				// 直接在查询中包含 where 条件，不依赖 tasksWhere 计算属性
-				return [
-					db.collection('todoitems')
-						.where(`todobook_id == "${this.bookId}"`)
-						.field('_id,todobook_id,parent_id,title,description,creator_id,assignee_id,created_at,updated_at,due_date,completed_at,status,priority,tags,sort_order,level,progress,estimated_hours,actual_hours,subtask_count,completed_subtask_count,is_recurring,last_activity_at')
-						.orderBy('sort_order asc, created_at desc')
-						.getTemp()
-				]
-			},
 			filteredTasks() {
 				if (this.activeFilter === 'all') {
 					return this.tasks

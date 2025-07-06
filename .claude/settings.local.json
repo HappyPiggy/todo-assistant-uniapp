@@ -22,7 +22,12 @@
       "Bash(grep:*)",
       "Bash(node:*)",
       "WebFetch(domain:doc.dcloud.net.cn)",
-      "WebFetch(domain:uniapp.dcloud.io)"
+      "WebFetch(domain:uniapp.dcloud.io)",
+      "Bash(ssh-keygen:*)",
+      "Bash(ssh-add:*)",
+      "Bash(cat:*)",
+      "Bash(ssh:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

@@ -233,23 +233,17 @@
 				this.creating = true
 
 				try {
-					// 准备任务数据
+					// 准备任务数据，只包含必要字段和用户输入的字段
+					// Schema中的forceDefaultValue会自动填充creator_id、created_at、updated_at、last_activity_at
 					const taskData = {
 						todobook_id: this.bookId,
 						title: this.formData.title.trim(),
 						description: this.formData.description.trim(),
-						status: 'todo',
 						priority: this.formData.priority,
 						parent_id: this.formData.parent_id || null,
 						due_date: this.formData.due_date ? new Date(this.formData.due_date) : null,
 						tags: this.formData.tags || [],
-						sort_order: 0,
-						level: this.formData.parent_id ? 1 : 0,
-						progress: 0,
-						actual_hours: 0,
-						subtask_count: 0,
-						completed_subtask_count: 0,
-						is_recurring: false
+						level: this.formData.parent_id ? 1 : 0
 					}
 
 					// 添加预估工时

@@ -4,7 +4,9 @@
 		<unicloud-db 
 			ref="taskDB"
 			v-slot:default="{ data, loading, error }"
-			:collection="taskCollection"
+			collection="todoitems"
+			:where="`_id == '${taskId}'`"
+			:getone="true"
 			@load="onTaskLoaded">
 		</unicloud-db>
 		
@@ -12,14 +14,16 @@
 		<unicloud-db 
 			ref="subtasksDB"
 			v-slot:default="{ data, loading, error }"
-			:collection="subtasksCollection"
+			collection="todoitems"
+			:where="`parent_id == '${taskId}'`"
+			orderby="sort_order asc, created_at asc"
 			@load="onSubtasksLoaded">
 		</unicloud-db>
 		
 		<!-- 任务状态更新 -->
 		<unicloud-db 
 			ref="updateTaskDB"
-			:collection="taskUpdateCollection"
+			collection="todoitems"
 			action="update"
 			@success="onTaskUpdated"
 			@error="onUpdateError">
@@ -254,40 +258,6 @@
 				newComment: ''
 			}
 		},
-		computed: {
-			taskCollection() {
-				if (!this.taskId || typeof this.taskId !== 'string') {
-					console.warn("taskId is empty, undefined or not string:", this.taskId)
-					return null
-				}
-				console.log("taskCollection")
-				const db = uniCloud.database()
-				// 使用 where 查询代替 doc() 方法
-				return [
-					db.collection('todoitems')
-						.where(`_id == "${this.taskId}"`)
-						.getTemp()
-				]
-			},
-			subtasksCollection() {
-				return null
-				if (!this.taskId) return null
-				const db = uniCloud.database()
-				return [
-					db.collection('todoitems')
-						.where({
-							parent_id: this.taskId
-						})
-						.orderBy('sort_order', 'asc')
-						.orderBy('created_at', 'asc')
-						.getTemp()
-				]
-			},
-			taskUpdateCollection() {
-				const db = uniCloud.database()
-				return db.collection('todoitems')
-			}
-		},
 		onLoad(options) {
 			if (!options.id) {
 				uni.showToast({
@@ -303,8 +273,8 @@
 		methods: {
 			onTaskLoaded(data) {
 				// 任务数据加载完成
-				if (data && data.length > 0) {
-					this.task = data[0]
+				if (data) {
+					this.task = data
 					
 					// 获取负责人信息
 					if (this.task.assignee_id) {

@@ -17,11 +17,13 @@
 			<unicloud-db 
 				v-slot:default="{data, loading, error}" 
 				ref="todoBooksDB"
-				:collection="collection"
+				:collection="collectionList"
 				:where="where"
+				:field="fieldStr"
 				:orderby="'sort_order asc, updated_at desc'"
 				:page-size="pageSize"
 				:page-current="page"
+				:getcount="true"
 				:options="loadOptions"
 				@load="onDataLoad">
 				
@@ -66,11 +68,11 @@
 
 						<view class="card-stats">
 							<view class="stat-item">
-								<text class="stat-number">{{ book.task_stats?.total || 0 }}</text>
+								<text class="stat-number">{{ book.item_count || 0 }}</text>
 								<text class="stat-label">总任务</text>
 							</view>
 							<view class="stat-item">
-								<text class="stat-number">{{ book.task_stats?.completed || 0 }}</text>
+								<text class="stat-number">{{ book.completed_count || 0 }}</text>
 								<text class="stat-label">已完成</text>
 							</view>
 							<view class="stat-item">
@@ -78,14 +80,14 @@
 								<text class="stat-label">成员</text>
 							</view>
 							<view class="stat-item">
-								<text class="stat-number">{{ calculateProgress(book.task_stats) }}%</text>
+								<text class="stat-number">{{ calculateProgress(book) }}%</text>
 								<text class="stat-label">进度</text>
 							</view>
 						</view>
 
 						<view class="card-progress">
 							<view class="progress-bar">
-								<view class="progress-fill" :style="{ width: calculateProgress(book.task_stats) + '%', backgroundColor: book.color }"></view>
+								<view class="progress-fill" :style="{ width: calculateProgress(book) + '%', backgroundColor: book.color }"></view>
 							</view>
 						</view>
 
@@ -171,21 +173,19 @@
 			hasLogin() {
 				return store.hasLogin
 			},
-			where() {
-				// 简化查询条件：只查询用户创建的项目册，参与的项目册通过单独查询获取
-				let whereStr = `creator_id == $env.uid && is_archived == false`
-				
-				// 添加搜索条件
-				if (this.searchKeyword) {
-					const keyword = this.searchKeyword.replace(/'/g, "\\'") // 转义单引号
-					whereStr += ` && (title.indexOf('${keyword}') != -1 || description.indexOf('${keyword}') != -1)`
-				}
-				
-				return whereStr
-			},
-			collection() {
-				// 只查询项目册主表
+			collectionList() {
+				// 直接返回集合名，where条件和联表查询在where计算属性中处理
 				return 'todobooks'
+			},
+			where() {
+				// 构建查询条件，只查询用户创建的项目册
+				// 参与的项目册需要通过联表查询或其他方式处理
+				const searchCondition = this.buildWhereCondition()
+				return `creator_id == $env.uid && is_archived == false${searchCondition}`
+			},
+			fieldStr() {
+				// 指定要查询的字段
+				return '_id,title,description,creator_id,color,icon,is_shared,share_type,member_count,item_count,completed_count,sort_order,updated_at,last_activity_at'
 			}
 		},
 		onLoad() {
@@ -215,57 +215,30 @@
 			this.loadMore()
 		},
 		methods: {
+			// 构建查询条件
+			buildWhereCondition() {
+				if (this.searchKeyword) {
+					const keyword = this.searchKeyword.replace(/'/g, "\\'") // 转义单引号
+					return ` && (title.indexOf('${keyword}') != -1 || description.indexOf('${keyword}') != -1)`
+				}
+				return ''
+			},
+			
 			// 处理数据加载完成
-			async onDataLoad(data) {
+			async onDataLoad(data, ended, pagination) {
 				if (!data || data.length === 0) {
-					this.processedData = []
 					this.hasMore = false
 					this.loadMoreStatus = 'noMore'
 					uni.stopPullDownRefresh()
 					return
 				}
 				
-				// 处理数据，只有项目册主表数据
+				// 获取用户创建的项目册
 				const ownedBooks = Array.isArray(data) ? data : [data]
 				
-				// 查询用户参与的项目册
+				// 由于权限规则限制，暂时只显示用户创建的项目册
+				// TODO: 需要通过云函数或其他方式获取用户参与的项目册
 				let participatedBooks = []
-				try {
-					// 获取用户参与的项目册 ID 列表
-					const memberResult = await db.collection('todobook_members')
-						.where({
-							user_id: db.env.uid,
-							is_active: true
-						})
-						.field({ todobook_id: true })
-						.get()
-					
-					if (memberResult.result.data && memberResult.result.data.length > 0) {
-						const bookIds = memberResult.result.data.map(item => item.todobook_id)
-						
-						// 查询这些项目册的详细信息
-						if (bookIds.length > 0) {
-							let participatedWhere = `_id in [${bookIds.map(id => `"${id}"`).join(',')}] && is_archived == false`
-							
-							// 添加搜索条件
-							if (this.searchKeyword) {
-								const keyword = this.searchKeyword.replace(/'/g, "\\'")
-								participatedWhere += ` && (title.indexOf('${keyword}') != -1 || description.indexOf('${keyword}') != -1)`
-							}
-							
-							const participatedResult = await db.collection('todobooks')
-								.where(participatedWhere)
-								.orderBy('sort_order asc, updated_at desc')
-								.get()
-							
-							if (participatedResult.result.data) {
-								participatedBooks = participatedResult.result.data
-							}
-						}
-					}
-				} catch (error) {
-					console.error('查询参与的项目册失败:', error)
-				}
 				
 				// 合并用户创建的和参与的项目册，去重
 				const allBooks = [...ownedBooks]
@@ -275,65 +248,11 @@
 					}
 				})
 				
-				// 如果没有项目册，直接返回空数据
-				if (allBooks.length === 0) {
-					this.processedData = []
-					this.hasMore = false
-					this.loadMoreStatus = 'noMore'
-					uni.stopPullDownRefresh()
-					return
-				}
-				
-				// 获取所有项目册的 ID
-				const bookIds = allBooks.map(book => book._id)
-				
-				// 查询成员统计和任务统计
-				const [memberStats, taskStats] = await Promise.all([
-					this.getMemberStats(bookIds),
-					this.getTaskStats(bookIds)
-				])
-				
-				// 创建成员统计映射
-				const memberMap = {}
-				if (memberStats && memberStats.length > 0) {
-					memberStats.forEach(item => {
-						memberMap[item.todobook_id] = item.member_count
-					})
-				}
-				
-				// 创建任务统计映射
-				const taskMap = {}
-				if (taskStats && taskStats.length > 0) {
-					taskStats.forEach(item => {
-						if (!taskMap[item.todobook_id]) {
-							taskMap[item.todobook_id] = {
-								total: 0,
-								todo: 0,
-								in_progress: 0,
-								completed: 0
-							}
-						}
-						taskMap[item.todobook_id][item.status] = item.count
-						taskMap[item.todobook_id].total += item.count
-					})
-				}
-				
-				// 整合数据
-				this.processedData = allBooks.map(book => {
-					return {
-						...book,
-						member_count: memberMap[book._id] || 1,
-						task_stats: taskMap[book._id] || {
-							total: 0,
-							todo: 0,
-							in_progress: 0,
-							completed: 0
-						}
-					}
-				})
+				// 更新本地数据
+				this.processedData = allBooks
 				
 				// 更新分页状态
-				if (allBooks.length < this.pageSize) {
+				if (ended && participatedBooks.length === 0) {
 					this.hasMore = false
 					this.loadMoreStatus = 'noMore'
 				} else {
@@ -508,9 +427,9 @@
 				})
 			},
 
-			calculateProgress(taskStats) {
-				if (!taskStats || taskStats.total === 0) return 0
-				return Math.round((taskStats.completed / taskStats.total) * 100)
+			calculateProgress(book) {
+				if (!book.item_count || book.item_count === 0) return 0
+				return Math.round((book.completed_count / book.item_count) * 100)
 			},
 
 			formatTime(timeStr) {
@@ -532,81 +451,6 @@
 					return `${days}天前`
 				} else {
 					return time.toLocaleDateString()
-				}
-			},
-			
-			// 获取成员统计
-			async getMemberStats(bookIds) {
-				try {
-					const result = await db.collection('todobook_members')
-						.where({
-							todobook_id: db.command.in(bookIds),
-							is_active: true
-						})
-						.field({ todobook_id: true })
-						.get()
-					
-					// 手动统计每个项目册的成员数
-					const memberCounts = {}
-					if (result.result.data) {
-						result.result.data.forEach(member => {
-							if (!memberCounts[member.todobook_id]) {
-								memberCounts[member.todobook_id] = 0
-							}
-							memberCounts[member.todobook_id]++
-						})
-					}
-					
-					return Object.keys(memberCounts).map(todobook_id => ({
-						todobook_id,
-						member_count: memberCounts[todobook_id]
-					}))
-				} catch (error) {
-					console.error('获取成员统计失败:', error)
-					return []
-				}
-			},
-			
-			// 获取任务统计
-			async getTaskStats(bookIds) {
-				try {
-					const result = await db.collection('todoitems')
-						.where({
-							todobook_id: db.command.in(bookIds)
-						})
-						.field({ todobook_id: true, status: true })
-						.get()
-					
-					// 手动统计每个项目册的任务状态
-					const taskCounts = {}
-					if (result.result.data) {
-						result.result.data.forEach(task => {
-							if (!taskCounts[task.todobook_id]) {
-								taskCounts[task.todobook_id] = {}
-							}
-							if (!taskCounts[task.todobook_id][task.status]) {
-								taskCounts[task.todobook_id][task.status] = 0
-							}
-							taskCounts[task.todobook_id][task.status]++
-						})
-					}
-					
-					// 转换为数组格式
-					const results = []
-					Object.keys(taskCounts).forEach(todobook_id => {
-						Object.keys(taskCounts[todobook_id]).forEach(status => {
-							results.push({
-								todobook_id,
-								status,
-								count: taskCounts[todobook_id][status]
-							})
-						})
-					})
-					
-					return results
-				} catch (error) {
-					console.error('获取任务统计失败:', error)
-					return []
 				}
 			}
 		}

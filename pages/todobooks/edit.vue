@@ -3,7 +3,8 @@
 		<unicloud-db 
 			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
 			ref="bookDetailDB"
-			:collection="bookColList"
+			collection="todobooks"
+			:where="`_id == '${bookId}'`"
 			:getone="true"
 			@load="onBookLoad">
 			
@@ -268,18 +269,6 @@
 					{ value: 'private', text: '私有项目册' },
 					{ value: 'public', text: '公开项目册' },
 					{ value: 'member', text: '成员项目册' }
-				]
-			}
-		},
-		computed: {
-			bookColList() {
-				if (!this.bookId || typeof this.bookId !== 'string') {
-					console.warn("bookId is empty, undefined or not string:", this.bookId)
-					return []
-				}
-				// 参考 test-pages/detail.vue 的写法，直接在查询中包含 where 条件
-				return [
-					db.collection('todobooks').where(`_id == "${this.bookId}"`).getTemp()
 				]
 			}
 		},
