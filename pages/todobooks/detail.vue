@@ -5,7 +5,6 @@
 			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
 			ref="bookDetailDB"
 			:collection="bookColList"
-			:where="bookWhere"
 			:getone="true"
 			@load="onBookLoad">
 			
@@ -81,7 +80,6 @@
 				v-slot:default="{data: tasksData, loading: tasksLoading, error: tasksError}" 
 				ref="tasksDB"
 				:collection="tasksColList"
-				:where="tasksWhere"
 				@load="onTasksLoad">
 				
 				<!-- 加载状态 -->
@@ -221,35 +219,32 @@
 			}
 		},
 		computed: {
-			bookWhere() {
-				return `_id == "${this.bookId}"`
-			},
 			bookColList() {
 				console.log("bookColList - bookId:", this.bookId, "type:", typeof this.bookId)
-				if (!this.bookId) {
-					console.warn("bookId is empty or undefined")
-					return []
+				if (!this.bookId || typeof this.bookId !== 'string') {
+					console.warn("bookId is empty, undefined or not string:", this.bookId)
+					return null
 				}
 				try {
-					const result = [
-						db.collection('todobooks').doc(this.bookId).getTemp()
-					]
-					console.log("bookColList - success:", result)
-					return result
+					// 简化查询，仅保留必要的 where 条件
+					const query = db.collection('todobooks').where(`_id == "${this.bookId}"`).getTemp()
+					console.log("bookColList - query created successfully")
+					return [query]
 				} catch (error) {
-					console.error("bookColList - error:", error)
-					console.error("error details:", JSON.stringify(error, null, 2))
-					return []
+					console.error("bookColList - error creating query:", error)
+					return null
 				}
 			},
-			tasksWhere() {
-				return `todobook_id == "${this.bookId}"`
-			},
 			tasksColList() {
-				console.error("tasksColList", this.bookId)
+				console.log("tasksColList - bookId:", this.bookId)
+				if (!this.bookId || typeof this.bookId !== 'string') {
+					console.warn("tasksColList - bookId is empty, undefined or not string:", this.bookId)
+					return []
+				}
+				// 直接在查询中包含 where 条件，不依赖 tasksWhere 计算属性
 				return [
 					db.collection('todoitems')
-						.where(this.tasksWhere)
+						.where(`todobook_id == "${this.bookId}"`)
 						.field('_id,todobook_id,parent_id,title,description,creator_id,assignee_id,created_at,updated_at,due_date,completed_at,status,priority,tags,sort_order,level,progress,estimated_hours,actual_hours,subtask_count,completed_subtask_count,is_recurring,last_activity_at')
 						.orderBy('sort_order asc, created_at desc')
 						.getTemp()
@@ -281,7 +276,19 @@
 			}
 		},
 		onLoad(options) {
+			console.log('[onLoad] options:', options)
+			console.log('[onLoad] options.id:', options.id, 'type:', typeof options.id)
+			
+			if (!options.id) {
+				uni.showToast({
+					title: '缺少项目册ID',
+					icon: 'error'
+				})
+				uni.navigateBack()
+				return
+			}
 			this.bookId = options.id
+			console.log('[onLoad] this.bookId 设置为:', this.bookId)
 			// 等待 unicloud-db 组件自动加载数据
 		},
 		onShow() {

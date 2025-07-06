@@ -180,7 +180,10 @@
 		},
 		computed: {
 			parentTasksCollection() {
-				if (!this.bookId) return null
+				if (!this.bookId || typeof this.bookId !== 'string') {
+					console.warn("bookId is empty, undefined or not string:", this.bookId)
+					return null
+				}
 				return [
 					db.collection('todoitems')
 						.where({
@@ -198,6 +201,14 @@
 			}
 		},
 		onLoad(options) {
+			if (!options.bookId) {
+				uni.showToast({
+					title: '缺少项目册ID',
+					icon: 'error'
+				})
+				uni.navigateBack()
+				return
+			}
 			this.bookId = options.bookId
 		},
 		methods: {

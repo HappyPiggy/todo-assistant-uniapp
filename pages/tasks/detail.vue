@@ -256,12 +256,16 @@
 		},
 		computed: {
 			taskCollection() {
-				if (!this.taskId) return null
+				if (!this.taskId || typeof this.taskId !== 'string') {
+					console.warn("taskId is empty, undefined or not string:", this.taskId)
+					return null
+				}
 				console.log("taskCollection")
 				const db = uniCloud.database()
+				// 使用 where 查询代替 doc() 方法
 				return [
 					db.collection('todoitems')
-						.doc(this.taskId)
+						.where(`_id == "${this.taskId}"`)
 						.getTemp()
 				]
 			},
@@ -285,6 +289,14 @@
 			}
 		},
 		onLoad(options) {
+			if (!options.id) {
+				uni.showToast({
+					title: '缺少任务ID',
+					icon: 'error'
+				})
+				uni.navigateBack()
+				return
+			}
 			this.taskId = options.id
 			this.bookId = options.bookId
 		},

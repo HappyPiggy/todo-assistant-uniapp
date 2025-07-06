@@ -21,7 +21,8 @@
       "Bash(chmod:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "WebFetch(domain:doc.dcloud.net.cn)"
+      "WebFetch(domain:doc.dcloud.net.cn)",
+      "WebFetch(domain:uniapp.dcloud.io)"
     ],
     "deny": []
   }

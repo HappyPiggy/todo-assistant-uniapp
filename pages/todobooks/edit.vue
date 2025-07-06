@@ -4,7 +4,6 @@
 			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
 			ref="bookDetailDB"
 			:collection="bookColList"
-			:where="bookWhere"
 			:getone="true"
 			@load="onBookLoad">
 			
@@ -273,16 +272,26 @@
 			}
 		},
 		computed: {
-			bookWhere() {
-				return `_id == "${this.bookId}"`
-			},
 			bookColList() {
+				if (!this.bookId || typeof this.bookId !== 'string') {
+					console.warn("bookId is empty, undefined or not string:", this.bookId)
+					return []
+				}
+				// 参考 test-pages/detail.vue 的写法，直接在查询中包含 where 条件
 				return [
-					db.collection('todobooks').doc(this.bookId).getTemp()
+					db.collection('todobooks').where(`_id == "${this.bookId}"`).getTemp()
 				]
 			}
 		},
 		onLoad(options) {
+			if (!options.id) {
+				uni.showToast({
+					title: '缺少项目册ID',
+					icon: 'error'
+				})
+				uni.navigateBack()
+				return
+			}
 			this.bookId = options.id
 			// 等待 unicloud-db 组件自动加载数据
 		},

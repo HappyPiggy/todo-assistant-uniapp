@@ -7,6 +7,6 @@
 	  ],
 	  
 	"tokenSecret": "abc123",
-	"tokenExpiresIn": 7200,
-	"tokenExpiresThreshold": 3600
+	"tokenExpiresIn": 72000,
+	"tokenExpiresThreshold": 36000
 }
