@@ -2,10 +2,10 @@
 	"bsonType": "object",
 	"required": ["todobook_id", "title", "creator_id", "created_at"],
 	"permission": {
-		"read": "auth.uid != null && doc.creator_id == auth.uid",
+		"read": "auth.uid != null",
 		"create": "auth.uid != null",
-		"update": "auth.uid != null && doc.creator_id == auth.uid",
-		"delete": "auth.uid != null && doc.creator_id == auth.uid",
+		"update": "auth.uid != null",
+		"delete": "auth.uid != null",
 		"count": "auth.uid != null"
 	},
 	"properties": {

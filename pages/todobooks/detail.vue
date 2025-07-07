@@ -1,59 +1,56 @@
 <template>
 	<view class="detail-page">
 		<!-- 项目册基本信息 -->
-		<unicloud-db 
-			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
-			ref="bookDetailDB"
-			collection="todobooks"
-			:where="`_id == '${bookId}'`"
-			:getone="true"
-			@load="onBookLoad">
-			
-			<!-- 项目册头部信息 -->
-			<view class="book-header" v-if="!bookLoading && bookData">
-				<view class="header-top">
-					<view class="book-icon" :style="{ backgroundColor: bookData.color }">
-						<uni-icons color="#ffffff" size="32" :type="bookData.icon" />
-					</view>
-					<view class="book-meta">
-						<text class="book-title">{{ bookData.title }}</text>
-						<text class="book-description" v-if="bookData.description">{{ bookData.description }}</text>
-					</view>
-					<view class="header-actions" @click="showBookMenu">
-						<uni-icons color="#999999" size="24" type="more-filled" />
-					</view>
-				</view>
+		<!-- 加载状态 -->
+		<view v-if="bookLoading" class="loading-section">
+			<uni-load-more status="loading" />
+		</view>
 
-				<view class="progress-section">
-					<view class="progress-info">
-						<text class="progress-text">完成进度</text>
-						<text class="progress-percent">{{ overallProgress }}%</text>
-					</view>
-					<view class="progress-bar">
-						<view class="progress-fill" :style="{ width: overallProgress + '%', backgroundColor: bookData.color }"></view>
-					</view>
-				</view>
+		<!-- 错误状态 -->
+		<view v-else-if="bookError" class="error-section">
+			<text class="error-text">{{ bookError }}</text>
+		</view>
 
-				<view class="stats-section">
-					<view class="stat-item">
-						<text class="stat-number">{{ taskStats.total }}</text>
-						<text class="stat-label">总任务</text>
-					</view>
-					<view class="stat-item">
-						<text class="stat-number">{{ taskStats.completed }}</text>
-						<text class="stat-label">已完成</text>
-					</view>
-					<view class="stat-item">
-						<text class="stat-number">{{ taskStats.in_progress }}</text>
-						<text class="stat-label">进行中</text>
-					</view>
-					<view class="stat-item">
-						<text class="stat-number">{{ memberCount }}</text>
-						<text class="stat-label">成员</text>
-					</view>
+		<!-- 项目册头部信息 -->
+		<view class="book-header" v-else-if="bookData">
+			<view class="header-top">
+				<view class="book-icon" :style="{ backgroundColor: bookData.color }">
+					<uni-icons color="#ffffff" size="32" :type="bookData.icon" />
+				</view>
+				<view class="book-meta">
+					<text class="book-title">{{ bookData.title }}</text>
+					<text class="book-description" v-if="bookData.description">{{ bookData.description }}</text>
+				</view>
+				<view class="header-actions" @click="showBookMenu">
+					<uni-icons color="#999999" size="24" type="more-filled" />
 				</view>
 			</view>
-		</unicloud-db>
+
+			<view class="progress-section">
+				<view class="progress-info">
+					<text class="progress-text">完成进度</text>
+					<text class="progress-percent">{{ overallProgress }}%</text>
+				</view>
+				<view class="progress-bar">
+					<view class="progress-fill" :style="{ width: overallProgress + '%', backgroundColor: bookData.color }"></view>
+				</view>
+			</view>
+
+			<view class="stats-section">
+				<view class="stat-item">
+					<text class="stat-number">{{ taskStats.total }}</text>
+					<text class="stat-label">总任务</text>
+				</view>
+				<view class="stat-item">
+					<text class="stat-number">{{ taskStats.completed }}</text>
+					<text class="stat-label">已完成</text>
+				</view>
+				<view class="stat-item">
+					<text class="stat-number">{{ memberCount }}</text>
+					<text class="stat-label">成员</text>
+				</view>
+			</view>
+		</view>
 
 		<!-- 任务筛选标签 -->
 		<view class="filter-tabs">
@@ -77,99 +74,126 @@
 
 		<!-- 任务列表 -->
 		<view class="tasks-container">
-			<unicloud-db 
-				v-slot:default="{data: tasksData, loading: tasksLoading, error: tasksError}" 
-				ref="tasksDB"
-				collection="todoitems"
-				:where="`todobook_id == '${bookId}'`"
-				field="_id,todobook_id,parent_id,title,description,creator_id,assignee_id,created_at,updated_at,due_date,completed_at,status,priority,tags,sort_order,level,progress,estimated_hours,actual_hours,subtask_count,completed_subtask_count,is_recurring,last_activity_at"
-				orderby="sort_order asc, created_at desc"
-				@load="onTasksLoad">
-				
-				<!-- 加载状态 -->
-				<view v-if="tasksLoading" class="loading-section">
-					<uni-load-more status="loading" />
-				</view>
+			<!-- 加载状态 -->
+			<view v-if="tasksLoading" class="loading-section">
+				<uni-load-more status="loading" />
+			</view>
 
-				<!-- 错误状态 -->
-				<view v-else-if="tasksError" class="error-section">
-					<text class="error-text">{{ tasksError.message }}</text>
-				</view>
+			<!-- 错误状态 -->
+			<view v-else-if="tasksError" class="error-section">
+				<text class="error-text">{{ tasksError }}</text>
+			</view>
 
-				<!-- 空状态 -->
-				<view v-else-if="filteredTasks.length === 0" class="empty-section">
-					<view class="empty-icon">
-						<uni-icons color="#cccccc" size="60" type="list" />
-					</view>
-					<text class="empty-text">{{ getEmptyText() }}</text>
-					<view class="empty-action" @click="addTask" v-if="activeFilter === 'all'">
-						<text class="action-text">创建第一个任务</text>
-					</view>
+			<!-- 空状态 -->
+			<view v-else-if="filteredTasks.length === 0" class="empty-section">
+				<view class="empty-icon">
+					<uni-icons color="#cccccc" size="60" type="list" />
 				</view>
+				<text class="empty-text">{{ getEmptyText() }}</text>
+				<view class="empty-action" @click="addTask" v-if="activeFilter === 'all'">
+					<text class="action-text">创建第一个任务</text>
+				</view>
+			</view>
 
-				<!-- 任务卡片列表 -->
-				<view v-else class="tasks-list">
-					<view 
-						v-for="task in filteredTasks" 
-						:key="task._id"
-						class="task-card"
-						@click="openTask(task)">
-						
-						<view class="task-header">
-							<view class="task-checkbox" @click.stop="toggleTaskStatus(task)">
+			<!-- 任务卡片列表 -->
+			<view v-else class="tasks-list">
+				<view 
+					v-for="task in filteredTasks" 
+					:key="task._id"
+					class="task-card"
+					@click="task.subtask_count > 0 ? toggleTaskExpand(task) : null">
+					
+					<view class="task-header">
+						<view class="task-left">
+							<view class="task-expand" v-if="task.subtask_count > 0">
 								<uni-icons 
-									v-if="task.status === 'completed'"
-									color="#28a745" 
-									size="20" 
-									type="checkmarkempty" />
-								<uni-icons 
-									v-else-if="task.status === 'in_progress'"
-									color="#ffc107" 
-									size="20" 
-									type="loop" />
-								<uni-icons 
-									v-else
-									color="#cccccc" 
-									size="20" 
-									type="circle" />
+									color="#666666" 
+									size="16" 
+									:type="task.expanded ? 'arrowdown' : 'arrowright'" />
 							</view>
 							<view class="task-content">
 								<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
 								<text class="task-description" v-if="task.description">{{ task.description }}</text>
 							</view>
+						</view>
+						<view class="task-right">
 							<view class="task-priority" :class="task.priority">
 								<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
 							</view>
+							<view class="task-detail-btn" @click.stop="openTask(task)">
+								<uni-icons 
+									color="#999999" 
+									size="20" 
+									type="more-filled" />
+							</view>
+							<view class="task-status" @click.stop="toggleTaskStatus(task)">
+								<uni-icons 
+									v-if="task.status === 'completed'"
+									color="#28a745" 
+									size="24" 
+									type="checkmarkempty" />
+								<uni-icons 
+									v-else
+									color="#cccccc" 
+									size="24" 
+									type="circle" />
+							</view>
 						</view>
+					</view>
 
-						<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || (task.tags && task.tags.length > 0)">
-							<view class="meta-left">
-								<view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
-									<uni-icons color="#999999" size="14" type="calendar" />
-									<text class="due-text">{{ formatDueDate(task.due_date) }}</text>
-								</view>
-								<view class="subtasks" v-if="task.subtask_count > 0">
-									<uni-icons color="#999999" size="14" type="list" />
-									<text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
-								</view>
+					<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || (task.tags && task.tags.length > 0)">
+						<view class="meta-left">
+							<view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
+								<uni-icons color="#999999" size="14" type="calendar" />
+								<text class="due-text">{{ formatDueDate(task.due_date) }}</text>
 							</view>
-							<view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
-								<view v-for="tag in task.tags.slice(0, 2)" :key="tag" class="tag-item">
-									<text class="tag-text">{{ tag }}</text>
-								</view>
-								<text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+							<view class="subtasks" v-if="task.subtask_count > 0">
+								<uni-icons color="#999999" size="14" type="list" />
+								<text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
 							</view>
 						</view>
-
-						<view class="task-progress" v-if="task.progress > 0 && task.status !== 'completed'">
-							<view class="progress-bar-small">
-								<view class="progress-fill-small" :style="{ width: task.progress + '%' }"></view>
+						<view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
+							<view v-for="tag in task.tags.slice(0, 2)" :key="tag" class="tag-item">
+								<text class="tag-text">{{ tag }}</text>
 							</view>
-							<text class="progress-text-small">{{ task.progress }}%</text>
+							<text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+						</view>
+					</view>
+
+					<!-- 子任务列表 -->
+					<view v-if="task.expanded && task.subtasks && task.subtasks.length > 0" class="subtasks-container">
+						<view 
+							v-for="subtask in task.subtasks" 
+							:key="subtask._id"
+							class="subtask-item">
+							<view class="subtask-content">
+								<text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text>
+								<text class="subtask-description" v-if="subtask.description">{{ subtask.description }}</text>
+							</view>
+							<view class="subtask-actions">
+								<view class="subtask-detail-btn" @click.stop="openTask(subtask)">
+									<uni-icons 
+										color="#999999" 
+										size="18" 
+										type="more-filled" />
+								</view>
+								<view class="subtask-status" @click.stop="toggleTaskStatus(subtask)">
+									<uni-icons 
+										v-if="subtask.status === 'completed'"
+										color="#28a745" 
+										size="20" 
+										type="checkmarkempty" />
+									<uni-icons 
+										v-else
+										color="#cccccc" 
+										size="20" 
+										type="circle" />
+								</view>
+							</view>
 						</view>
 					</view>
 				</view>
-			</unicloud-db>
+			</view>
 		</view>
 
 		<!-- 项目册菜单弹窗 -->
@@ -205,19 +229,25 @@
 </template>
 
 <script>
-	const db = uniCloud.database()
-	
 	export default {
 		data() {
 			return {
 				bookId: '',
+				// 项目册数据和状态
+				bookData: null,
+				bookLoading: false,
+				bookError: null,
+				// 任务数据和状态
 				tasks: [],
+				tasksLoading: false,
+				tasksError: null,
+				// 成员数量
 				memberCount: 0,
+				// 筛选相关
 				activeFilter: 'all',
 				filterTabs: [
 					{ key: 'all', label: '全部', count: 0 },
 					{ key: 'todo', label: '待办', count: 0 },
-					{ key: 'in_progress', label: '进行中', count: 0 },
 					{ key: 'completed', label: '已完成', count: 0 }
 				]
 			}
@@ -227,18 +257,35 @@
 				if (this.activeFilter === 'all') {
 					return this.tasks
 				}
-				return this.tasks.filter(task => task.status === this.activeFilter)
+				
+				// 筛选逻辑
+				return this.tasks.filter(task => {
+					if (this.activeFilter === 'completed') {
+						// 已完成列表：只显示状态为completed的父任务
+						return task.status === 'completed'
+					} else if (this.activeFilter === 'todo') {
+						// 待办列表：显示状态不是completed的父任务
+						return task.status !== 'completed'
+					}
+					
+					return false
+				})
 			},
 			taskStats() {
 				const stats = {
-					total: this.tasks.length,
+					total: 0,
 					todo: 0,
-					in_progress: 0,
 					completed: 0
 				}
 
+				// 只统计父任务（顶级任务）
 				this.tasks.forEach(task => {
-					stats[task.status] = (stats[task.status] || 0) + 1
+					stats.total++
+					if (task.status === 'completed') {
+						stats.completed++
+					} else {
+						stats.todo++
+					}
 				})
 
 				return stats
@@ -262,84 +309,121 @@
 			}
 			this.bookId = options.id
 			console.log('[onLoad] this.bookId 设置为:', this.bookId)
-			// 等待 unicloud-db 组件自动加载数据
+			
+			// 加载项目册详情和任务数据
+			this.loadBookDetail()
+			this.loadTasks()
 		},
 		onShow() {
 			// 返回时刷新数据
-			if (this.bookId && this.$refs.bookDetailDB && this.$refs.tasksDB) {
-				this.$refs.bookDetailDB.loadData()
-				this.$refs.tasksDB.loadData()
+			if (this.bookId) {
+				this.refreshData()
 			}
 		},
 		onPullDownRefresh() {
 			this.refreshData()
 		},
 		methods: {
-			// 处理项目册信息加载完成
-			onBookLoad(data) {
-				if (data && data.title) {
-					// 设置页面标题
-					uni.setNavigationBarTitle({
-						title: data.title
-					})
-					
-					// 加载成员数量
-					this.loadMemberCount()
-				}
-				uni.stopPullDownRefresh()
-			},
-
-			// 处理任务列表加载完成
-			onTasksLoad(data) {
-				console.log('原始任务数据:', data)
-				// 确保数据格式正确，特别是 tags 字段
-				this.tasks = (data || []).map(task => {
-					console.log('处理任务:', task._id, '标签类型:', typeof task.tags, '标签值:', task.tags)
-					return {
-						...task,
-						tags: Array.isArray(task.tags) ? task.tags : [],
-						attachments: Array.isArray(task.attachments) ? task.attachments : [],
-						comments: Array.isArray(task.comments) ? task.comments : []
-					}
-				})
-				console.log('处理后的任务数据:', this.tasks)
-				this.updateFilterCounts()
-				uni.stopPullDownRefresh()
-			},
-
-			// 加载成员数量
-			async loadMemberCount() {
+			// 加载项目册详情
+			async loadBookDetail() {
+				if (this.bookLoading) return
+				
+				this.bookLoading = true
+				this.bookError = null
+				
 				try {
-					const result = await db.collection('todobook_members')
-						.where({
-							todobook_id: this.bookId,
-							is_active: true
-						})
-						.count()
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTodoBookDetail(this.bookId)
 					
-					this.memberCount = result.result.total || 1
+					if (result.code === 0) {
+						this.bookData = result.data.book
+						this.memberCount = result.data.members.length
+						
+						// 设置页面标题
+						if (this.bookData.title) {
+							uni.setNavigationBarTitle({
+								title: this.bookData.title
+							})
+						}
+					} else {
+						this.bookError = result.message || '获取项目册详情失败'
+						uni.showToast({
+							title: this.bookError,
+							icon: 'none'
+						})
+					}
 				} catch (error) {
-					console.error('获取成员数量失败:', error)
-					this.memberCount = 1
+					console.error('加载项目册详情失败:', error)
+					this.bookError = '网络错误，请重试'
+					uni.showToast({
+						title: '网络错误，请重试',
+						icon: 'none'
+					})
+				} finally {
+					this.bookLoading = false
+					uni.stopPullDownRefresh()
+				}
+			},
+
+			// 加载任务列表
+			async loadTasks() {
+				if (this.tasksLoading) return
+				
+				this.tasksLoading = true
+				this.tasksError = null
+				
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTodoBookDetail(this.bookId)
+					
+					if (result.code === 0) {
+						// 处理任务数据，确保格式正确
+						const allTasks = (result.data.tasks || []).map(task => {
+							return {
+								...task,
+								tags: Array.isArray(task.tags) ? task.tags : [],
+								attachments: Array.isArray(task.attachments) ? task.attachments : [],
+								comments: Array.isArray(task.comments) ? task.comments : [],
+								expanded: false,
+								subtasks: []
+							}
+						})
+						
+						// 组织父子关系：只显示父任务，子任务作为父任务的属性
+						this.tasks = this.organizeParentChildTasks(allTasks)
+						this.updateFilterCounts()
+					} else {
+						this.tasksError = result.message || '获取任务列表失败'
+						uni.showToast({
+							title: this.tasksError,
+							icon: 'none'
+						})
+					}
+				} catch (error) {
+					console.error('加载任务列表失败:', error)
+					this.tasksError = '网络错误，请重试'
+					uni.showToast({
+						title: '网络错误，请重试',
+						icon: 'none'
+					})
+				} finally {
+					this.tasksLoading = false
+					uni.stopPullDownRefresh()
 				}
 			},
 
 			// 刷新数据
 			async refreshData() {
-				if (this.$refs.bookDetailDB && this.$refs.tasksDB) {
-					await Promise.all([
-						this.$refs.bookDetailDB.loadData(),
-						this.$refs.tasksDB.loadData()
-					])
-					this.loadMemberCount()
-				}
+				await Promise.all([
+					this.loadBookDetail(),
+					this.loadTasks()
+				])
 			},
 
 			updateFilterCounts() {
 				this.filterTabs[0].count = this.taskStats.total
 				this.filterTabs[1].count = this.taskStats.todo
-				this.filterTabs[2].count = this.taskStats.in_progress
-				this.filterTabs[3].count = this.taskStats.completed
+				this.filterTabs[2].count = this.taskStats.completed
 			},
 
 			setActiveFilter(filter) {
@@ -347,42 +431,55 @@
 			},
 
 			async toggleTaskStatus(task) {
-				const newStatus = task.status === 'completed' ? 'todo' : 
-					(task.status === 'todo' ? 'in_progress' : 'completed')
-
-				const updates = {
-					status: newStatus,
-					updated_at: Date.now(),
-					last_activity_at: Date.now()
+				// 如果有子任务且不是全部完成，不允许直接完成父任务
+				if (task.subtask_count > 0 && task.completed_subtask_count < task.subtask_count && task.status !== 'completed') {
+					uni.showToast({
+						title: '请先完成所有子任务',
+						icon: 'none'
+					})
+					return
 				}
 
-				// 如果任务完成，设置完成时间和进度
+				const oldStatus = task.status
+				const newStatus = task.status === 'completed' ? 'todo' : 'completed'
+
+				// 先乐观更新UI
+				task.status = newStatus
+				task.updated_at = new Date()
+				task.last_activity_at = new Date()
+				
 				if (newStatus === 'completed') {
-					updates.completed_at = Date.now()
-					updates.progress = 100
+					task.completed_at = new Date()
 				} else {
-					updates.completed_at = null
-					if (newStatus === 'todo') {
-						updates.progress = 0
-					} else if (newStatus === 'in_progress') {
-						updates.progress = Math.max(task.progress || 0, 10)
-					}
+					task.completed_at = null
 				}
 
 				try {
-					const result = await db.collection('todoitems')
-						.doc(task._id)
-						.update(updates)
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.updateTodoItemStatus(task._id, newStatus)
 
-					if (result.result.updated > 0) {
-						// 更新本地数据
-						Object.assign(task, updates)
-						this.updateFilterCounts()
+					if (result.code === 0) {
+						// 更新统计数据
+						this.updateLocalStats(oldStatus, newStatus)
 						
-						// 更新项目册的完成计数
-						this.updateBookCompletedCount(task, newStatus)
+						// 处理父子任务关系的本地更新
+						this.handleLocalParentChildUpdate(task, newStatus)
+						
+						// 更新过滤器计数
+						this.updateFilterCounts()
 					} else {
-						throw new Error('更新失败')
+						// 如果失败，回滚本地更新
+						task.status = oldStatus
+						task.updated_at = new Date()
+						task.last_activity_at = new Date()
+						
+						if (oldStatus === 'completed') {
+							task.completed_at = new Date()
+						} else {
+							task.completed_at = null
+						}
+						
+						throw new Error(result.message || '更新失败')
 					}
 				} catch (error) {
 					console.error('更新任务状态失败:', error)
@@ -393,29 +490,124 @@
 				}
 			},
 
-			// 更新项目册的完成计数
-			async updateBookCompletedCount(task, newStatus) {
-				try {
-					const oldStatus = task.status
-					let increment = 0
-					
-					if (newStatus === 'completed' && oldStatus !== 'completed') {
-						increment = 1
-					} else if (newStatus !== 'completed' && oldStatus === 'completed') {
-						increment = -1
+			// 更新本地统计数据
+			updateLocalStats(oldStatus, newStatus) {
+				// 更新项目册的统计
+				if (newStatus === 'completed' && oldStatus !== 'completed') {
+					if (this.bookData) {
+						this.bookData.completed_count = (this.bookData.completed_count || 0) + 1
 					}
-					
-					if (increment !== 0) {
-						await db.collection('todobooks')
-							.doc(this.bookId)
-							.update({
-								completed_count: db.command.inc(increment),
-								last_activity_at: Date.now()
-							})
+				} else if (newStatus !== 'completed' && oldStatus === 'completed') {
+					if (this.bookData) {
+						this.bookData.completed_count = Math.max(0, (this.bookData.completed_count || 0) - 1)
 					}
-				} catch (error) {
-					console.error('更新项目册统计失败:', error)
 				}
+			},
+
+			// 处理父子任务关系的本地更新
+			handleLocalParentChildUpdate(task, newStatus) {
+				// 如果是子任务，更新父任务的完成子任务计数
+				if (task.parent_id) {
+					// 查找父任务
+					let parentTask = null
+					for (let i = 0; i < this.tasks.length; i++) {
+						if (this.tasks[i]._id === task.parent_id) {
+							parentTask = this.tasks[i]
+							break
+						}
+					}
+					
+					if (parentTask) {
+						// 更新父任务的完成子任务计数
+						if (newStatus === 'completed') {
+							parentTask.completed_subtask_count = (parentTask.completed_subtask_count || 0) + 1
+						} else {
+							parentTask.completed_subtask_count = Math.max(0, (parentTask.completed_subtask_count || 0) - 1)
+						}
+						
+						// 如果所有子任务都完成了，自动完成父任务
+						if (parentTask.completed_subtask_count === parentTask.subtask_count && parentTask.status !== 'completed') {
+							parentTask.status = 'completed'
+							parentTask.completed_at = new Date()
+							parentTask.updated_at = new Date()
+							// 更新统计
+							this.updateLocalStats('todo', 'completed')
+						}
+						// 如果父任务已完成但有子任务变为未完成，父任务回退
+						else if (parentTask.completed_subtask_count < parentTask.subtask_count && parentTask.status === 'completed') {
+							parentTask.status = 'todo'
+							parentTask.completed_at = null
+							parentTask.updated_at = new Date()
+							// 更新统计
+							this.updateLocalStats('completed', 'todo')
+						}
+					}
+				}
+				
+				// 如果是父任务且有子任务，更新子任务计数
+				if (task.subtask_count > 0 && task.subtasks) {
+					let completedCount = 0
+					task.subtasks.forEach(subtask => {
+						if (subtask.status === 'completed') {
+							completedCount++
+						}
+					})
+					task.completed_subtask_count = completedCount
+				}
+			},
+
+			toggleTaskExpand(task) {
+				this.$set(task, 'expanded', !task.expanded)
+			},
+
+			// 组织父子任务关系
+			organizeParentChildTasks(allTasks) {
+				// 创建任务映射
+				const taskMap = {}
+				allTasks.forEach(task => {
+					taskMap[task._id] = task
+				})
+				
+				// 分离父任务和子任务
+				const parentTasks = []
+				const childTasks = []
+				
+				allTasks.forEach(task => {
+					if (task.parent_id) {
+						childTasks.push(task)
+					} else {
+						parentTasks.push(task)
+					}
+				})
+				
+				// 将子任务关联到父任务
+				childTasks.forEach(childTask => {
+					const parentTask = taskMap[childTask.parent_id]
+					if (parentTask) {
+						parentTask.subtasks.push(childTask)
+					}
+				})
+				
+				// 对子任务进行排序
+				parentTasks.forEach(parent => {
+					if (parent.subtasks.length > 0) {
+						parent.subtasks.sort((a, b) => {
+							// 按照sort_order排序，如果没有则按创建时间
+							if (a.sort_order !== undefined && b.sort_order !== undefined) {
+								return a.sort_order - b.sort_order
+							}
+							return new Date(a.created_at) - new Date(b.created_at)
+						})
+					}
+				})
+				
+				// 返回只包含父任务的数组
+				return parentTasks.sort((a, b) => {
+					if (a.sort_order !== undefined && b.sort_order !== undefined) {
+						return a.sort_order - b.sort_order
+					}
+					return new Date(a.created_at) - new Date(b.created_at)
+				})
 			},
 
 			openTask(task) {
@@ -500,7 +692,6 @@
 				const map = {
 					all: '还没有任务，创建第一个吧',
 					todo: '没有待办任务',
-					in_progress: '没有进行中的任务',
 					completed: '还没有完成的任务'
 				}
 				return map[this.activeFilter] || '暂无数据'
@@ -765,23 +956,71 @@
 		transition: transform 0.1s ease;
 	}
 
+	/* 当任务有子任务时，显示指针手势 */
+	/* #ifndef APP-NVUE */
+	.task-card[data-has-subtasks="true"] {
+		cursor: pointer;
+	}
+	/* #endif */
+
 	.task-header {
 		flex-direction: row;
 		align-items: flex-start;
+		justify-content: space-between;
 		margin-bottom: 16rpx;
 	}
 
-	.task-checkbox {
-		width: 40rpx;
-		height: 40rpx;
+	.task-left {
+		flex-direction: row;
+		align-items: flex-start;
+		flex: 1;
+	}
+
+	.task-right {
+		flex-direction: row;
+		align-items: center;
+		gap: 12rpx;
+	}
+
+	.task-expand {
+		width: 32rpx;
+		height: 32rpx;
 		justify-content: center;
 		align-items: center;
-		margin-right: 16rpx;
+		margin-right: 12rpx;
 		margin-top: 4rpx;
 	}
 
 	.task-content {
 		flex: 1;
+	}
+
+	.task-status {
+		width: 44rpx;
+		height: 44rpx;
+		justify-content: center;
+		align-items: center;
+		background-color: #f8f8f8;
+		border-radius: 22rpx;
+		border: 1rpx solid #e8e8e8;
+	}
+
+	.task-status:active {
+		background-color: #e8e8e8;
+	}
+
+	.task-detail-btn {
+		width: 36rpx;
+		height: 36rpx;
+		justify-content: center;
+		align-items: center;
+		background-color: #f8f8f8;
+		border-radius: 18rpx;
+		margin-right: 12rpx;
+	}
+
+	.task-detail-btn:active {
+		background-color: #e8e8e8;
 	}
 
 	.task-title {
@@ -926,6 +1165,77 @@
 		font-size: 22rpx;
 		color: #999999;
 		min-width: 60rpx;
+	}
+
+	/* 子任务容器 */
+	.subtasks-container {
+		margin-top: 16rpx;
+		padding-top: 16rpx;
+		border-top: 1rpx solid #f0f0f0;
+		gap: 12rpx;
+	}
+
+	.subtask-item {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 16rpx;
+		background-color: #f8f8f8;
+		border-radius: 12rpx;
+		margin-left: 24rpx;
+	}
+
+	.subtask-item:active {
+		background-color: #f0f0f0;
+	}
+
+	.subtask-content {
+		flex: 1;
+	}
+
+	.subtask-title {
+		font-size: 28rpx;
+		color: #333333;
+		margin-bottom: 4rpx;
+	}
+
+	.subtask-title.completed {
+		color: #999999;
+		/* #ifndef APP-NVUE */
+		text-decoration: line-through;
+		/* #endif */
+	}
+
+	.subtask-description {
+		font-size: 24rpx;
+		color: #666666;
+		line-height: 1.4;
+	}
+
+	.subtask-actions {
+		flex-direction: row;
+		align-items: center;
+		gap: 12rpx;
+	}
+
+	.subtask-detail-btn {
+		width: 32rpx;
+		height: 32rpx;
+		justify-content: center;
+		align-items: center;
+		background-color: #f8f8f8;
+		border-radius: 16rpx;
+	}
+
+	.subtask-detail-btn:active {
+		background-color: #f0f0f0;
+	}
+
+	.subtask-status {
+		width: 36rpx;
+		height: 36rpx;
+		justify-content: center;
+		align-items: center;
 	}
 
 	/* 菜单弹窗 */

@@ -21,25 +21,29 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    console.log('【调试】Token验证结果:', {
-      code: payload.code,
-      errCode: payload.errCode,
-      errMsg: payload.errMsg,
-      uid: payload.uid,
-      tokenExpired: payload.tokenExpired
-    })
     
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       console.error('Token验证失败:', payload)
       return {
-        code: payload.code,
+        code: payload.code || 30202,
         message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
     const uid = payload.uid
     const db = uniCloud.database()
-    const { include_archived = false, limit = 20, skip = 0 } = options
+    const { 
+      include_archived = false, 
+      page = 1,
+      pageSize = 20,
+      keyword = ''
+    } = options
+    
+    // 参数验证
+    let validPage = page
+    let validPageSize = pageSize
+    if (validPage < 1) validPage = 1
+    if (validPageSize < 1 || validPageSize > 100) validPageSize = 20
 
     try {
       // 先获取用户参与的项目册ID列表
@@ -57,26 +61,54 @@ module.exports = {
         ]
       }
       
-      // 如果用户参与了其他项目册，添加到查询条件中
+      // 添加成员项目册
       if (memberBookIds.length > 0) {
         whereCondition.$or.push({ _id: db.command.in(memberBookIds) })
       }
-
+      
+      // 归档状态
       if (!include_archived) {
         whereCondition.is_archived = false
       }
-
-      const result = await db.collection('todobooks')
-        .where(whereCondition)
-        .orderBy('sort_order', 'asc')
-        .orderBy('updated_at', 'desc')
-        .skip(skip)
-        .limit(limit)
-        .get()
+      
+      // 搜索条件 - 仅搜索项目册标题，精确包含匹配
+      if (keyword && keyword.trim()) {
+        const trimmedKeyword = keyword.trim()
+        // 使用正则表达式进行包含匹配，忽略大小写
+        const escapedKeyword = trimmedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        whereCondition.$and = [{
+          title: {
+            $regex: escapedKeyword,
+            $options: 'i'
+          }
+        }]
+      }
+      
+      // 调试日志：打印查询条件
+      // console.log('【调试】搜索关键字:', keyword)
+      // console.log('【调试】最终查询条件:', JSON.stringify(whereCondition, null, 2))
+      
+      // 创建查询对象
+      const query = db.collection('todobooks').where(whereCondition)
+      
+      // 并行执行查询数据和总数
+      const [dataResult, countResult] = await Promise.all([
+        query
+          .orderBy('sort_order', 'asc')
+          .orderBy('updated_at', 'desc')
+          .skip((validPage - 1) * validPageSize)
+          .limit(validPageSize)
+          .get(),
+        query.count()
+      ])
+      
+      // 调试日志：打印查询结果
+      // console.log('【调试】查询返回的项目册数量:', dataResult.data.length)
+      // console.log('【调试】查询返回的项目册标题:', dataResult.data.map(book => book.title))
 
       // 获取每个项目册的成员信息和任务统计
       const todoBooks = await Promise.all(
-        result.data.map(async (book) => {
+        dataResult.data.map(async (book) => {
           const [memberResult, taskStatsResult] = await Promise.all([
             // 获取成员数量
             db.collection('todobook_members')
@@ -112,14 +144,26 @@ module.exports = {
           return {
             ...book,
             member_count: memberResult.total,
+            item_count: taskStats.total,
+            completed_count: taskStats.completed,
             task_stats: taskStats
           }
         })
       )
 
+      // 返回分页数据
       return {
         code: 0,
-        data: todoBooks
+        data: {
+          list: todoBooks,
+          pagination: {
+            page: validPage,
+            pageSize: validPageSize,
+            total: countResult.total,
+            totalPages: Math.ceil(countResult.total / validPageSize),
+            hasMore: dataResult.data.length === validPageSize
+          }
+        }
       }
     } catch (error) {
       console.error('获取项目册列表失败:', error)
@@ -143,10 +187,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -232,10 +276,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -325,10 +369,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -405,10 +449,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -508,10 +552,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -645,10 +689,10 @@ module.exports = {
     }
     
     const payload = await this.uniID.checkToken(token)
-    if (payload.code && payload.code > 0) {
+    if (payload.code !== 0) {
       return {
-        code: payload.code,
-        message: payload.message
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
       }
     }
 
@@ -706,20 +750,79 @@ module.exports = {
         last_activity_at: new Date()
       }
 
-      // 如果任务完成，设置完成时间和进度
+      // 如果任务完成，设置完成时间
       if (status === 'completed') {
         updates.completed_at = new Date()
-        updates.progress = 100
       } else {
         updates.completed_at = null
-        if (status === 'todo') {
-          updates.progress = 0
-        } else if (status === 'in_progress') {
-          updates.progress = Math.max(updates.progress || 0, 10)
-        }
       }
 
+      // 更新当前任务状态
       await db.collection('todoitems').doc(itemId).update(updates)
+
+      // 处理父子关系的状态联动
+      try {
+        // 如果是子任务状态变更，检查是否需要更新父任务
+        if (item.parent_id) {
+          // 获取父任务信息
+          const parentResult = await db.collection('todoitems').doc(item.parent_id).get()
+          if (parentResult.data.length > 0) {
+            const parentTask = parentResult.data[0]
+            
+            // 获取所有子任务
+            const childrenResult = await db.collection('todoitems')
+              .where({ parent_id: item.parent_id })
+              .get()
+            
+            if (childrenResult.data.length > 0) {
+              const children = childrenResult.data
+              const completedChildren = children.filter(child => 
+                child._id === item._id ? status === 'completed' : child.status === 'completed'
+              )
+              
+              // 更新父任务的子任务计数
+              const parentUpdates = {
+                completed_subtask_count: completedChildren.length,
+                updated_at: new Date(),
+                last_activity_at: new Date()
+              }
+              
+              // 如果所有子任务都完成了，自动完成父任务
+              if (completedChildren.length === children.length && parentTask.status !== 'completed') {
+                parentUpdates.status = 'completed'
+                parentUpdates.completed_at = new Date()
+              }
+              // 如果父任务已完成但有子任务变为未完成，父任务回退
+              else if (completedChildren.length < children.length && parentTask.status === 'completed') {
+                parentUpdates.status = 'todo'
+                parentUpdates.completed_at = null
+              }
+              
+              await db.collection('todoitems').doc(item.parent_id).update(parentUpdates)
+            }
+          }
+        }
+        
+        // 如果是父任务状态变更，更新子任务计数
+        if (item.subtask_count > 0) {
+          const childrenResult = await db.collection('todoitems')
+            .where({ parent_id: item._id })
+            .get()
+          
+          if (childrenResult.data.length > 0) {
+            const completedChildren = childrenResult.data.filter(child => child.status === 'completed')
+            
+            await db.collection('todoitems').doc(item._id).update({
+              completed_subtask_count: completedChildren.length,
+              updated_at: new Date(),
+              last_activity_at: new Date()
+            })
+          }
+        }
+      } catch (error) {
+        console.error('处理父子状态联动失败:', error)
+        // 不抛出异常，避免影响主要的状态更新流程
+      }
 
       // 更新项目册的完成计数
       if (status === 'completed' && item.status !== 'completed') {
@@ -748,6 +851,208 @@ module.exports = {
         code: 500,
         message: '更新任务状态失败'
       }
+    }
+  },
+
+  /**
+   * 处理父子任务状态联动
+   */
+  async handleParentChildStatusUpdate(task, newStatus) {
+    const db = uniCloud.database()
+    
+    try {
+      // 如果是子任务状态变更，检查是否需要更新父任务
+      if (task.parent_id) {
+        // 获取父任务信息
+        const parentResult = await db.collection('todoitems').doc(task.parent_id).get()
+        if (parentResult.data.length > 0) {
+          const parentTask = parentResult.data[0]
+          
+          // 获取所有子任务
+          const childrenResult = await db.collection('todoitems')
+            .where({ parent_id: task.parent_id })
+            .get()
+          
+          if (childrenResult.data.length > 0) {
+            const children = childrenResult.data
+            const completedChildren = children.filter(child => 
+              child._id === task._id ? newStatus === 'completed' : child.status === 'completed'
+            )
+            
+            // 更新父任务的子任务计数
+            const parentUpdates = {
+              completed_subtask_count: completedChildren.length,
+              updated_at: new Date(),
+              last_activity_at: new Date()
+            }
+            
+            // 如果所有子任务都完成了，自动完成父任务
+            if (completedChildren.length === children.length && parentTask.status !== 'completed') {
+              parentUpdates.status = 'completed'
+              parentUpdates.completed_at = new Date()
+            }
+            // 如果父任务已完成但有子任务变为未完成，父任务回退
+            else if (completedChildren.length < children.length && parentTask.status === 'completed') {
+              parentUpdates.status = 'todo'
+              parentUpdates.completed_at = null
+            }
+            
+            await db.collection('todoitems').doc(task.parent_id).update(parentUpdates)
+          }
+        }
+      }
+      
+      // 如果是父任务状态变更，更新子任务计数
+      if (task.subtask_count > 0) {
+        const childrenResult = await db.collection('todoitems')
+          .where({ parent_id: task._id })
+          .get()
+        
+        if (childrenResult.data.length > 0) {
+          const completedChildren = childrenResult.data.filter(child => child.status === 'completed')
+          
+          await db.collection('todoitems').doc(task._id).update({
+            completed_subtask_count: completedChildren.length,
+            updated_at: new Date(),
+            last_activity_at: new Date()
+          })
+        }
+      }
+    } catch (error) {
+      console.error('处理父子状态联动失败:', error)
+      // 不抛出异常，避免影响主要的状态更新流程
+    }
+  },
+
+  /**
+   * 获取任务详情（包含子任务）
+   */
+  async getTaskDetail(taskId) {
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code !== 0) {
+      return {
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
+      }
+    }
+
+    const uid = payload.uid
+    const db = uniCloud.database()
+
+    try {
+      // 获取任务详情
+      const taskResult = await db.collection('todoitems')
+        .where({ _id: taskId })
+        .get()
+
+      if (taskResult.data.length === 0) {
+        return {
+          code: 404,
+          message: '任务不存在'
+        }
+      }
+
+      const task = taskResult.data[0]
+
+      // 检查权限：用户是否有权访问此任务所属的项目册
+      // 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是项目册创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: task.todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true
+      } else {
+        // 检查是否是项目册成员
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: task.todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('read')
+        }
+      }
+      
+      if (!hasPermission) {
+        return {
+          code: 403,
+          message: '没有访问权限'
+        }
+      }
+
+      // 获取子任务
+      const subtasksResult = await db.collection('todoitems')
+        .where({ parent_id: taskId })
+        .orderBy('sort_order', 'asc')
+        .orderBy('created_at', 'asc')
+        .get()
+
+      return {
+        code: 0,
+        data: {
+          task: task,
+          subtasks: subtasksResult.data
+        }
+      }
+    } catch (error) {
+      console.error('获取任务详情失败:', error)
+      return {
+        code: 500,
+        message: '获取任务详情失败'
+      }
+    }
+  },
+
+  /**
+   * 检查任务权限
+   */
+  async checkTaskPermission(userId, todoBookId) {
+    const db = uniCloud.database()
+    
+    try {
+      // 检查是否是项目册创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todoBookId, creator_id: userId })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        return true
+      }
+
+      // 检查是否是项目册成员
+      const memberResult = await db.collection('todobook_members')
+        .where({
+          todobook_id: todoBookId,
+          user_id: userId,
+          is_active: true
+        })
+        .get()
+
+      if (memberResult.data.length > 0) {
+        const member = memberResult.data[0]
+        return member.permissions.includes('read')
+      }
+
+      return false
+    } catch (error) {
+      console.error('检查任务权限失败:', error)
+      return false
     }
   },
 

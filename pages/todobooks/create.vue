@@ -132,8 +132,6 @@
 </template>
 
 <script>
-	const db = uniCloud.database()
-	
 	export default {
 		data() {
 			return {
@@ -201,61 +199,64 @@
 					return
 				}
 
-				this.creating = true
+				// 准备项目册数据
+				const bookData = {
+					title: this.formData.title.trim(),
+					description: this.formData.description.trim(),
+					color: this.formData.color,
+					icon: this.formData.icon,
+					is_shared: this.formData.shareType !== 'private',
+					share_type: this.formData.shareType
+				}
 
+				// 乐观更新：立即返回并显示成功消息
+				uni.showToast({
+					title: '创建中...',
+					icon: 'loading',
+					duration: 10000 // 设置较长时间，后续会手动关闭
+				})
+
+				// 立即返回列表页
+				setTimeout(() => {
+					uni.navigateBack()
+				}, 300)
+
+				// 异步创建项目册
+				this.createTodoBookAsync(bookData)
+			},
+
+			async createTodoBookAsync(bookData) {
 				try {
-					// 准备项目册数据
-					const bookData = {
-						title: this.formData.title.trim(),
-						description: this.formData.description.trim(),
-						// creator_id 由数据库 schema 的 forceDefaultValue 自动填充
-						// created_at, updated_at 由数据库 schema 自动填充
-						color: this.formData.color,
-						icon: this.formData.icon,
-						is_shared: this.formData.shareType !== 'private',
-						share_type: this.formData.shareType,
-						member_count: 1,
-						item_count: 0,
-						completed_count: 0,
-						sort_order: 0,
-						is_archived: false
-						// last_activity_at 由数据库 schema 自动填充
-					}
-
-					// 创建项目册
-					const result = await db.collection('todobooks').add(bookData)
+					// 使用云对象创建项目册
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.createTodoBook(bookData)
 					
-					if (result.result && result.result.id) {
-						const bookId = result.result.id
-						
-						// 添加创建者为所有者成员
-						await db.collection('todobook_members').add({
-							todobook_id: bookId,
-							role: 'owner',
-							permissions: ['read', 'write', 'delete', 'manage_members', 'manage_settings'],
-							is_active: true
-						})
-
+					// 隐藏loading提示
+					uni.hideToast()
+					
+					if (result.code === 0) {
+						// 创建成功，显示成功提示
 						uni.showToast({
 							title: '创建成功',
-							icon: 'success'
+							icon: 'success',
+							duration: 1500
 						})
-
-						setTimeout(() => {
-							uni.navigateBack()
-						}, 1500)
 					} else {
-						throw new Error('创建失败')
+						// 创建失败，显示错误
+						uni.showToast({
+							title: result.message || '创建失败',
+							icon: 'error',
+							duration: 2000
+						})
 					}
 				} catch (error) {
 					console.error('创建项目册失败:', error)
-					console.error('错误详情:', JSON.stringify(error, null, 2))
+					uni.hideToast()
 					uni.showToast({
-						title: error.message || error.errMsg || '创建失败',
-						icon: 'error'
+						title: error.message || error.errMsg || '网络错误',
+						icon: 'error',
+						duration: 2000
 					})
-				} finally {
-					this.creating = false
 				}
 			},
 

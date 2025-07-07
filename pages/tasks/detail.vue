@@ -1,33 +1,5 @@
 <template>
 	<view class="task-detail">
-		<!-- 任务详情查询 -->
-		<unicloud-db 
-			ref="taskDB"
-			v-slot:default="{ data, loading, error }"
-			collection="todoitems"
-			:where="`_id == '${taskId}'`"
-			:getone="true"
-			@load="onTaskLoaded">
-		</unicloud-db>
-		
-		<!-- 子任务查询 -->
-		<unicloud-db 
-			ref="subtasksDB"
-			v-slot:default="{ data, loading, error }"
-			collection="todoitems"
-			:where="`parent_id == '${taskId}'`"
-			orderby="sort_order asc, created_at asc"
-			@load="onSubtasksLoaded">
-		</unicloud-db>
-		
-		<!-- 任务状态更新 -->
-		<unicloud-db 
-			ref="updateTaskDB"
-			collection="todoitems"
-			action="update"
-			@success="onTaskUpdated"
-			@error="onUpdateError">
-		</unicloud-db>
 		
 		<view v-if="loading" class="loading-section">
 			<uni-load-more status="loading" />
@@ -43,11 +15,6 @@
 							color="#28a745" 
 							size="32" 
 							type="checkmarkempty" />
-						<uni-icons 
-							v-else-if="task.status === 'in_progress'"
-							color="#ffc107" 
-							size="32" 
-							type="loop" />
 						<uni-icons 
 							v-else
 							color="#cccccc" 
@@ -68,14 +35,24 @@
 					</view>
 				</view>
 
-				<!-- 进度条 -->
-				<view class="progress-section" v-if="task.progress > 0 && task.status !== 'completed'">
-					<view class="progress-info">
-						<text class="progress-label">完成进度</text>
-						<text class="progress-percent">{{ task.progress }}%</text>
+				<!-- 父子关系信息 -->
+				<view class="relations-section" v-if="parentTask || subtasks.length > 0">
+					<view class="section-header">
+						<text class="section-title">任务关系</text>
 					</view>
-					<view class="progress-bar">
-						<view class="progress-fill" :style="{ width: task.progress + '%' }"></view>
+					<view class="relations-content">
+						<view class="relation-item" v-if="parentTask" @click="openParentTask">
+							<view class="relation-icon">
+								<uni-icons color="#666666" size="16" type="arrowup" />
+							</view>
+							<text class="relation-text">父任务：{{ parentTask.title }}</text>
+						</view>
+						<view class="relation-item" v-if="subtasks.length > 0">
+							<view class="relation-icon">
+								<uni-icons color="#666666" size="16" type="arrowdown" />
+							</view>
+							<text class="relation-text">子任务：{{ subtasks.length }}个</text>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -253,8 +230,10 @@
 				bookId: '',
 				task: null,
 				subtasks: [],
+				parentTask: null,
 				assigneeInfo: null,
 				loading: true,
+				error: null,
 				newComment: ''
 			}
 		},
@@ -269,29 +248,55 @@
 			}
 			this.taskId = options.id
 			this.bookId = options.bookId
+			
+			// 加载任务详情
+			this.loadTaskDetail()
 		},
 		methods: {
-			onTaskLoaded(data) {
-				// 任务数据加载完成
-				if (data) {
-					this.task = data
+			// 加载任务详情
+			async loadTaskDetail() {
+				this.loading = true
+				this.error = null
+				
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTaskDetail(this.taskId)
 					
-					// 获取负责人信息
-					if (this.task.assignee_id) {
-						this.loadAssigneeInfo()
-					}
+					if (result.code === 0) {
+						this.task = result.data.task
+						this.subtasks = result.data.subtasks || []
+						
+						// 加载父任务信息
+						if (this.task.parent_id) {
+							this.loadParentTask()
+						}
+						
+						// 获取负责人信息
+						if (this.task.assignee_id) {
+							this.loadAssigneeInfo()
+						}
 
-					// 设置页面标题
-					uni.setNavigationBarTitle({
-						title: this.task.title
+						// 设置页面标题
+						uni.setNavigationBarTitle({
+							title: this.task.title
+						})
+					} else {
+						this.error = result.message || '获取任务详情失败'
+						uni.showToast({
+							title: this.error,
+							icon: 'none'
+						})
+					}
+				} catch (error) {
+					console.error('加载任务详情失败:', error)
+					this.error = '网络错误，请重试'
+					uni.showToast({
+						title: '网络错误，请重试',
+						icon: 'none'
 					})
+				} finally {
+					this.loading = false
 				}
-				this.loading = false
-			},
-			
-			onSubtasksLoaded(data) {
-				// 子任务数据加载完成
-				this.subtasks = data || []
 			},
 
 			async loadAssigneeInfo() {
@@ -303,88 +308,99 @@
 				}
 			},
 
+			async loadParentTask() {
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTaskDetail(this.task.parent_id)
+					
+					if (result.code === 0) {
+						this.parentTask = result.data.task
+					}
+				} catch (error) {
+					console.error('加载父任务失败:', error)
+				}
+			},
+
+			openParentTask() {
+				if (this.parentTask) {
+					uni.navigateTo({
+						url: `/pages/tasks/detail?id=${this.parentTask._id}&bookId=${this.bookId}`
+					})
+				}
+			},
+
 			async toggleStatus() {
-				const newStatus = this.task.status === 'completed' ? 'todo' : 
-					(this.task.status === 'todo' ? 'in_progress' : 'completed')
+				// 如果有子任务且不是全部完成，不允许直接完成父任务
+				if (this.subtasks.length > 0 && this.task.completed_subtask_count < this.task.subtask_count && this.task.status !== 'completed') {
+					uni.showToast({
+						title: '请先完成所有子任务',
+						icon: 'none'
+					})
+					return
+				}
+
+				const newStatus = this.task.status === 'completed' ? 'todo' : 'completed'
 
 				try {
-					const updateData = {
-						status: newStatus,
-						updated_at: Date.now()
-					}
-					
-					if (newStatus === 'completed') {
-						updateData.completed_at = Date.now()
-						updateData.progress = 100
-					} else {
-						updateData.completed_at = null
-						updateData.progress = newStatus === 'in_progress' ? Math.max(this.task.progress || 0, 10) : 0
-					}
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.updateTodoItemStatus(this.taskId, newStatus)
 
-					await this.$refs.updateTaskDB.update(this.taskId, updateData)
+					if (result.code === 0) {
+						// 更新本地数据
+						this.task.status = newStatus
+						this.task.updated_at = new Date()
+						
+						if (newStatus === 'completed') {
+							this.task.completed_at = new Date()
+						} else {
+							this.task.completed_at = null
+						}
+						
+						uni.showToast({
+							title: '状态更新成功',
+							icon: 'success'
+						})
+					} else {
+						throw new Error(result.message || '更新失败')
+					}
 				} catch (error) {
+					console.error('更新任务状态失败:', error)
 					uni.showToast({
 						title: error.message || '更新失败',
 						icon: 'error'
 					})
 				}
 			},
-			
-			onTaskUpdated(e) {
-				// 任务更新成功事件处理
-				this.task.status = e.status || this.task.status
-				this.task.completed_at = e.completed_at
-				this.task.progress = e.progress || this.task.progress
-				
-				uni.showToast({
-					title: '状态更新成功',
-					icon: 'success'
-				})
-			},
-			
-			onUpdateError(e) {
-				// 任务更新失败事件处理
-				console.error('更新任务失败:', e)
-				uni.showToast({
-					title: e.message || '更新失败',
-					icon: 'error'
-				})
-			},
 
 			async toggleSubtaskStatus(subtask) {
 				const newStatus = subtask.status === 'completed' ? 'todo' : 'completed'
 
 				try {
-					const updateData = {
-						status: newStatus,
-						updated_at: Date.now()
-					}
-					
-					if (newStatus === 'completed') {
-						updateData.completed_at = Date.now()
-						updateData.progress = 100
-					} else {
-						updateData.completed_at = null
-						updateData.progress = 0
-					}
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.updateTodoItemStatus(subtask._id, newStatus)
 
-					await this.$refs.updateTaskDB.update(subtask._id, updateData)
-					
-					// 本地更新状态
-					subtask.status = newStatus
-					
-					// 更新父任务的子任务完成数量
-					if (newStatus === 'completed') {
-						this.task.completed_subtask_count++
+					if (result.code === 0) {
+						// 本地更新状态
+						subtask.status = newStatus
+						subtask.updated_at = new Date()
+						
+						if (newStatus === 'completed') {
+							subtask.completed_at = new Date()
+							this.task.completed_subtask_count++
+						} else {
+							subtask.completed_at = null
+							this.task.completed_subtask_count--
+						}
+						
+						uni.showToast({
+							title: '状态更新成功',
+							icon: 'success'
+						})
 					} else {
-						this.task.completed_subtask_count--
+						throw new Error(result.message || '更新失败')
 					}
-					
-					uni.showToast({
-						title: '状态更新成功',
-						icon: 'success'
-					})
 				} catch (error) {
+					console.error('更新子任务状态失败:', error)
 					uni.showToast({
 						title: error.message || '更新失败',
 						icon: 'error'
@@ -676,41 +692,42 @@
 		padding: 10rpx;
 	}
 
-	/* 进度区域 */
-	.progress-section {
+	/* 关系区域 */
+	.relations-section {
 		border-top: 1rpx solid #f0f0f0;
 		padding-top: 24rpx;
 	}
 
-	.progress-info {
+	.relations-content {
+		gap: 16rpx;
+	}
+
+	.relation-item {
 		flex-direction: row;
-		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 12rpx;
+		padding: 16rpx;
+		background-color: #f8f8f8;
+		border-radius: 12rpx;
 	}
 
-	.progress-label {
-		font-size: 28rpx;
-		color: #666666;
-	}
-
-	.progress-percent {
-		font-size: 28rpx;
-		color: #007AFF;
-		font-weight: 600;
-	}
-
-	.progress-bar {
-		height: 8rpx;
+	.relation-item:active {
 		background-color: #f0f0f0;
-		border-radius: 4rpx;
-		overflow: hidden;
 	}
 
-	.progress-fill {
-		height: 100%;
-		background-color: #007AFF;
-		transition: width 0.3s ease;
+	.relation-icon {
+		width: 32rpx;
+		height: 32rpx;
+		background-color: #ffffff;
+		border-radius: 16rpx;
+		justify-content: center;
+		align-items: center;
+		margin-right: 12rpx;
+	}
+
+	.relation-text {
+		font-size: 28rpx;
+		color: #333333;
+		flex: 1;
 	}
 
 	/* 描述区域 */

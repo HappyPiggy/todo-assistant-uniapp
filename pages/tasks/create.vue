@@ -88,7 +88,7 @@
 			</view>
 
 			<!-- 父任务选择 -->
-			<view class="form-section" v-if="availableParents.length > 0">
+			<view class="form-section" v-if="availableParents.length > 0 || formData.parent_id">
 				<view class="section-header">
 					<text class="section-title">父任务</text>
 				</view>
@@ -126,8 +126,6 @@
 </template>
 
 <script>
-	const db = uniCloud.database()
-	
 	export default {
 		data() {
 			return {
@@ -170,6 +168,12 @@
 				return
 			}
 			this.bookId = options.bookId
+			
+			// 如果传入了父任务ID，设置默认值
+			if (options.parentId) {
+				this.formData.parent_id = options.parentId
+			}
+			
 			this.loadParentTasks()
 		},
 		methods: {
@@ -181,18 +185,29 @@
 				}
 				
 				try {
-					const res = await db.collection('todoitems')
-						.where({
-							todobook_id: this.bookId,
-							parent_id: null,
-							status: db.command.neq('completed')
-						})
-						.field('_id,title')
-						.orderBy('created_at', 'desc')
-						.get()
+					// 使用云对象获取可用的父任务
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTodoBookDetail(this.bookId)
+					
+					if (result.code === 0 && result.data.tasks) {
+						console.log('所有任务数量:', result.data.tasks.length)
+						console.log('任务列表:', result.data.tasks)
 						
-					if (res.result.data && res.result.data.length > 0) {
-						this.availableParents = res.result.data.map(task => ({
+						// 筛选出可作为父任务的任务
+						// 1. 不能选择已完成的任务
+						// 2. 不能选择有父任务的任务（避免多层嵌套）
+						const availableTasks = result.data.tasks.filter(task => {
+							// 过滤已完成的任务
+							if (task.status === 'completed') return false
+							// 过滤已经有父任务的任务（只允许一层父子关系）
+							if (task.parent_id) return false
+							return true
+						})
+						
+						console.log('可选父任务数量:', availableTasks.length)
+						console.log('可选父任务:', availableTasks)
+						
+						this.availableParents = availableTasks.map(task => ({
 							value: task._id,
 							text: task.title
 						}))
@@ -210,58 +225,89 @@
 					return
 				}
 
-				this.creating = true
+				// 准备任务数据
+				const taskData = {
+					todobook_id: this.bookId,
+					title: this.formData.title.trim(),
+					description: this.formData.description.trim(),
+					priority: this.formData.priority,
+					parent_id: this.formData.parent_id || null,
+					due_date: this.formData.due_date,
+					tags: this.formData.tags || []
+				}
 
+				// 添加预估工时
+				if (this.formData.estimated_hours) {
+					taskData.estimated_hours = parseFloat(this.formData.estimated_hours)
+				}
+
+				// 乐观更新：立即返回并显示成功消息
+				uni.showToast({
+					title: '创建中...',
+					icon: 'loading',
+					duration: 10000 // 设置较长时间，后续会手动关闭
+				})
+
+				// 立即返回列表页
+				setTimeout(() => {
+					uni.navigateBack()
+				}, 300)
+
+				// 异步创建任务
+				this.createTaskAsync(taskData)
+			},
+
+			async createTaskAsync(taskData) {
 				try {
-					// 准备任务数据，只包含必要字段和用户输入的字段
-					// Schema中的forceDefaultValue会自动填充creator_id、created_at、updated_at、last_activity_at
-					const taskData = {
-						todobook_id: this.bookId,
-						title: this.formData.title.trim(),
-						description: this.formData.description.trim(),
-						priority: this.formData.priority,
-						parent_id: this.formData.parent_id || null,
-						due_date: this.formData.due_date ? new Date(this.formData.due_date).getTime() : null,
-						tags: this.formData.tags || [],
-						level: this.formData.parent_id ? 1 : 0
-					}
-
-					// 添加预估工时
-					if (this.formData.estimated_hours) {
-						taskData.estimated_hours = parseFloat(this.formData.estimated_hours)
-					}
-
-					// 直接操作数据库创建任务
-					const result = await db.collection('todoitems').add(taskData)
+					// 使用云对象创建任务
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.createTodoItem(taskData)
 					
-					// 创建成功处理
-					this.onTaskCreated(result)
+					// 隐藏loading提示
+					uni.hideToast()
+					
+					if (result.code === 0) {
+						// 创建成功，显示成功提示
+						uni.showToast({
+							title: '创建成功',
+							icon: 'success',
+							duration: 1500
+						})
+					} else {
+						// 创建失败，显示错误
+						uni.showToast({
+							title: result.message || '创建失败',
+							icon: 'error',
+							duration: 2000
+						})
+					}
 				} catch (error) {
 					console.error('创建任务失败:', error)
-					this.onCreateError(error)
+					uni.hideToast()
+					uni.showToast({
+						title: error.message || '网络错误',
+						icon: 'error',
+						duration: 2000
+					})
 				}
 			},
 			
-			onTaskCreated(e) {
+			onTaskCreated(result) {
 				// 任务创建成功事件处理
 				this.creating = false
 				
-				// 更新项目册的任务计数
-				this.updateBookTaskCount()
-				
-				// 如果有父任务，更新父任务的子任务计数
-				if (this.formData.parent_id) {
-					this.updateParentTaskCount(this.formData.parent_id)
-				}
-				
-				uni.showToast({
-					title: '创建成功',
-					icon: 'success'
-				})
+				if (result.code === 0) {
+					uni.showToast({
+						title: '创建成功',
+						icon: 'success'
+					})
 
-				setTimeout(() => {
-					uni.navigateBack()
-				}, 1500)
+					setTimeout(() => {
+						uni.navigateBack()
+					}, 1500)
+				} else {
+					this.onCreateError({ message: result.message || '创建失败' })
+				}
 			},
 			
 			onCreateError(e) {
@@ -318,52 +364,6 @@
 				this.newTag = ''
 			},
 			
-			// 更新项目册的任务计数
-			async updateBookTaskCount() {
-				try {
-					// 先查询当前计数
-					const bookRes = await db.collection('todobooks')
-						.doc(this.bookId)
-						.field('item_count')
-						.get()
-						
-					const currentCount = bookRes.result.data[0]?.item_count || 0
-					
-					// 更新计数
-					await db.collection('todobooks')
-						.doc(this.bookId)
-						.update({
-							item_count: currentCount + 1,
-							last_activity_at: Date.now()
-						})
-				} catch (error) {
-					console.error('更新项目册任务计数失败:', error)
-				}
-			},
-			
-			// 更新父任务的子任务计数
-			async updateParentTaskCount(parentId) {
-				try {
-					// 先查询当前计数
-					const taskRes = await db.collection('todoitems')
-						.doc(parentId)
-						.field('subtask_count')
-						.get()
-						
-					const currentCount = taskRes.result.data[0]?.subtask_count || 0
-					
-					// 更新计数
-					await db.collection('todoitems')
-						.doc(parentId)
-						.update({
-							subtask_count: currentCount + 1,
-							updated_at: Date.now(),
-							last_activity_at: Date.now()
-						})
-				} catch (error) {
-					console.error('更新父任务子任务计数失败:', error)
-				}
-			}
 		}
 	}
 </script>

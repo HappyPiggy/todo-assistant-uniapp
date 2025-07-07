@@ -399,33 +399,25 @@
 									title: '删除中...'
 								})
 
-								// 使用 unicloud-db 删除相关数据
-								const deletePromises = [
-									// 删除项目册
-									db.collection('todobooks').doc(this.bookId).remove(),
-									// 删除成员关系
-									db.collection('todobook_members').where({
-										todobook_id: this.bookId
-									}).remove(),
-									// 删除任务
-									db.collection('todoitems').where({
-										todobook_id: this.bookId
-									}).remove()
-								]
-
-								await Promise.all(deletePromises)
+								const todoBooksObj = uniCloud.importObject('todobook-co')
+								const result = await todoBooksObj.deleteTodoBook(this.bookId)
 
 								uni.hideLoading()
-								uni.showToast({
-									title: '删除成功',
-									icon: 'success'
-								})
-
-								setTimeout(() => {
-									uni.reLaunch({
-										url: '/pages/list/list'
+								
+								if (result.code === 0) {
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
 									})
-								}, 1500)
+
+									setTimeout(() => {
+										uni.reLaunch({
+											url: '/pages/list/list'
+										})
+									}, 1500)
+								} else {
+									throw new Error(result.message || '删除失败')
+								}
 							} catch (error) {
 								uni.hideLoading()
 								console.error('删除失败:', error)
