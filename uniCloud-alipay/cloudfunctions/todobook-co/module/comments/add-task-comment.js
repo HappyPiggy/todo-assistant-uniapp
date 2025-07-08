@@ -1,64 +1,54 @@
+// 添加任务评论
+
+const { validateAuth, getDatabase } = require('../../lib/utils/auth')
+const { 
+  createSuccessResponse, 
+  createErrorResponse, 
+  validateStringParam 
+} = require('../../common/utils')
+const { checkTaskPermission } = require('../../lib/utils/permission')
+const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
+
 /**
  * 添加任务评论
+ * @param {Object} params 参数对象
+ * @param {string} params.taskId 任务ID
+ * @param {string} params.content 评论内容
+ * @param {string} params.parentCommentId 父评论ID（回复时使用）
+ * @returns {Object} 响应结果
  */
-module.exports = async function addTaskComment(params) {
+async function addTaskComment(params) {
   const { taskId, content, parentCommentId = null } = params
   
-  // 重新进行用户验证，确保获取最新的用户信息
-  const token = this.getUniIdToken()
-  if (!token) {
-    return {
-      code: 30202,
-      message: '用户未登录或token已过期'
-    }
+  // 认证验证
+  const authResult = await validateAuth(this)
+  if (!authResult.success) {
+    return authResult.error
   }
   
-  const payload = await this.uniID.checkToken(token)
-  if (payload.code !== 0) {
-    return {
-      code: payload.code || 30202,
-      message: payload.message || payload.errMsg || '用户未登录或token已过期'
-    }
-  }
-
-  const uid = payload.uid
-  const db = this.db || uniCloud.database()
+  const { uid } = authResult
+  const db = getDatabase(this)
   
   // 参数验证
-  if (!taskId || !content || content.trim().length === 0) {
-    return {
-      code: 400,
-      message: '任务ID和评论内容不能为空'
-    }
+  if (!taskId) {
+    return createErrorResponse(ERROR_CODES.INVALID_PARAM, '任务ID不能为空')
   }
-
-  if (content.length > 1000) {
-    return {
-      code: 400,
-      message: '评论内容不能超过1000个字符'
-    }
+  
+  const contentValidation = validateStringParam(content, '评论内容', 1, 1000)
+  if (contentValidation) {
+    return contentValidation
   }
-
+  
   try {
-    // 验证任务是否存在
-    const taskResult = await db.collection('todoitems')
-      .doc(taskId)
-      .field({
-        comments: true,
-        creator_id: true
-      })
-      .get()
-
-    if (taskResult.data.length === 0) {
-      return {
-        code: 404,
-        message: '任务不存在'
-      }
+    // 权限检查和获取任务信息
+    const permissionResult = await checkTaskPermission(this, uid, taskId, PERMISSION_TYPE.WRITE)
+    if (!permissionResult.success) {
+      return permissionResult.error
     }
-
-    const task = taskResult.data[0]
+    
+    const { task } = permissionResult
     let comments = task.comments || []
-
+    
     // 验证父评论是否存在（如果是回复）
     if (parentCommentId) {
       const parentComment = comments.find(c => 
@@ -68,13 +58,10 @@ module.exports = async function addTaskComment(params) {
       )
       
       if (!parentComment) {
-        return {
-          code: 400,
-          message: '父评论不存在或不允许回复'
-        }
+        return createErrorResponse(ERROR_CODES.INVALID_PARAM, '父评论不存在或不允许回复')
       }
     }
-
+    
     // 获取用户信息
     const userResult = await db.collection('uni-id-users')
       .where({ _id: uid })
@@ -86,9 +73,8 @@ module.exports = async function addTaskComment(params) {
         email: true
       })
       .get()
-
-    const user = userResult.data.length > 0 ? userResult.data[0] : {}
     
+    const user = userResult.data.length > 0 ? userResult.data[0] : {}
     
     // 创建新评论
     const now = new Date()
@@ -101,14 +87,14 @@ module.exports = async function addTaskComment(params) {
       created_at: now,
       is_deleted: false
     }
-
+    
     if (parentCommentId) {
       newComment.reply_to = parentCommentId
     }
-
+    
     // 添加评论到数组
     comments.push(newComment)
-
+    
     // 更新任务的评论数组
     await db.collection('todoitems')
       .doc(taskId)
@@ -116,9 +102,8 @@ module.exports = async function addTaskComment(params) {
         comments: comments,
         updated_at: now
       })
-
-    // 返回带用户信息的评论
     
+    // 为返回的评论添加用户信息
     // 优先级：昵称 > 用户名 > 手机号脱敏 > 邮箱前缀 > 默认值
     let displayName = '用户'
     if (user.nickname && user.nickname.trim()) {
@@ -134,20 +119,14 @@ module.exports = async function addTaskComment(params) {
     newComment.user_nickname = displayName
     newComment.user_avatar = user.avatar_file || ''
     
-
-    return {
-      code: 0,
-      data: {
-        commentId: commentId,
-        comment: newComment
-      },
-      message: '评论添加成功'
-    }
+    return createSuccessResponse({
+      commentId: commentId,
+      comment: newComment
+    }, '评论添加成功')
   } catch (error) {
     console.error('添加评论失败:', error)
-    return {
-      code: 500,
-      message: '添加评论失败'
-    }
+    return createErrorResponse(ERROR_CODES.INTERNAL_ERROR, '添加评论失败')
   }
 }
+
+module.exports = addTaskComment
