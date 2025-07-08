@@ -64,25 +64,6 @@
 				</uni-forms-item>
 			</view>
 
-			<!-- 共享设置 -->
-			<view class="form-section">
-				<view class="section-header">
-					<text class="section-title">共享设置</text>
-				</view>
-
-				<uni-forms-item name="shareType" label="共享类型">
-					<uni-data-picker 
-						v-model="formData.shareType" 
-						:localdata="shareOptions"
-						placeholder="选择共享类型">
-					</uni-data-picker>
-				</uni-forms-item>
-
-				<view v-if="formData.shareType !== 'private'" class="share-notice">
-					<uni-icons color="#ff9500" size="16" type="info" />
-					<text class="notice-text">共享项目册的成员可以查看和编辑其中的任务</text>
-				</view>
-			</view>
 		</uni-forms>
 
 		<!-- 预览区域 -->
@@ -140,8 +121,7 @@
 					title: '',
 					description: '',
 					color: '#007AFF',
-					icon: 'folder',
-					shareType: 'private'
+					icon: 'folder'
 				},
 				rules: {
 					title: {
@@ -175,11 +155,6 @@
 					{ value: 'email', name: '邮件' },
 					{ value: 'phone', name: '电话' }
 				],
-				shareOptions: [
-					{ value: 'private', text: '私有项目册' },
-					{ value: 'public', text: '公开项目册' },
-					{ value: 'member', text: '成员项目册' }
-				]
 			}
 		},
 		methods: {
@@ -204,9 +179,7 @@
 					title: this.formData.title.trim(),
 					description: this.formData.description.trim(),
 					color: this.formData.color,
-					icon: this.formData.icon,
-					is_shared: this.formData.shareType !== 'private',
-					share_type: this.formData.shareType
+					icon: this.formData.icon
 				}
 
 				// 乐观更新：立即返回并显示成功消息

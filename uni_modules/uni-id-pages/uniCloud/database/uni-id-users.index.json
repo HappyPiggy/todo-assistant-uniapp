@@ -1,0 +1,11 @@
+{
+  "nickname_unique": {
+    "unique": true,
+    "partialFilterExpression": {
+      "nickname": {
+        "$type": "string",
+        "$ne": ""
+      }
+    }
+  }
+}

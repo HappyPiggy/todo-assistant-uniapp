@@ -78,9 +78,27 @@ module.exports = {
       }
     }
 
+    // 检查昵称唯一性
+    if (nickname && nickname.trim()) {
+      const db = uniCloud.database()
+      const nicknameCheck = await db.collection('uni-id-users')
+        .where({
+          nickname: nickname.trim(),
+          _id: db.command.neq(uid)
+        })
+        .count()
+      
+      if (nicknameCheck.total > 0) {
+        return {
+          code: 400,
+          message: '昵称已被使用，请选择其他昵称'
+        }
+      }
+    }
+
     // 准备更新数据
     const updateData = {}
-    if (nickname !== undefined) updateData.nickname = nickname
+    if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (gender !== undefined) updateData.gender = gender
     if (email !== undefined) updateData.email = email
     if (comment !== undefined) updateData.comment = comment

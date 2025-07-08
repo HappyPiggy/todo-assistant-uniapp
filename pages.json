@@ -58,6 +58,13 @@
         }
     },
     {
+        "path": "pages/todobooks/members",
+        "style": {
+            "navigationBarTitleText": "成员管理",
+            "navigationStyle": "custom"
+        }
+    },
+    {
         "path": "pages/tasks/detail",
         "style": {
             "navigationBarTitleText": "任务详情"

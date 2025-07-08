@@ -214,6 +214,22 @@ module.exports = {
       }
     }
 
+    // 检查同用户是否已有同名项目册
+    const existingBookCheck = await db.collection('todobooks')
+      .where({
+        title: title.trim(),
+        creator_id: uid,
+        is_archived: false
+      })
+      .count()
+    
+    if (existingBookCheck.total > 0) {
+      return {
+        code: 400,
+        message: '您已有同名项目册，请使用其他名称'
+      }
+    }
+
     try {
       const now = new Date()
       const newBook = {
@@ -224,8 +240,6 @@ module.exports = {
         updated_at: now,
         color,
         icon,
-        is_shared: false,
-        share_type: 'private',
         member_count: 1,
         item_count: 0,
         completed_count: 0,
@@ -332,6 +346,24 @@ module.exports = {
             message: '项目册标题不能为空'
           }
         }
+        
+        // 检查同用户是否已有同名项目册（排除当前项目册）
+        const existingBookCheck = await db.collection('todobooks')
+          .where({
+            title: title.trim(),
+            creator_id: uid,
+            is_archived: false,
+            _id: db.command.neq(bookId)
+          })
+          .count()
+        
+        if (existingBookCheck.total > 0) {
+          return {
+            code: 400,
+            message: '您已有同名项目册，请使用其他名称'
+          }
+        }
+        
         updates.title = title.trim()
       }
 
@@ -1090,6 +1122,508 @@ module.exports = {
     } catch (error) {
       console.error('检查权限失败:', error)
       return false
+    }
+  },
+
+  /**
+   * 邀请用户加入项目册（基于昵称）
+   */
+  async inviteUserByNickname(todobook_id, nickname) {
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code !== 0) {
+      return {
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
+      }
+    }
+
+    const uid = payload.uid
+    const db = uniCloud.database()
+
+    // 验证输入
+    if (!nickname || !nickname.trim()) {
+      return {
+        code: 400,
+        message: '请输入用户昵称'
+      }
+    }
+
+    try {
+      // 检查邀请者是否有管理成员权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('manage_members')
+        }
+      }
+      
+      if (!hasPermission) {
+        return {
+          code: 403,
+          message: '您没有邀请用户的权限'
+        }
+      }
+
+      // 查找要邀请的用户
+      const userResult = await db.collection('uni-id-users')
+        .where({ nickname: nickname.trim() })
+        .field({ _id: true, nickname: true })
+        .get()
+
+      if (userResult.data.length === 0) {
+        return {
+          code: 404,
+          message: '未找到该昵称的用户'
+        }
+      }
+
+      const inviteeId = userResult.data[0]._id
+
+      // 检查用户是否已经是成员
+      const memberCheck = await db.collection('todobook_members')
+        .where({
+          todobook_id: todobook_id,
+          user_id: inviteeId,
+          is_active: true
+        })
+        .count()
+
+      if (memberCheck.total > 0) {
+        return {
+          code: 400,
+          message: '该用户已经是项目册成员'
+        }
+      }
+
+      // 检查邀请者是否尝试邀请自己
+      if (inviteeId === uid) {
+        return {
+          code: 400,
+          message: '不能邀请自己'
+        }
+      }
+
+      const now = new Date()
+
+      // 添加新成员
+      await db.collection('todobook_members').add({
+        todobook_id: todobook_id,
+        user_id: inviteeId,
+        role: 'member',
+        permissions: ['read', 'write'],
+        invited_by: uid,
+        joined_at: now,
+        last_access_at: now,
+        is_active: true
+      })
+
+      // 更新项目册成员数量
+      await db.collection('todobooks')
+        .doc(todobook_id)
+        .update({
+          member_count: db.command.inc(1),
+          last_activity_at: now
+        })
+
+      return {
+        code: 0,
+        message: '邀请成功',
+        data: {
+          invitee_nickname: nickname.trim(),
+          invitee_id: inviteeId
+        }
+      }
+    } catch (error) {
+      console.error('邀请用户失败:', error)
+      return {
+        code: 500,
+        message: '邀请用户失败'
+      }
+    }
+  },
+
+  /**
+   * 移除项目册成员
+   */
+  async removeMember(todobook_id, member_user_id) {
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code !== 0) {
+      return {
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
+      }
+    }
+
+    const uid = payload.uid
+    const db = uniCloud.database()
+
+    try {
+      // 检查操作者是否有管理成员权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('manage_members')
+        }
+      }
+      
+      if (!hasPermission) {
+        return {
+          code: 403,
+          message: '您没有移除成员的权限'
+        }
+      }
+
+      // 不能移除项目册创建者
+      const creatorCheckResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: member_user_id })
+        .get()
+
+      if (creatorCheckResult.data.length > 0) {
+        return {
+          code: 400,
+          message: '不能移除项目册创建者'
+        }
+      }
+
+      // 检查要移除的用户是否是成员
+      const memberResult = await db.collection('todobook_members')
+        .where({
+          todobook_id: todobook_id,
+          user_id: member_user_id,
+          is_active: true
+        })
+        .get()
+
+      if (memberResult.data.length === 0) {
+        return {
+          code: 404,
+          message: '该用户不是项目册成员'
+        }
+      }
+
+      // 移除成员（设为非活跃状态）
+      await db.collection('todobook_members')
+        .where({
+          todobook_id: todobook_id,
+          user_id: member_user_id
+        })
+        .update({
+          is_active: false,
+          removed_at: new Date()
+        })
+
+      // 更新项目册成员数量
+      await db.collection('todobooks')
+        .doc(todobook_id)
+        .update({
+          member_count: db.command.inc(-1),
+          last_activity_at: new Date()
+        })
+
+      return {
+        code: 0,
+        message: '移除成员成功'
+      }
+    } catch (error) {
+      console.error('移除成员失败:', error)
+      return {
+        code: 500,
+        message: '移除成员失败'
+      }
+    }
+  },
+
+  /**
+   * 退出项目册
+   */
+  async leaveBook(todobook_id) {
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code !== 0) {
+      return {
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
+      }
+    }
+
+    const uid = payload.uid
+    const db = uniCloud.database()
+
+    try {
+      // 检查用户是否是项目册创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: uid })
+        .get()
+
+      if (bookResult.data.length > 0) {
+        return {
+          code: 400,
+          message: '项目册创建者不能退出，请删除项目册或转让所有权'
+        }
+      }
+
+      // 检查用户是否是成员
+      const memberResult = await db.collection('todobook_members')
+        .where({
+          todobook_id: todobook_id,
+          user_id: uid,
+          is_active: true
+        })
+        .get()
+
+      if (memberResult.data.length === 0) {
+        return {
+          code: 404,
+          message: '您不是该项目册的成员'
+        }
+      }
+
+      // 退出项目册（设为非活跃状态）
+      await db.collection('todobook_members')
+        .where({
+          todobook_id: todobook_id,
+          user_id: uid
+        })
+        .update({
+          is_active: false,
+          left_at: new Date()
+        })
+
+      // 更新项目册成员数量
+      await db.collection('todobooks')
+        .doc(todobook_id)
+        .update({
+          member_count: db.command.inc(-1),
+          last_activity_at: new Date()
+        })
+
+      return {
+        code: 0,
+        message: '退出项目册成功'
+      }
+    } catch (error) {
+      console.error('退出项目册失败:', error)
+      return {
+        code: 500,
+        message: '退出项目册失败'
+      }
+    }
+  },
+
+  /**
+   * 获取项目册成员列表
+   */
+  async getMembers(todobook_id) {
+    const token = this.getUniIdToken()
+    if (!token) {
+      return {
+        code: 30202,
+        message: '用户未登录或token已过期'
+      }
+    }
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code !== 0) {
+      return {
+        code: payload.code || 30202,
+        message: payload.message || payload.errMsg || '用户未登录或token已过期'
+      }
+    }
+
+    const uid = payload.uid
+    const db = uniCloud.database()
+
+    try {
+      // 检查权限 - 内联权限检查逻辑
+      let hasPermission = false
+      
+      // 检查是否是创建者
+      const bookResult = await db.collection('todobooks')
+        .where({ _id: todobook_id, creator_id: uid })
+        .get()
+      
+      if (bookResult.data.length > 0) {
+        hasPermission = true // 创建者有所有权限
+      } else {
+        // 检查成员权限
+        const memberResult = await db.collection('todobook_members')
+          .where({
+            todobook_id: todobook_id,
+            user_id: uid,
+            is_active: true
+          })
+          .get()
+
+        if (memberResult.data.length > 0) {
+          const member = memberResult.data[0]
+          hasPermission = member.permissions.includes('read')
+        }
+      }
+      
+      if (!hasPermission) {
+        return {
+          code: 403,
+          message: '没有查看权限'
+        }
+      }
+
+      // 获取成员列表和用户信息
+      let memberResult
+      try {
+        memberResult = await db.collection('todobook_members')
+          .aggregate()
+          .match({
+            todobook_id: todobook_id,
+            is_active: true
+          })
+          .lookup({
+            from: 'uni-id-users',
+            localField: 'user_id',
+            foreignField: '_id',
+            as: 'user_info'
+          })
+          .unwind('$user_info')
+          .project({
+            user_id: 1,
+            role: 1,
+            permissions: 1,
+            joined_at: 1,
+            last_access_at: 1,
+            invited_by: 1,
+            'user_info.nickname': 1,
+            'user_info.avatar_file': 1
+          })
+          .sort({ joined_at: 1 })
+          .end()
+      } catch (aggregateError) {
+        console.error('聚合查询失败，尝试使用备用方案:', aggregateError)
+        
+        // 备用方案：先获取成员列表，再手动关联用户信息
+        try {
+          const members = await db.collection('todobook_members')
+            .where({
+              todobook_id: todobook_id,
+              is_active: true
+            })
+            .orderBy('joined_at', 'asc')
+            .get()
+          
+          // 获取所有用户ID
+          const userIds = members.data.map(m => m.user_id)
+          
+          // 批量获取用户信息
+          const users = await db.collection('uni-id-users')
+            .where({
+              _id: db.command.in(userIds)
+            })
+            .field({
+              _id: true,
+              nickname: true,
+              avatar_file: true
+            })
+            .get()
+          
+          // 创建用户信息映射
+          const userMap = {}
+          users.data.forEach(user => {
+            userMap[user._id] = user
+          })
+          
+          // 合并数据
+          const membersWithUserInfo = members.data.map(member => {
+            const userInfo = userMap[member.user_id] || {
+              nickname: '未知用户',
+              avatar_file: null
+            }
+            return {
+              ...member,
+              user_info: userInfo
+            }
+          })
+          
+          return {
+            code: 0,
+            data: {
+              members: membersWithUserInfo
+            }
+          }
+        } catch (fallbackError) {
+          console.error('备用方案也失败了:', fallbackError)
+          throw fallbackError
+        }
+      }
+
+      return {
+        code: 0,
+        data: {
+          members: memberResult.data
+        }
+      }
+    } catch (error) {
+      console.error('获取成员列表失败:', error)
+      return {
+        code: 500,
+        message: '获取成员列表失败'
+      }
     }
   }
 }
