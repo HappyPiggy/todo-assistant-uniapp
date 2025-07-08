@@ -148,6 +148,10 @@
 			"items": {
 				"bsonType": "object",
 				"properties": {
+					"_id": {
+						"bsonType": "string",
+						"description": "评论唯一ID"
+					},
 					"user_id": {
 						"bsonType": "string",
 						"description": "评论者用户ID"
@@ -161,11 +165,25 @@
 						"bsonType": "timestamp",
 						"description": "评论时间"
 					},
+					"updated_at": {
+						"bsonType": "timestamp",
+						"description": "更新时间"
+					},
 					"reply_to": {
 						"bsonType": "string",
-						"description": "回复的评论ID"
+						"description": "回复的评论ID（顶级评论为空）"
+					},
+					"is_deleted": {
+						"bsonType": "bool",
+						"default": false,
+						"description": "是否已删除（软删除）"
+					},
+					"deleted_at": {
+						"bsonType": "timestamp",
+						"description": "删除时间"
 					}
-				}
+				},
+				"required": ["_id", "user_id", "content", "created_at", "is_deleted"]
 			},
 			"description": "评论列表"
 		},

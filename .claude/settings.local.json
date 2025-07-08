@@ -27,7 +27,10 @@
       "Bash(ssh-add:*)",
       "Bash(cat:*)",
       "Bash(ssh:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git pull:*)",
+      "Bash(git restore:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

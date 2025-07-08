@@ -159,22 +159,118 @@
 			<!-- 评论区域 -->
 			<view class="comments-section">
 				<view class="section-header">
-					<text class="section-title">评论 ({{ task.comments?.length || 0 }})</text>
+					<text class="section-title">评论 ({{ commentsData.total || 0 }})</text>
 					<view class="add-comment" @click="showAddComment">
 						<uni-icons color="#007AFF" size="18" type="chatboxes" />
 					</view>
 				</view>
-				<view v-if="task.comments && task.comments.length > 0" class="comments-list">
-					<view v-for="comment in task.comments" :key="comment.created_at" class="comment-item">
-						<view class="comment-header">
-							<text class="comment-author">{{ comment.user_nickname || '用户' }}</text>
-							<text class="comment-time">{{ formatTime(comment.created_at) }}</text>
+				
+				<!-- 评论加载状态 -->
+				<view v-if="commentsLoading && comments.length === 0" class="comments-loading">
+					<uni-load-more status="loading" />
+				</view>
+				
+				<!-- 评论列表 -->
+				<view v-else-if="comments.length > 0" class="comments-list">
+					<view 
+						v-for="comment in comments" 
+						:key="comment._id"
+						class="comment-item">
+						
+						<!-- 主评论 -->
+						<view class="comment-main">
+							<view class="comment-avatar">
+								<image 
+									v-if="comment.user_avatar" 
+									:src="comment.user_avatar" 
+									class="avatar-img" 
+									mode="aspectFill" />
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ (comment.user_nickname || '用户').charAt(0) }}</text>
+								</view>
+							</view>
+							<view class="comment-content-wrapper">
+								<view class="comment-header">
+									<text class="comment-author">{{ comment.user_nickname || '用户' }}</text>
+									<text class="comment-time">{{ formatTime(comment.created_at) }}</text>
+								</view>
+								<text class="comment-content">{{ comment.content }}</text>
+								
+								<!-- 评论操作 -->
+								<view class="comment-actions">
+									<view class="action-btn" @click="showReplyInput(comment)">
+										<text class="action-text">回复</text>
+									</view>
+									<view 
+										v-if="canEditComment(comment)" 
+										class="action-btn" 
+										@click="editComment(comment)">
+										<text class="action-text">编辑</text>
+									</view>
+									<view 
+										v-if="canDeleteComment(comment)" 
+										class="action-btn danger" 
+										@click="deleteComment(comment)">
+										<text class="action-text">删除</text>
+									</view>
+								</view>
+							</view>
 						</view>
-						<text class="comment-content">{{ comment.content }}</text>
+						
+						<!-- 回复列表 -->
+						<view v-if="comment.replies && comment.replies.length > 0" class="replies-list">
+							<view 
+								v-for="reply in comment.replies" 
+								:key="reply._id"
+								class="reply-item">
+								<view class="comment-avatar">
+									<image 
+										v-if="reply.user_avatar" 
+										:src="reply.user_avatar" 
+										class="avatar-img" 
+										mode="aspectFill" />
+									<view v-else class="avatar-placeholder">
+										<text class="avatar-text">{{ (reply.user_nickname || '用户').charAt(0) }}</text>
+									</view>
+								</view>
+								<view class="comment-content-wrapper">
+									<view class="comment-header">
+										<text class="comment-author">{{ reply.user_nickname || '用户' }}</text>
+										<text class="comment-time">{{ formatTime(reply.created_at) }}</text>
+									</view>
+									<text class="comment-content">{{ reply.content }}</text>
+									
+									<!-- 回复操作 -->
+									<view class="comment-actions">
+										<view 
+											v-if="canEditComment(reply)" 
+											class="action-btn" 
+											@click="editComment(reply)">
+											<text class="action-text">编辑</text>
+										</view>
+										<view 
+											v-if="canDeleteComment(reply)" 
+											class="action-btn danger" 
+											@click="deleteComment(reply)">
+											<text class="action-text">删除</text>
+										</view>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+					
+					<!-- 加载更多 -->
+					<view v-if="commentsData.hasMore" class="load-more-comments">
+						<uni-load-more 
+							:status="commentsLoading ? 'loading' : 'more'" 
+							@click="loadMoreComments" />
 					</view>
 				</view>
+				
+				<!-- 空状态 -->
 				<view v-else class="empty-comments">
-					<text class="empty-text">暂无评论</text>
+					<text class="empty-text">暂无评论，来发表第一条评论吧</text>
 				</view>
 			</view>
 		</view>
@@ -209,15 +305,38 @@
 			</view>
 		</uni-popup>
 
-		<!-- 添加评论弹窗 -->
-		<uni-popup ref="commentPopup" type="dialog">
-			<uni-popup-dialog 
-				title="添加评论"
-				placeholder="请输入评论内容"
-				:value="newComment"
-				@confirm="addComment"
-				@close="closeCommentDialog">
-			</uni-popup-dialog>
+		<!-- 添加/编辑评论弹窗 -->
+		<uni-popup ref="commentPopup" type="center" background-color="rgba(0,0,0,0.5)">
+			<view class="comment-dialog">
+				<view class="dialog-header">
+					<text class="dialog-title">{{ commentEditMode === 'add' ? '添加评论' : commentEditMode === 'reply' ? '回复评论' : '编辑评论' }}</text>
+					<view class="dialog-close" @click="closeCommentDialog">
+						<uni-icons color="#999" size="20" type="close" />
+					</view>
+				</view>
+				<view class="dialog-content">
+					<textarea 
+						v-model="commentFormData.content" 
+						placeholder="请输入评论内容"
+						class="comment-input"
+						:maxlength="1000"
+						:show-confirm-bar="false"
+						:auto-height="true"
+						:cursor-spacing="20"
+						:focus="true" />
+					<view class="char-count">
+						<text class="count-text">{{ (commentFormData.content || '').length }}/1000</text>
+					</view>
+				</view>
+				<view class="dialog-actions">
+					<view class="action-btn cancel-btn" @click="closeCommentDialog">
+						<text class="btn-text">取消</text>
+					</view>
+					<view class="action-btn confirm-btn" @click="submitComment(commentFormData.content)">
+						<text class="btn-text">确定</text>
+					</view>
+				</view>
+			</view>
 		</uni-popup>
 	</view>
 </template>
@@ -234,7 +353,22 @@
 				assigneeInfo: null,
 				loading: true,
 				error: null,
-				newComment: ''
+				// 评论相关
+				comments: [],
+				commentsData: {
+					total: 0,
+					page: 1,
+					pageSize: 20,
+					hasMore: false
+				},
+				commentsLoading: false,
+				commentEditMode: 'add', // add, reply, edit
+				commentFormData: {
+					content: '',
+					commentId: null,
+					parentCommentId: null
+				},
+				currentUser: null
 			}
 		},
 		onLoad(options) {
@@ -249,8 +383,15 @@
 			this.taskId = options.id
 			this.bookId = options.bookId
 			
-			// 加载任务详情
+			// 获取当前用户信息
+			this.getCurrentUser()
+			
+			// 加载任务详情和评论
 			this.loadTaskDetail()
+			this.loadComments()
+			
+			// 标记任务为已读
+			this.markTaskAsRead()
 		},
 		methods: {
 			// 加载任务详情
@@ -280,6 +421,11 @@
 						uni.setNavigationBarTitle({
 							title: this.task.title
 						})
+						
+						// 存储项目册创建者信息用于权限判断
+						if (result.data.todobook_creator_id) {
+							this.task.todobook_creator_id = result.data.todobook_creator_id
+						}
 					} else {
 						this.error = result.message || '获取任务详情失败'
 						uni.showToast({
@@ -469,24 +615,233 @@
 				})
 			},
 
+			// 获取当前用户信息
+			async getCurrentUser() {
+				try {
+					const userInfo = await uniCloud.getCurrentUserInfo()
+					this.currentUser = userInfo
+				} catch (error) {
+					console.error('获取用户信息失败:', error)
+				}
+			},
+
+			// 加载评论列表
+			async loadComments(refresh = true) {
+				if (this.commentsLoading) return
+				
+				this.commentsLoading = true
+				
+				if (refresh) {
+					this.commentsData.page = 1
+					this.comments = []
+				}
+				
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTaskComments(
+						this.taskId, 
+						this.commentsData.page, 
+						this.commentsData.pageSize
+					)
+					
+					if (result.code === 0) {
+						if (refresh) {
+							this.comments = result.data.comments
+						} else {
+							this.comments.push(...result.data.comments)
+						}
+						
+						this.commentsData = {
+							total: result.data.total,
+							page: result.data.page,
+							pageSize: result.data.pageSize,
+							hasMore: result.data.hasMore
+						}
+					} else {
+						console.error('加载评论失败:', result.message)
+					}
+				} catch (error) {
+					console.error('加载评论失败:', error)
+				} finally {
+					this.commentsLoading = false
+				}
+			},
+
+			// 加载更多评论
+			loadMoreComments() {
+				if (this.commentsLoading || !this.commentsData.hasMore) return
+				
+				this.commentsData.page++
+				this.loadComments(false)
+			},
+
+			// 显示添加评论对话框
 			showAddComment() {
-				this.newComment = ''
+				this.commentEditMode = 'add'
+				this.commentFormData = {
+					content: '',
+					commentId: null,
+					parentCommentId: null
+				}
 				this.$refs.commentPopup.open()
 			},
 
-			addComment(content) {
-				// TODO: 实现添加评论功能
-				console.log('添加评论:', content)
-				this.closeCommentDialog()
-				uni.showToast({
-					title: '功能开发中',
-					icon: 'none'
+			// 显示回复输入框
+			showReplyInput(comment) {
+				this.commentEditMode = 'reply'
+				this.commentFormData = {
+					content: '',
+					commentId: null,
+					parentCommentId: comment._id
+				}
+				this.$refs.commentPopup.open()
+			},
+
+			// 编辑评论
+			editComment(comment) {
+				this.commentEditMode = 'edit'
+				this.commentFormData = {
+					content: comment.content,
+					commentId: comment._id,
+					parentCommentId: null
+				}
+				this.$refs.commentPopup.open()
+			},
+
+			// 提交评论
+			async submitComment(content) {
+				if (!content || content.trim().length === 0) {
+					uni.showToast({
+						title: '请输入评论内容',
+						icon: 'none'
+					})
+					return
+				}
+
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					let result
+
+					if (this.commentEditMode === 'edit') {
+						// 编辑评论
+						result = await todoBooksObj.updateTaskComment(
+							this.commentFormData.commentId, 
+							content
+						)
+					} else {
+						// 添加评论或回复
+						result = await todoBooksObj.addTaskComment(
+							this.taskId, 
+							content, 
+							this.commentFormData.parentCommentId
+						)
+					}
+
+					if (result.code === 0) {
+						uni.showToast({
+							title: result.message || '操作成功',
+							icon: 'success'
+						})
+						
+						// 刷新评论列表
+						this.loadComments()
+						this.closeCommentDialog()
+					} else {
+						uni.showToast({
+							title: result.message || '操作失败',
+							icon: 'error'
+						})
+					}
+				} catch (error) {
+					console.error('提交评论失败:', error)
+					uni.showToast({
+						title: '网络错误，请重试',
+						icon: 'error'
+					})
+				}
+			},
+
+			// 删除评论
+			deleteComment(comment) {
+				uni.showModal({
+					title: '确认删除',
+					content: '确定要删除这条评论吗？删除后无法恢复。',
+					confirmColor: '#FF4757',
+					success: async (res) => {
+						if (res.confirm) {
+							try {
+								const todoBooksObj = uniCloud.importObject('todobook-co')
+								const result = await todoBooksObj.deleteTaskComment(comment._id)
+
+								if (result.code === 0) {
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
+									})
+									
+									// 刷新评论列表
+									this.loadComments()
+								} else {
+									uni.showToast({
+										title: result.message || '删除失败',
+										icon: 'error'
+									})
+								}
+							} catch (error) {
+								console.error('删除评论失败:', error)
+								uni.showToast({
+									title: '网络错误，请重试',
+									icon: 'error'
+								})
+							}
+						}
+					}
 				})
 			},
 
+			// 关闭评论对话框
 			closeCommentDialog() {
 				this.$refs.commentPopup.close()
-				this.newComment = ''
+				this.commentFormData = {
+					content: '',
+					commentId: null,
+					parentCommentId: null
+				}
+			},
+
+			// 权限检查 - 是否可以编辑评论
+			canEditComment(comment) {
+				return this.currentUser && comment.user_id === this.currentUser.uid
+			},
+
+			// 权限检查 - 是否可以删除评论
+			canDeleteComment(comment) {
+				if (!this.currentUser) return false
+				
+				// 评论作者可以删除自己的评论
+				if (comment.user_id === this.currentUser.uid) {
+					return true
+				}
+				
+				// 项目册owner可以删除所有评论
+				if (this.task && this.task.todobook_creator_id === this.currentUser.uid) {
+					return true
+				}
+				
+				return false
+			},
+
+			// 标记任务为已读
+			markTaskAsRead() {
+				if (!this.taskId) return
+				
+				try {
+					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
+					lastViewTimes[this.taskId] = Date.now()
+					uni.setStorageSync('task_comment_view_times', lastViewTimes)
+				} catch (error) {
+					console.error('标记已读失败:', error)
+				}
 			},
 
 			getPriorityText(priority) {
@@ -853,14 +1208,58 @@
 		align-items: center;
 	}
 
+	.comments-loading {
+		padding: 40rpx 0;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.comments-list {
-		gap: 20rpx;
+		gap: 24rpx;
 	}
 
 	.comment-item {
-		padding: 20rpx;
-		background-color: #f8f8f8;
+		background-color: #ffffff;
 		border-radius: 12rpx;
+		padding: 24rpx;
+		box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.1);
+	}
+
+	.comment-main {
+		flex-direction: row;
+		align-items: flex-start;
+	}
+
+	.comment-avatar {
+		width: 64rpx;
+		height: 64rpx;
+		margin-right: 16rpx;
+		flex-shrink: 0;
+	}
+
+	.avatar-img {
+		width: 100%;
+		height: 100%;
+		border-radius: 32rpx;
+	}
+
+	.avatar-placeholder {
+		width: 100%;
+		height: 100%;
+		background-color: #007AFF;
+		border-radius: 32rpx;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.avatar-text {
+		font-size: 24rpx;
+		color: #ffffff;
+		font-weight: 500;
+	}
+
+	.comment-content-wrapper {
+		flex: 1;
 	}
 
 	.comment-header {
@@ -871,8 +1270,8 @@
 	}
 
 	.comment-author {
-		font-size: 26rpx;
-		color: #666666;
+		font-size: 28rpx;
+		color: #333333;
 		font-weight: 500;
 	}
 
@@ -882,20 +1281,105 @@
 	}
 
 	.comment-content {
-		font-size: 28rpx;
+		font-size: 30rpx;
 		color: #333333;
-		line-height: 1.5;
+		line-height: 1.6;
+		margin-bottom: 16rpx;
+	}
+
+	.comment-actions {
+		flex-direction: row;
+		align-items: center;
+		gap: 24rpx;
+	}
+
+	.action-btn {
+		padding: 8rpx 16rpx;
+		background-color: #f8f8f8;
+		border-radius: 16rpx;
+		border: 1rpx solid #e8e8e8;
+	}
+
+	.action-btn:active {
+		background-color: #e8e8e8;
+	}
+
+	.action-btn.danger {
+		background-color: #ffebee;
+		border-color: #ffcdd2;
+	}
+
+	.action-btn.danger:active {
+		background-color: #ffcdd2;
+	}
+
+	.action-text {
+		font-size: 24rpx;
+		color: #666666;
+	}
+
+	.action-btn.danger .action-text {
+		color: #f44336;
+	}
+
+	/* 回复列表 */
+	.replies-list {
+		margin-top: 16rpx;
+		margin-left: 80rpx;
+		gap: 16rpx;
+	}
+
+	.reply-item {
+		flex-direction: row;
+		align-items: flex-start;
+		padding: 16rpx;
+		background-color: #f8f8f8;
+		border-radius: 8rpx;
+		border-left: 3rpx solid #007AFF;
+	}
+
+	.reply-item .comment-avatar {
+		width: 48rpx;
+		height: 48rpx;
+		margin-right: 12rpx;
+	}
+
+	.reply-item .avatar-placeholder {
+		border-radius: 24rpx;
+	}
+
+	.reply-item .avatar-img {
+		border-radius: 24rpx;
+	}
+
+	.reply-item .avatar-text {
+		font-size: 20rpx;
+	}
+
+	.reply-item .comment-content {
+		font-size: 28rpx;
+		margin-bottom: 12rpx;
+	}
+
+	.reply-item .comment-author {
+		font-size: 26rpx;
+	}
+
+	.load-more-comments {
+		margin-top: 20rpx;
+		align-items: center;
 	}
 
 	.empty-comments {
-		padding: 40rpx 20rpx;
+		padding: 60rpx 20rpx;
 		align-items: center;
 		justify-content: center;
 	}
 
 	.empty-text {
-		font-size: 26rpx;
+		font-size: 28rpx;
 		color: #999999;
+		text-align: center;
 	}
 
 	/* 菜单弹窗 */
@@ -958,5 +1442,115 @@
 	.cancel-text {
 		font-size: 30rpx;
 		color: #666666;
+	}
+
+	/* 评论弹窗样式 */
+	.comment-dialog {
+		width: 600rpx;
+		background-color: #ffffff;
+		border-radius: 16rpx;
+		overflow: hidden;
+	}
+
+	.dialog-header {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding: 30rpx;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+
+	.dialog-title {
+		font-size: 32rpx;
+		font-weight: 500;
+		color: #333333;
+	}
+
+	.dialog-close {
+		width: 40rpx;
+		height: 40rpx;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.dialog-content {
+		padding: 30rpx;
+	}
+
+	.comment-input {
+		width: 100%;
+		min-height: 200rpx;
+		max-height: 400rpx;
+		padding: 20rpx;
+		background-color: #f8f8f8;
+		border-radius: 12rpx;
+		border: 1rpx solid #e8e8e8;
+		font-size: 30rpx;
+		color: #333333;
+		line-height: 1.6;
+		/* #ifndef APP-NVUE */
+		box-sizing: border-box;
+		resize: none;
+		/* #endif */
+	}
+
+	.comment-input:focus {
+		border-color: #007AFF;
+	}
+
+	.char-count {
+		margin-top: 16rpx;
+		flex-direction: row;
+		justify-content: flex-end;
+	}
+
+	.count-text {
+		font-size: 24rpx;
+		color: #999999;
+	}
+
+	.dialog-actions {
+		flex-direction: row;
+		padding: 0 30rpx 30rpx;
+		gap: 20rpx;
+	}
+
+	.dialog-actions .action-btn {
+		flex: 1;
+		height: 80rpx;
+		justify-content: center;
+		align-items: center;
+		border-radius: 12rpx;
+		border: none;
+	}
+
+	.cancel-btn {
+		background-color: #f8f8f8;
+		border: 1rpx solid #e8e8e8;
+	}
+
+	.cancel-btn:active {
+		background-color: #e8e8e8;
+	}
+
+	.confirm-btn {
+		background-color: #007AFF;
+	}
+
+	.confirm-btn:active {
+		background-color: #0056CC;
+	}
+
+	.dialog-actions .btn-text {
+		font-size: 30rpx;
+	}
+
+	.cancel-btn .btn-text {
+		color: #666666;
+	}
+
+	.confirm-btn .btn-text {
+		color: #ffffff;
+		font-weight: 500;
 	}
 </style>

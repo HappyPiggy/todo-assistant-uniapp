@@ -383,7 +383,6 @@
 								...task,
 								tags: Array.isArray(task.tags) ? task.tags : [],
 								attachments: Array.isArray(task.attachments) ? task.attachments : [],
-								comments: Array.isArray(task.comments) ? task.comments : [],
 								expanded: false,
 								subtasks: []
 							}
@@ -392,6 +391,9 @@
 						// 组织父子关系：只显示父任务，子任务作为父任务的属性
 						this.tasks = this.organizeParentChildTasks(allTasks)
 						this.updateFilterCounts()
+						
+						// 加载任务评论数据（用于显示未读提示）
+						this.loadTasksCommentCounts(allTasks)
 					} else {
 						this.tasksError = result.message || '获取任务列表失败'
 						uni.showToast({
@@ -686,6 +688,70 @@
 				if (diffDays === -1) return '昨天'
 				if (diffDays > 0) return `${diffDays}天后`
 				return `逾期${Math.abs(diffDays)}天`
+			},
+
+			// 加载任务评论数量
+			async loadTasksCommentCounts(tasks) {
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					
+					// 并行获取每个任务的评论数量
+					const commentPromises = tasks.map(async task => {
+						try {
+							const result = await todoBooksObj.getTaskComments(task._id, 1, 1)
+							return {
+								taskId: task._id,
+								total: result.code === 0 ? result.data.total : 0
+							}
+						} catch (error) {
+							console.error(`获取任务${task._id}评论数量失败:`, error)
+							return {
+								taskId: task._id,
+								total: 0
+							}
+						}
+					})
+					
+					const commentCounts = await Promise.all(commentPromises)
+					
+					// 将评论数量添加到任务对象中
+					commentCounts.forEach(({ taskId, total }) => {
+						const task = tasks.find(t => t._id === taskId)
+						if (task) {
+							task.comment_count = total
+						}
+					})
+				} catch (error) {
+					console.error('加载评论数量失败:', error)
+				}
+			},
+
+			// 获取未读评论数量
+			getUnreadCommentCount(taskId) {
+				try {
+					const task = this.tasks.find(t => t._id === taskId)
+					if (!task || !task.comment_count) return 0
+					
+					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
+					const lastViewTime = lastViewTimes[taskId] || 0
+					
+					// 这里简化处理，如果有评论且用户从未查看过此任务的评论，则显示总数
+					// 实际项目中可以通过比较评论的创建时间来精确计算
+					if (lastViewTime === 0) {
+						return task.comment_count
+					}
+					
+					// 简化处理：如果最后查看时间超过1小时，显示有新评论的提示
+					const hoursSinceLastView = (Date.now() - lastViewTime) / (1000 * 60 * 60)
+					if (hoursSinceLastView > 1 && task.comment_count > 0) {
+						return Math.min(task.comment_count, 99) // 最多显示99
+					}
+					
+					return 0
+				} catch (error) {
+					console.error('计算未读评论数量失败:', error)
+					return 0
+				}
 			},
 
 			getEmptyText() {
@@ -1116,6 +1182,24 @@
 
 	.due-date.overdue .due-text {
 		color: #ff4757;
+	}
+
+	.comment-hint {
+		flex-direction: row;
+		align-items: center;
+		gap: 4rpx;
+		background-color: #fff3e0;
+		padding: 4rpx 8rpx;
+		border-radius: 8rpx;
+		border: 1rpx solid #ffcc80;
+	}
+
+	.comment-count {
+		font-size: 20rpx;
+		color: #ff9800;
+		font-weight: 500;
+		min-width: 16rpx;
+		text-align: center;
 	}
 
 	.task-tags {

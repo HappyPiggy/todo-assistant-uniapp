@@ -1,12 +1,30 @@
 // 项目册管理云对象
 const uniID = require('uni-id-common')
+const comments = require('./module/comments')
 
 module.exports = {
   _before: function () {
     this.uniID = uniID.createInstance({
       context: this.getCloudInfo()
     })
+    // 为评论模块提供上下文
+    this.db = uniCloud.database()
+    this.uid = null
+    this.userInfo = null
   },
+
+  async _beforeEach() {
+    // 在每个方法执行前获取用户信息
+    const token = this.getUniIdToken()
+    if (token) {
+      const payload = await this.uniID.checkToken(token)
+      if (payload.code === 0) {
+        this.uid = payload.uid
+        this.userInfo = payload
+      }
+    }
+  },
+
 
   /**
    * 获取用户的项目册列表
@@ -1638,5 +1656,33 @@ module.exports = {
         message: '获取成员列表失败'
       }
     }
+  },
+
+  /**
+   * 获取任务评论列表（分页）
+   */
+  async getTaskComments(taskId, page = 1, pageSize = 20) {
+    return await comments.getTaskComments.call(this, { taskId, page, pageSize })
+  },
+
+  /**
+   * 添加任务评论
+   */
+  async addTaskComment(taskId, content, parentCommentId = null) {
+    return await comments.addTaskComment.call(this, { taskId, content, parentCommentId })
+  },
+
+  /**
+   * 编辑评论
+   */
+  async updateTaskComment(commentId, content) {
+    return await comments.updateTaskComment.call(this, { commentId, content })
+  },
+
+  /**
+   * 删除评论
+   */
+  async deleteTaskComment(commentId) {
+    return await comments.deleteTaskComment.call(this, { commentId })
   }
 }
