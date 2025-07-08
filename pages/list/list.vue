@@ -80,9 +80,9 @@
 
 					<view class="card-footer">
 						<text class="last-activity">{{ formatTime(book.last_activity_at || book.updated_at) }}</text>
-						<view v-if="book.is_shared" class="share-badge">
+						<view v-if="book.member_count > 1" class="share-badge">
 							<uni-icons color="#28a745" size="14" type="checkmarkempty" />
-							<text class="share-text">共享</text>
+							<text class="share-text">协作</text>
 						</view>
 					</view>
 				</view>
@@ -112,9 +112,9 @@
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="action-text">编辑</text>
 					</view>
-					<view class="action-item" @click="shareTodoBook" v-if="!currentBook?.is_shared">
+					<view class="action-item" @click="shareTodoBook">
 						<uni-icons color="#28a745" size="20" type="person-add" />
-						<text class="action-text">共享</text>
+						<text class="action-text">成员管理</text>
 					</view>
 					<view class="action-item" @click="archiveTodoBook">
 						<uni-icons color="#ffc107" size="20" type="archive" />
@@ -308,17 +308,23 @@
 			},
 
 			editTodoBook() {
+				const bookId = this.currentBook?._id
 				this.hideActionSheet()
-				uni.navigateTo({
-					url: `/pages/todobooks/edit?id=${this.currentBook._id}`
-				})
+				if (bookId) {
+					uni.navigateTo({
+						url: `/pages/todobooks/edit?id=${bookId}`
+					})
+				}
 			},
 
 			shareTodoBook() {
+				const bookId = this.currentBook?._id
 				this.hideActionSheet()
-				uni.navigateTo({
-					url: `/pages/todobooks/share?id=${this.currentBook._id}`
-				})
+				if (bookId) {
+					uni.navigateTo({
+						url: `/pages/todobooks/members?id=${bookId}`
+					})
+				}
 			},
 
 			async archiveTodoBook() {

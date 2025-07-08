@@ -334,7 +334,7 @@ module.exports = {
         }
       }
 
-      const { title, description, color, icon } = updateData
+      const { title, description, color, icon, is_archived, archived_at } = updateData
       const updates = {
         updated_at: new Date()
       }
@@ -370,6 +370,19 @@ module.exports = {
       if (description !== undefined) updates.description = description
       if (color !== undefined) updates.color = color
       if (icon !== undefined) updates.icon = icon
+      
+      // 处理归档状态
+      if (is_archived !== undefined) {
+        updates.is_archived = is_archived
+        // 如果设置为归档，记录归档时间
+        if (is_archived && archived_at !== undefined) {
+          updates.archived_at = archived_at
+        }
+        // 如果取消归档，清除归档时间
+        else if (!is_archived) {
+          updates.archived_at = null
+        }
+      }
 
       await db.collection('todobooks')
         .doc(bookId)

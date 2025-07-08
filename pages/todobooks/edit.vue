@@ -1,22 +1,14 @@
 <template>
 	<view class="edit-todobook">
-		<unicloud-db 
-			v-slot:default="{data: bookData, loading: bookLoading, error: bookError}" 
-			ref="bookDetailDB"
-			collection="todobooks"
-			:where="`_id == '${bookId}'`"
-			:getone="true"
-			@load="onBookLoad">
-			
-			<view v-if="bookLoading" class="loading-section">
-				<uni-load-more status="loading" />
-			</view>
+		<view v-if="bookLoading" class="loading-section">
+			<uni-load-more status="loading" />
+		</view>
 
-			<view v-else-if="bookError" class="error-section">
-				<text class="error-text">{{ bookError.message }}</text>
-			</view>
+		<view v-else-if="bookError" class="error-section">
+			<text class="error-text">{{ bookError }}</text>
+		</view>
 
-			<view v-else-if="bookData" class="edit-content">
+		<view v-else-if="bookData" class="edit-content">
 			<uni-forms ref="form" :model="formData" :rules="rules" label-position="top">
 				<!-- 基本信息 -->
 				<view class="form-section">
@@ -79,26 +71,6 @@
 							</view>
 						</view>
 					</uni-forms-item>
-				</view>
-
-				<!-- 共享设置 -->
-				<view class="form-section" v-if="isOwner">
-					<view class="section-header">
-						<text class="section-title">共享设置</text>
-					</view>
-
-					<uni-forms-item name="shareType" label="共享类型">
-						<uni-data-picker 
-							v-model="formData.shareType" 
-							:localdata="shareOptions"
-							placeholder="选择共享类型">
-						</uni-data-picker>
-					</uni-forms-item>
-
-					<view v-if="formData.shareType !== 'private'" class="share-notice">
-						<uni-icons color="#ff9500" size="16" type="info" />
-						<text class="notice-text">共享项目册的成员可以查看和编辑其中的任务</text>
-					</view>
 				</view>
 
 				<!-- 统计信息 -->
@@ -205,33 +177,36 @@
 					</view>
 				</view>
 			</view>
-		</unicloud-db>
 
-		<!-- 底部按钮 -->
-		<view class="button-section" v-if="bookId">
-			<button class="cancel-btn" @click="cancel">取消</button>
-			<button class="save-btn" @click="saveTodoBook" :loading="saving">
-				{{ saving ? '保存中...' : '保存修改' }}
-			</button>
+			<!-- 底部按钮 -->
+			<view class="button-section" v-if="bookId">
+				<button class="cancel-btn" @click="cancel">取消</button>
+				<button class="save-btn" @click="saveTodoBook" :loading="saving">
+					{{ saving ? '保存中...' : '保存修改' }}
+				</button>
+			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-	const db = uniCloud.database()
-	
 	export default {
 		data() {
 			return {
 				bookId: '',
 				saving: false,
 				isOwner: false,
+				
+				// 项目册数据状态管理
+				bookData: null,
+				bookLoading: false,
+				bookError: null,
+				
 				formData: {
 					title: '',
 					description: '',
 					color: '#007AFF',
-					icon: 'folder',
-					shareType: 'private'
+					icon: 'folder'
 				},
 				rules: {
 					title: {
@@ -264,11 +239,6 @@
 					{ value: 'cart', name: '购物车' },
 					{ value: 'email', name: '邮件' },
 					{ value: 'phone', name: '电话' }
-				],
-				shareOptions: [
-					{ value: 'private', text: '私有项目册' },
-					{ value: 'public', text: '公开项目册' },
-					{ value: 'member', text: '成员项目册' }
 				]
 			}
 		},
@@ -282,29 +252,46 @@
 				return
 			}
 			this.bookId = options.id
-			// 等待 unicloud-db 组件自动加载数据
+			// 主动加载项目册数据
+			this.loadBookDetail()
 		},
 		methods: {
-			// 处理项目册数据加载完成
-			onBookLoad(data) {
-				if (data) {
-					// 检查是否为所有者
-					const currentUser = uniCloud.getCurrentUserInfo()
-					this.isOwner = data.creator_id === currentUser.uid
+			// 加载项目册详情
+			async loadBookDetail() {
+				this.bookLoading = true
+				this.bookError = null
+				
+				try {
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.getTodoBookDetail(this.bookId)
+					
+					if (result.code === 0) {
+						this.bookData = result.data.book
+						
+						// 检查是否为所有者
+						const currentUser = uniCloud.getCurrentUserInfo()
+						this.isOwner = this.bookData.creator_id === currentUser.uid
 
-					// 填充表单数据
-					this.formData = {
-						title: data.title,
-						description: data.description || '',
-						color: data.color || '#007AFF',
-						icon: data.icon || 'folder',
-						shareType: data.share_type || 'private'
+						// 填充表单数据
+						this.formData = {
+							title: this.bookData.title,
+							description: this.bookData.description || '',
+							color: this.bookData.color || '#007AFF',
+							icon: this.bookData.icon || 'folder'
+						}
+
+						// 设置页面标题
+						uni.setNavigationBarTitle({
+							title: '编辑 ' + this.bookData.title
+						})
+					} else {
+						this.bookError = result.message || '获取项目册详情失败'
 					}
-
-					// 设置页面标题
-					uni.setNavigationBarTitle({
-						title: '编辑 ' + data.title
-					})
+				} catch (error) {
+					console.error('加载项目册详情失败:', error)
+					this.bookError = '网络错误，请重试'
+				} finally {
+					this.bookLoading = false
 				}
 			},
 
@@ -341,17 +328,11 @@
 						updated_at: Date.now()
 					}
 
-					// 只有所有者才能修改共享设置
-					if (this.isOwner) {
-						updateData.is_shared = this.formData.shareType !== 'private'
-						updateData.share_type = this.formData.shareType
-					}
 
-					const result = await db.collection('todobooks')
-						.doc(this.bookId)
-						.update(updateData)
+					const todoBooksObj = uniCloud.importObject('todobook-co')
+					const result = await todoBooksObj.updateTodoBook(this.bookId, updateData)
 
-					if (result.result.updated > 0) {
+					if (result.code === 0) {
 						uni.showToast({
 							title: '保存成功',
 							icon: 'success'
@@ -361,7 +342,7 @@
 							uni.navigateBack()
 						}, 1500)
 					} else {
-						throw new Error('保存失败')
+						throw new Error(result.message || '保存失败')
 					}
 				} catch (error) {
 					console.error('保存项目册失败:', error)
@@ -448,13 +429,12 @@
 			},
 
 			hasChanges() {
-				if (!this.todoBook) return false
+				if (!this.bookData) return false
 				
-				return this.formData.title !== this.todoBook.title ||
-					   this.formData.description !== (this.todoBook.description || '') ||
-					   this.formData.color !== (this.todoBook.color || '#007AFF') ||
-					   this.formData.icon !== (this.todoBook.icon || 'folder') ||
-					   this.formData.shareType !== (this.todoBook.share_type || 'private')
+				return this.formData.title !== this.bookData.title ||
+					   this.formData.description !== (this.bookData.description || '') ||
+					   this.formData.color !== (this.bookData.color || '#007AFF') ||
+					   this.formData.icon !== (this.bookData.icon || 'folder')
 			}
 		}
 	}
