@@ -3,7 +3,26 @@
  */
 module.exports = async function updateTaskComment(params) {
   const { commentId, content } = params
-  const { db, userInfo, uid } = this
+  
+  // 重新进行用户验证，确保获取最新的用户信息
+  const token = this.getUniIdToken()
+  if (!token) {
+    return {
+      code: 30202,
+      message: '用户未登录或token已过期'
+    }
+  }
+  
+  const payload = await this.uniID.checkToken(token)
+  if (payload.code !== 0) {
+    return {
+      code: payload.code || 30202,
+      message: payload.message || payload.errMsg || '用户未登录或token已过期'
+    }
+  }
+
+  const uid = payload.uid
+  const db = this.db || uniCloud.database()
   
   // 参数验证
   if (!commentId || !content || content.trim().length === 0) {
@@ -21,21 +40,28 @@ module.exports = async function updateTaskComment(params) {
   }
 
   try {
-    // 查找包含该评论的任务
-    const tasksResult = await db.collection('todoitems')
-      .where({
-        'comments._id': commentId
-      })
-      .get()
-
-    if (tasksResult.data.length === 0) {
+    // 从 commentId 中提取 taskId（commentId 格式：taskId_timestamp_random）
+    const taskId = commentId.split('_')[0]
+    if (!taskId) {
       return {
-        code: 404,
-        message: '评论不存在'
+        code: 400,
+        message: '评论ID格式错误'
       }
     }
 
-    const task = tasksResult.data[0]
+    // 根据 taskId 查找任务
+    const taskResult = await db.collection('todoitems')
+      .doc(taskId)
+      .get()
+
+    if (taskResult.data.length === 0) {
+      return {
+        code: 404,
+        message: '任务不存在'
+      }
+    }
+
+    const task = taskResult.data[0]
     let comments = task.comments || []
     
     // 找到要编辑的评论

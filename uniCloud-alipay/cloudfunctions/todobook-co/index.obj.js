@@ -1066,11 +1066,30 @@ module.exports = {
         .orderBy('created_at', 'asc')
         .get()
 
+      // 获取负责人信息
+      let assigneeInfo = null
+      if (task.assignee_id) {
+        try {
+          const assigneeResult = await db.collection('uni-id-users')
+            .where({ _id: task.assignee_id })
+            .field({ _id: true, nickname: true, username: true, avatar_file: true })
+            .get()
+          
+          if (assigneeResult.data.length > 0) {
+            assigneeInfo = assigneeResult.data[0]
+          }
+        } catch (error) {
+          console.error('获取负责人信息失败:', error)
+        }
+      }
+
       return {
         code: 0,
         data: {
           task: task,
-          subtasks: subtasksResult.data
+          subtasks: subtasksResult.data,
+          assignee: assigneeInfo,
+          todobook_creator_id: bookResult.data.length > 0 ? bookResult.data[0].creator_id : null
         }
       }
     } catch (error) {

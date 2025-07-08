@@ -3,7 +3,26 @@
  */
 module.exports = async function addTaskComment(params) {
   const { taskId, content, parentCommentId = null } = params
-  const { db, userInfo, uid } = this
+  
+  // 重新进行用户验证，确保获取最新的用户信息
+  const token = this.getUniIdToken()
+  if (!token) {
+    return {
+      code: 30202,
+      message: '用户未登录或token已过期'
+    }
+  }
+  
+  const payload = await this.uniID.checkToken(token)
+  if (payload.code !== 0) {
+    return {
+      code: payload.code || 30202,
+      message: payload.message || payload.errMsg || '用户未登录或token已过期'
+    }
+  }
+
+  const uid = payload.uid
+  const db = this.db || uniCloud.database()
   
   // 参数验证
   if (!taskId || !content || content.trim().length === 0) {
@@ -58,15 +77,18 @@ module.exports = async function addTaskComment(params) {
 
     // 获取用户信息
     const userResult = await db.collection('uni-id-users')
-      .doc(uid)
+      .where({ _id: uid })
       .field({
         nickname: true,
-        avatar: true,
-        username: true
+        avatar_file: true,
+        username: true,
+        mobile: true,
+        email: true
       })
       .get()
 
     const user = userResult.data.length > 0 ? userResult.data[0] : {}
+    
     
     // 创建新评论
     const now = new Date()
@@ -96,8 +118,22 @@ module.exports = async function addTaskComment(params) {
       })
 
     // 返回带用户信息的评论
-    newComment.user_nickname = user.nickname || user.username || '用户'
-    newComment.user_avatar = user.avatar || ''
+    
+    // 优先级：昵称 > 用户名 > 手机号脱敏 > 邮箱前缀 > 默认值
+    let displayName = '用户'
+    if (user.nickname && user.nickname.trim()) {
+      displayName = user.nickname.trim()
+    } else if (user.username && user.username.trim()) {
+      displayName = user.username.trim()
+    } else if (user.mobile) {
+      displayName = user.mobile.substring(0, 3) + '****' + user.mobile.substring(7)
+    } else if (user.email) {
+      displayName = user.email.split('@')[0]
+    }
+    
+    newComment.user_nickname = displayName
+    newComment.user_avatar = user.avatar_file || ''
+    
 
     return {
       code: 0,

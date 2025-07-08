@@ -107,7 +107,7 @@
 						</view>
 						<view class="attr-content">
 							<text class="attr-label">负责人</text>
-							<text class="attr-value">{{ assigneeInfo.nickname || assigneeInfo.username }}</text>
+							<text class="attr-value">{{ assigneeInfo.nickname || assigneeInfo.username || '未知用户' }}</text>
 						</view>
 					</view>
 				</view>
@@ -412,9 +412,9 @@
 							this.loadParentTask()
 						}
 						
-						// 获取负责人信息
-						if (this.task.assignee_id) {
-							this.loadAssigneeInfo()
+						// 设置负责人信息
+						if (result.data.assignee) {
+							this.assigneeInfo = result.data.assignee
 						}
 
 						// 设置页面标题
@@ -445,14 +445,6 @@
 				}
 			},
 
-			async loadAssigneeInfo() {
-				// 这里可以调用用户信息接口获取负责人详情
-				// 暂时使用mock数据
-				this.assigneeInfo = {
-					nickname: '当前用户',
-					username: 'user'
-				}
-			},
 
 			async loadParentTask() {
 				try {
