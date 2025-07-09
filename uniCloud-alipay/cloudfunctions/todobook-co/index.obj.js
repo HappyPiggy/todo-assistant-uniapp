@@ -13,7 +13,9 @@ const {
 const {
   createTodoItem,
   getTaskDetail,
-  updateTodoItemStatus
+  updateTodoItemStatus,
+  updateTaskOrder,
+  deleteTask
 } = require('./module/task/index')
 
 const {
@@ -64,6 +66,8 @@ module.exports = {
   createTodoItem,
   getTaskDetail,
   updateTodoItemStatus,
+  updateTaskOrder,
+  deleteTask,
 
   // 成员管理接口
   getMembers,

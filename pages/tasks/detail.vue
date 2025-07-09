@@ -594,19 +594,63 @@
 				})
 			},
 
-			deleteTask() {
+			async deleteTask() {
 				this.hideTaskMenu()
+				
+				if (!this.task || !this.taskId) {
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+					return
+				}
+				
+				// 检查是否有子任务
+				const hasSubtasks = this.subtasks && this.subtasks.length > 0
+				const modalContent = hasSubtasks 
+					? `删除后无法恢复，该任务包含 ${this.subtasks.length} 个子任务，将一并删除。确定要删除吗？`
+					: '删除后无法恢复，确定要删除这个任务吗？'
+				
 				uni.showModal({
 					title: '确认删除',
-					content: '确定要删除这个任务吗？删除后无法恢复。',
+					content: modalContent,
 					confirmColor: '#FF4757',
-					success: (res) => {
+					success: async (res) => {
 						if (res.confirm) {
-							// TODO: 实现删除任务功能
-							uni.showToast({
-								title: '功能开发中',
-								icon: 'none'
-							})
+							try {
+								uni.showLoading({
+									title: '删除中...'
+								})
+								
+								const todoBooksObj = uniCloud.importObject('todobook-co')
+								const result = await todoBooksObj.deleteTask(this.taskId)
+								
+								uni.hideLoading()
+								
+								if (result.code === 0) {
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
+									})
+									
+									// 返回上一页
+									setTimeout(() => {
+										uni.navigateBack()
+									}, 1000)
+								} else {
+									uni.showToast({
+										title: result.message || '删除失败',
+										icon: 'error'
+									})
+								}
+							} catch (error) {
+								uni.hideLoading()
+								console.error('删除任务失败:', error)
+								uni.showToast({
+									title: '删除失败，请重试',
+									icon: 'error'
+								})
+							}
 						}
 					}
 				})

@@ -98,10 +98,13 @@
 					v-for="task in filteredTasks" 
 					:key="task._id"
 					class="task-card"
-					@click="task.subtask_count > 0 ? toggleTaskExpand(task) : null">
+					@click="handleTaskClick(task)">
 					
 					<view class="task-header">
 						<view class="task-left">
+							<view class="task-priority" :class="task.priority">
+								<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
+							</view>
 							<view class="task-expand" v-if="task.subtask_count > 0">
 								<uni-icons 
 									color="#666666" 
@@ -114,16 +117,13 @@
 							</view>
 						</view>
 						<view class="task-right">
-							<view class="task-priority" :class="task.priority">
-								<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
-							</view>
-							<view class="task-detail-btn" @click.stop="openTask(task)">
+							<view class="task-detail-btn" @click.stop="showTaskMenu(task)">
 								<uni-icons 
 									color="#999999" 
 									size="20" 
 									type="more-filled" />
 							</view>
-							<view class="task-status" @click.stop="toggleTaskStatus(task)">
+							<view class="task-status" v-if="task.subtask_count === 0" @click.stop="toggleTaskStatus(task)">
 								<uni-icons 
 									v-if="task.status === 'completed'"
 									color="#28a745" 
@@ -165,20 +165,30 @@
 					<!-- 子任务列表 -->
 					<view v-if="task.expanded && task.subtasks && task.subtasks.length > 0" class="subtasks-container">
 						<view 
-							v-for="subtask in task.subtasks" 
+							v-for="(subtask, index) in task.subtasks" 
 							:key="subtask._id"
-							class="subtask-item">
-							<view class="subtask-content">
-								<text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text>
-								<text class="subtask-description" v-if="subtask.description">{{ subtask.description }}</text>
-								<!-- 子任务未读评论提醒 -->
-								<view v-if="getUnreadCommentCount(subtask._id) > 0" class="subtask-comment-hint">
-									<uni-icons color="#ff9800" size="12" type="chatbubble" />
-									<text class="subtask-comment-count">{{ getUnreadCommentCount(subtask._id) }}</text>
+							class="subtask-item"
+							:class="{ 'dragging': dragState.isDragging && dragState.dragItem && dragState.dragItem._id === subtask._id }"
+							@click="openTask(subtask)"
+							@touchstart="handleSubtaskTouchStart(subtask, index, task, $event)"
+							@touchmove="handleSubtaskTouchMove($event)"
+							@touchend="handleSubtaskTouchEnd($event)">
+							<view class="subtask-left">
+								<view class="subtask-priority" :class="subtask.priority">
+									<text class="priority-text">{{ getPriorityText(subtask.priority) }}</text>
+								</view>
+								<view class="subtask-content">
+									<text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text>
+									<text class="subtask-description" v-if="subtask.description">{{ subtask.description }}</text>
+									<!-- 子任务未读评论提醒 -->
+									<view v-if="getUnreadCommentCount(subtask._id) > 0" class="subtask-comment-hint">
+										<uni-icons color="#ff9800" size="12" type="chatbubble" />
+										<text class="subtask-comment-count">{{ getUnreadCommentCount(subtask._id) }}</text>
+									</view>
 								</view>
 							</view>
 							<view class="subtask-actions">
-								<view class="subtask-detail-btn" @click.stop="openTask(subtask)">
+								<view class="subtask-detail-btn" @click.stop="showTaskMenu(subtask)">
 									<uni-icons 
 										color="#999999" 
 										size="18" 
@@ -203,6 +213,31 @@
 			</view>
 		</view>
 
+		<!-- 任务菜单弹窗 -->
+		<uni-popup ref="taskMenuPopup" type="bottom" background-color="#ffffff" :safe-area="true">
+			<view class="task-menu-sheet">
+				<view class="menu-header">
+					<text class="menu-title">{{ currentTask && currentTask.title ? currentTask.title : '任务操作' }}</text>
+				</view>
+				<view class="menu-list">
+					<view class="menu-item" @click="viewTaskDetail">
+						<uni-icons color="#007AFF" size="20" type="eye" />
+						<text class="menu-text">查看详情</text>
+					</view>
+					<view class="menu-item" @click="editTask">
+						<uni-icons color="#28a745" size="20" type="compose" />
+						<text class="menu-text">编辑任务</text>
+					</view>
+					<view class="menu-item danger" @click="deleteTask">
+						<uni-icons color="#FF4757" size="20" type="trash" />
+						<text class="menu-text">删除任务</text>
+					</view>
+				</view>
+				<view class="menu-cancel" @click="hideTaskMenu">
+					<text class="cancel-text">取消</text>
+				</view>
+			</view>
+		</uni-popup>
 	</view>
 </template>
 
@@ -230,7 +265,20 @@
 					{ key: 'all', label: '全部', count: 0 },
 					{ key: 'todo', label: '待办', count: 0 },
 					{ key: 'completed', label: '已完成', count: 0 }
-				]
+				],
+				// 任务菜单相关
+				currentTask: null,
+				// 拖拽排序相关
+				dragState: {
+					isDragging: false,
+					dragItem: null,
+					dragParent: null,
+					startY: 0,
+					currentY: 0,
+					originalIndex: -1,
+					newIndex: -1,
+					longPressTimer: null
+				}
 			}
 		},
 		computed: {
@@ -378,9 +426,6 @@
 						
 						// 加载任务评论数据（用于显示未读提示）
 						await this.loadTasksCommentCounts(allTasks)
-						
-						// 标记当前页面任务的评论为已读
-						this.markCurrentTasksAsRead()
 					} else {
 						this.tasksError = result.message || '获取任务列表失败'
 						uni.showToast({
@@ -549,6 +594,278 @@
 				this.$set(task, 'expanded', !task.expanded)
 			},
 
+			// 处理任务点击逻辑
+			handleTaskClick(task) {
+				if (task.subtask_count > 0) {
+					// 有子任务，展开/收起
+					this.toggleTaskExpand(task)
+				} else {
+					// 无子任务，打开详情页
+					this.openTask(task)
+				}
+			},
+
+			// 显示任务菜单
+			showTaskMenu(task) {
+				console.log('显示任务菜单:', task)
+				
+				// 验证任务对象
+				if (!task || !task._id) {
+					console.error('任务对象无效:', task)
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+					return
+				}
+				
+				console.log('设置当前任务:', task.title)
+				this.currentTask = task
+				this.$refs.taskMenuPopup.open()
+			},
+			
+			// 隐藏任务菜单
+			hideTaskMenu() {
+				this.$refs.taskMenuPopup.close()
+				this.currentTask = null
+			},
+			
+			// 查看任务详情
+			viewTaskDetail() {
+				if (this.currentTask && this.currentTask._id) {
+					// 先保存任务引用，再隐藏菜单
+					const task = this.currentTask
+					this.hideTaskMenu()
+					this.openTask(task)
+				} else {
+					this.hideTaskMenu()
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+				}
+			},
+			
+			// 编辑任务
+			editTask() {
+				if (this.currentTask && this.currentTask._id) {
+					// 先保存任务引用，再隐藏菜单
+					const task = this.currentTask
+					this.hideTaskMenu()
+					// 暂时跳转到任务详情页，用户可以在详情页进行编辑
+					uni.showToast({
+						title: '编辑功能开发中',
+						icon: 'none'
+					})
+					// 可以先跳转到详情页
+					setTimeout(() => {
+						this.openTask(task)
+					}, 500)
+				} else {
+					this.hideTaskMenu()
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+				}
+			},
+			
+			// 删除任务
+			async deleteTask() {
+				if (!this.currentTask || !this.currentTask._id) {
+					this.hideTaskMenu()
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+					return
+				}
+				
+				const taskToDelete = this.currentTask
+				this.hideTaskMenu()
+				
+				// 检查是否有子任务
+				const hasSubtasks = taskToDelete.subtask_count > 0
+				const modalContent = hasSubtasks 
+					? `删除后无法恢复，该任务包含 ${taskToDelete.subtask_count} 个子任务，将一并删除。确定要删除吗？`
+					: '删除后无法恢复，确定要删除这个任务吗？'
+				
+				uni.showModal({
+					title: '确认删除',
+					content: modalContent,
+					confirmColor: '#FF4757',
+					success: async (res) => {
+						if (res.confirm) {
+							try {
+								uni.showLoading({
+									title: '删除中...'
+								})
+								
+								const todoBooksObj = uniCloud.importObject('todobook-co')
+								const result = await todoBooksObj.deleteTask(taskToDelete._id)
+								
+								uni.hideLoading()
+								
+								if (result.code === 0) {
+									uni.showToast({
+										title: '删除成功',
+										icon: 'success'
+									})
+									// 重新加载任务列表
+									await this.loadTasks()
+									// 同时刷新项目册信息（更新统计数据）
+									await this.loadBookDetail()
+								} else {
+									throw new Error(result.message || '删除失败')
+								}
+							} catch (error) {
+								uni.hideLoading()
+								console.error('删除任务失败:', error)
+								uni.showToast({
+									title: error.message || '删除失败',
+									icon: 'error'
+								})
+							}
+						}
+					}
+				})
+			},
+
+			// 子任务拖拽处理
+			handleSubtaskTouchStart(subtask, index, parentTask, event) {
+				console.log('开始触摸子任务:', subtask.title, 'index:', index)
+				
+				// 记录触摸开始位置
+				this.dragState.startY = event.touches[0].clientY
+				this.dragState.currentY = event.touches[0].clientY
+				
+				// 设置长按定时器
+				this.dragState.longPressTimer = setTimeout(() => {
+					console.log('长按触发拖拽模式')
+					this.dragState.isDragging = true
+					this.dragState.dragItem = subtask
+					this.dragState.dragParent = parentTask
+					this.dragState.originalIndex = index
+					this.dragState.newIndex = index
+					
+					// 振动反馈
+					uni.vibrateShort()
+					
+					// 显示拖拽提示
+					uni.showToast({
+						title: '拖拽以调整顺序',
+						icon: 'none',
+						duration: 1500
+					})
+				}, 500) // 500ms长按
+			},
+
+			handleSubtaskTouchMove(event) {
+				if (!this.dragState.isDragging) return
+				
+				event.preventDefault()
+				
+				this.dragState.currentY = event.touches[0].clientY
+				const deltaY = this.dragState.currentY - this.dragState.startY
+				
+				// 计算新的索引位置
+				const itemHeight = 60 // 大约的子任务高度
+				const moveDistance = Math.round(deltaY / itemHeight)
+				const newIndex = Math.max(0, Math.min(
+					this.dragState.dragParent.subtasks.length - 1,
+					this.dragState.originalIndex + moveDistance
+				))
+				
+				if (newIndex !== this.dragState.newIndex) {
+					this.dragState.newIndex = newIndex
+					console.log('拖拽到新位置:', newIndex)
+				}
+			},
+
+			handleSubtaskTouchEnd(event) {
+				// 清除长按定时器
+				if (this.dragState.longPressTimer) {
+					clearTimeout(this.dragState.longPressTimer)
+					this.dragState.longPressTimer = null
+				}
+				
+				if (!this.dragState.isDragging) return
+				
+				console.log('结束拖拽，原位置:', this.dragState.originalIndex, '新位置:', this.dragState.newIndex)
+				
+				// 如果位置有变化，执行排序
+				if (this.dragState.newIndex !== this.dragState.originalIndex) {
+					this.updateSubtaskOrder()
+				}
+				
+				// 重置拖拽状态
+				this.resetDragState()
+			},
+
+			// 更新子任务排序
+			async updateSubtaskOrder() {
+				const { dragItem, dragParent, originalIndex, newIndex } = this.dragState
+				
+				try {
+					// 本地先更新UI
+					const subtasks = [...dragParent.subtasks]
+					const [removed] = subtasks.splice(originalIndex, 1)
+					subtasks.splice(newIndex, 0, removed)
+					
+					// 更新sort_order
+					subtasks.forEach((subtask, index) => {
+						subtask.sort_order = index
+					})
+					
+					// 更新父任务的subtasks
+					this.$set(dragParent, 'subtasks', subtasks)
+					
+					// 调用云函数更新排序
+					await this.updateTaskOrderInCloud(dragItem._id, newIndex)
+					
+					uni.showToast({
+						title: '排序已更新',
+						icon: 'success'
+					})
+					
+				} catch (error) {
+					console.error('更新排序失败:', error)
+					// 失败时重新加载任务列表
+					this.loadTasks()
+					uni.showToast({
+						title: '排序更新失败',
+						icon: 'error'
+					})
+				}
+			},
+
+			// 更新任务排序到云端
+			async updateTaskOrderInCloud(taskId, newOrder) {
+				const todoBooksObj = uniCloud.importObject('todobook-co')
+				const result = await todoBooksObj.updateTaskOrder(taskId, newOrder)
+				
+				if (result.code !== 0) {
+					throw new Error(result.message || '更新排序失败')
+				}
+				
+				return result
+			},
+
+			// 重置拖拽状态
+			resetDragState() {
+				this.dragState.isDragging = false
+				this.dragState.dragItem = null
+				this.dragState.dragParent = null
+				this.dragState.startY = 0
+				this.dragState.currentY = 0
+				this.dragState.originalIndex = -1
+				this.dragState.newIndex = -1
+				if (this.dragState.longPressTimer) {
+					clearTimeout(this.dragState.longPressTimer)
+					this.dragState.longPressTimer = null
+				}
+			},
+
 			// 组织父子任务关系
 			organizeParentChildTasks(allTasks) {
 				// 创建任务映射
@@ -600,6 +917,15 @@
 			},
 
 			openTask(task) {
+				if (!task || !task._id) {
+					console.error('任务对象无效:', task)
+					uni.showToast({
+						title: '任务信息不存在',
+						icon: 'error'
+					})
+					return
+				}
+				
 				uni.navigateTo({
 					url: `/pages/tasks/detail?id=${task._id}&bookId=${this.bookId}`
 				})
@@ -1071,6 +1397,7 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 12rpx;
+		flex-shrink: 0;
 	}
 
 	.task-expand {
@@ -1079,7 +1406,8 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 12rpx;
-		margin-top: 4rpx;
+		margin-top: 2rpx;
+		flex-shrink: 0;
 	}
 
 	.task-content {
@@ -1107,7 +1435,6 @@
 		align-items: center;
 		background-color: #f8f8f8;
 		border-radius: 18rpx;
-		margin-right: 12rpx;
 	}
 
 	.task-detail-btn:active {
@@ -1136,9 +1463,10 @@
 	}
 
 	.task-priority {
-		padding: 8rpx 16rpx;
+		padding: 6rpx 12rpx;
 		border-radius: 12rpx;
-		margin-left: 16rpx;
+		margin-right: 12rpx;
+		flex-shrink: 0;
 	}
 
 	.task-priority.low {
@@ -1176,6 +1504,44 @@
 
 	.task-priority.urgent .priority-text {
 		color: #d32f2f;
+	}
+
+	/* 子任务优先级样式 */
+	.subtask-priority.low {
+		background-color: #e8f5e8;
+	}
+
+	.subtask-priority.medium {
+		background-color: #fff3e0;
+	}
+
+	.subtask-priority.high {
+		background-color: #ffebee;
+	}
+
+	.subtask-priority.urgent {
+		background-color: #ffebee;
+	}
+
+	.subtask-priority.low .priority-text {
+		color: #28a745;
+	}
+
+	.subtask-priority.medium .priority-text {
+		color: #ff9800;
+	}
+
+	.subtask-priority.high .priority-text {
+		color: #f44336;
+	}
+
+	.subtask-priority.urgent .priority-text {
+		color: #d32f2f;
+	}
+
+	.subtask-priority .priority-text {
+		font-size: 20rpx;
+		font-weight: 500;
 	}
 
 	/* 任务元信息 */
@@ -1292,10 +1658,19 @@
 		background-color: #f8f8f8;
 		border-radius: 12rpx;
 		margin-left: 24rpx;
+		transition: all 0.2s ease;
 	}
 
 	.subtask-item:active {
 		background-color: #f0f0f0;
+	}
+
+	.subtask-item.dragging {
+		transform: scale(1.02);
+		box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+		background-color: #ffffff;
+		border: 2rpx solid #007AFF;
+		z-index: 1000;
 	}
 
 	.subtask-content {
@@ -1342,10 +1717,25 @@
 		text-align: center;
 	}
 
+	.subtask-left {
+		flex-direction: row;
+		align-items: flex-start;
+		flex: 1;
+	}
+
+	.subtask-priority {
+		padding: 4rpx 8rpx;
+		border-radius: 8rpx;
+		margin-right: 12rpx;
+		flex-shrink: 0;
+		margin-top: 2rpx;
+	}
+
 	.subtask-actions {
 		flex-direction: row;
 		align-items: center;
 		gap: 12rpx;
+		flex-shrink: 0;
 	}
 
 	.subtask-detail-btn {
@@ -1353,12 +1743,12 @@
 		height: 32rpx;
 		justify-content: center;
 		align-items: center;
-		background-color: #f8f8f8;
+		background-color: #f0f0f0;
 		border-radius: 16rpx;
 	}
 
 	.subtask-detail-btn:active {
-		background-color: #f0f0f0;
+		background-color: #e8e8e8;
 	}
 
 	.subtask-status {
@@ -1366,6 +1756,83 @@
 		height: 36rpx;
 		justify-content: center;
 		align-items: center;
+	}
+
+	/* 任务菜单弹窗 */
+	.task-menu-sheet {
+		background-color: #ffffff;
+		border-radius: 20rpx 20rpx 0 0;
+		padding-bottom: 40rpx;
+		/* #ifndef APP-NVUE */
+		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+		z-index: 9999;
+		position: relative;
+		/* #endif */
+	}
+
+	.menu-header {
+		padding: 30rpx;
+		border-bottom: 1rpx solid #f0f0f0;
+		align-items: center;
+	}
+
+	.menu-title {
+		font-size: 32rpx;
+		color: #333333;
+		font-weight: 500;
+		/* #ifndef APP-NVUE */
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		/* #endif */
+	}
+
+	.menu-list {
+		padding: 0 20rpx;
+	}
+
+	.menu-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 24rpx 20rpx;
+		border-radius: 12rpx;
+		margin: 8rpx 0;
+	}
+
+	.menu-item:active {
+		background-color: #f8f8f8;
+	}
+
+	.menu-item.danger .menu-text {
+		color: #FF4757;
+	}
+
+	.menu-text {
+		font-size: 30rpx;
+		color: #333333;
+		margin-left: 16rpx;
+	}
+
+	.menu-cancel {
+		margin: 20rpx;
+		margin-bottom: 60rpx;
+		padding: 24rpx;
+		background-color: #f8f8f8;
+		border-radius: 16rpx;
+		align-items: center;
+		/* #ifndef APP-NVUE */
+		margin-bottom: calc(60rpx + env(safe-area-inset-bottom));
+		/* #endif */
+	}
+
+	.menu-cancel:active {
+		background-color: #e8e8e8;
+	}
+
+	.cancel-text {
+		font-size: 30rpx;
+		color: #666666;
 	}
 
 </style>
