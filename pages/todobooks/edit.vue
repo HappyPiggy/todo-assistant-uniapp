@@ -16,22 +16,18 @@
 
     <!-- 编辑表单 -->
     <BookForm
-      v-else-if="bookData"
-      :initial-data="bookData"
+      v-else-if="bookData && !bookLoading"
+      :form-data="formData"
+      :stats-data="bookData"
       :loading="submitting"
       :errors="errors"
+      :show-preview="true"
       mode="edit"
       @submit="handleSubmit"
       @cancel="handleCancel"
+      @update:form-data="updateFormData"
     />
 
-    <!-- 项目册预览 -->
-    <BookPreview
-      v-if="bookData && !bookLoading"
-      :preview-data="previewData"
-      :show-preview="showPreview"
-      @close-preview="showPreview = false"
-    />
   </view>
 </template>
 
@@ -40,7 +36,6 @@ import { ref, computed, onMounted } from 'vue'
 import LoadingState from './components/common/LoadingState.vue'
 import ErrorState from './components/common/ErrorState.vue'
 import BookForm from './components/book/BookForm.vue'
-import BookPreview from './components/book/BookPreview.vue'
 import { useBookForm } from './composables/useBookForm.js'
 import { useBookData } from './composables/useBookData.js'
 
@@ -63,36 +58,39 @@ const {
   errors,
   validateForm,
   resetForm,
+  fillForm,
   updateBook
 } = useBookForm()
 
-// 预览相关
-const showPreview = ref(false)
-const previewData = computed(() => ({
-  ...bookData.value,
-  title: formData.value.title || bookData.value?.title || '项目册',
-  description: formData.value.description || bookData.value?.description || '',
-  color: formData.value.color || bookData.value?.color || '#007AFF',
-  icon: formData.value.icon || bookData.value?.icon || 'folder',
-  stats: {
-    total: bookData.value?.item_count || 0,
-    completed: bookData.value?.completed_count || 0,
-    members: bookData.value?.member_count || 1,
-    progress: bookData.value?.item_count > 0 ? 
-      Math.round((bookData.value.completed_count / bookData.value.item_count) * 100) : 0
-  }
-}))
 
 // 加载数据
 const loadBookData = async () => {
   await loadBookDetail()
+  // 加载完成后初始化表单数据
+  if (bookData.value) {
+    // 使用 fillForm 方法正确初始化表单数据
+    fillForm(bookData.value)
+  }
+}
+
+// 更新表单数据
+const updateFormData = (newData) => {
+  Object.assign(formData.value, newData)
 }
 
 // 事件处理
 const handleSubmit = async (data) => {
   try {
-    const result = await updateBook(bookId, data)
-    if (result.success) {
+    // 清理数据，避免循环引用
+    const cleanData = {
+      title: data.title,
+      description: data.description,
+      color: data.color,
+      icon: data.icon
+    }
+    
+    const result = await updateBook(bookId, cleanData)
+    if (result.code === 0) {
       uni.showToast({
         title: '保存成功',
         icon: 'success'
@@ -104,6 +102,7 @@ const handleSubmit = async (data) => {
       }, 1000)
     }
   } catch (error) {
+    console.error('提交失败:', error)
     uni.showToast({
       title: '保存失败',
       icon: 'error'
