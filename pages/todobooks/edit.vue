@@ -27,7 +27,8 @@
 
     <!-- 项目册预览 -->
     <BookPreview
-      :book-data="previewData"
+      v-if="bookData && !bookLoading"
+      :preview-data="previewData"
       :show-preview="showPreview"
       @close-preview="showPreview = false"
     />
@@ -71,8 +72,15 @@ const previewData = computed(() => ({
   ...bookData.value,
   title: formData.value.title || bookData.value?.title || '项目册',
   description: formData.value.description || bookData.value?.description || '',
-  color: formData.value.color || bookData.value?.color,
-  icon: formData.value.icon || bookData.value?.icon
+  color: formData.value.color || bookData.value?.color || '#007AFF',
+  icon: formData.value.icon || bookData.value?.icon || 'folder',
+  stats: {
+    total: bookData.value?.item_count || 0,
+    completed: bookData.value?.completed_count || 0,
+    members: bookData.value?.member_count || 1,
+    progress: bookData.value?.item_count > 0 ? 
+      Math.round((bookData.value.completed_count / bookData.value.item_count) * 100) : 0
+  }
 }))
 
 // 加载数据

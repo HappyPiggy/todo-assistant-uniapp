@@ -15,7 +15,7 @@
 
     <!-- 项目册预览 -->
     <BookPreview
-      :book-data="previewData"
+      :preview-data="previewData"
       :show-preview="showPreview"
       @close-preview="showPreview = false"
     />
@@ -43,12 +43,15 @@ const showPreview = ref(false)
 const previewData = computed(() => ({
   title: formData.value.title || '新项目册',
   description: formData.value.description || '这是一个新的项目册',
-  color: formData.value.color,
-  icon: formData.value.icon,
+  color: formData.value.color || '#007AFF',
+  icon: formData.value.icon || 'folder',
   created_at: new Date(),
-  item_count: 0,
-  completed_count: 0,
-  member_count: 1
+  stats: {
+    total: 0,
+    completed: 0,
+    members: 1,
+    progress: 0
+  }
 }))
 
 // 事件处理

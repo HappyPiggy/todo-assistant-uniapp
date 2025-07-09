@@ -1,30 +1,30 @@
 <template>
-  <view class="book-preview">
+  <view v-if="showPreview" class="book-preview">
     <view class="preview-card">
       <view class="card-header">
-        <view class="book-icon" :style="{ backgroundColor: previewData.color }">
-          <uni-icons color="#ffffff" size="24" :type="previewData.icon" />
+        <view class="book-icon" :style="{ backgroundColor: previewData?.color || '#007AFF' }">
+          <uni-icons color="#ffffff" size="24" :type="previewData?.icon || 'folder'" />
         </view>
         <view class="book-info">
-          <text class="book-title">{{ previewData.title }}</text>
-          <text class="book-description" v-if="previewData.description">{{ previewData.description }}</text>
+          <text class="book-title">{{ previewData?.title || '项目册' }}</text>
+          <text class="book-description" v-if="previewData?.description">{{ previewData.description }}</text>
         </view>
       </view>
       <view class="card-stats">
         <view class="stat-item">
-          <text class="stat-number">{{ previewData.stats.total }}</text>
+          <text class="stat-number">{{ previewData?.stats?.total || 0 }}</text>
           <text class="stat-label">总任务</text>
         </view>
         <view class="stat-item">
-          <text class="stat-number">{{ previewData.stats.completed }}</text>
+          <text class="stat-number">{{ previewData?.stats?.completed || 0 }}</text>
           <text class="stat-label">已完成</text>
         </view>
         <view class="stat-item">
-          <text class="stat-number">{{ previewData.stats.members }}</text>
+          <text class="stat-number">{{ previewData?.stats?.members || 1 }}</text>
           <text class="stat-label">成员</text>
         </view>
         <view class="stat-item">
-          <text class="stat-number">{{ previewData.stats.progress }}%</text>
+          <text class="stat-number">{{ previewData?.stats?.progress || 0 }}%</text>
           <text class="stat-label">进度</text>
         </view>
       </view>
@@ -38,7 +38,22 @@ import { defineProps } from 'vue'
 const props = defineProps({
   previewData: {
     type: Object,
-    required: true
+    default: () => ({
+      title: '项目册',
+      description: '',
+      color: '#007AFF',
+      icon: 'folder',
+      stats: {
+        total: 0,
+        completed: 0,
+        members: 1,
+        progress: 0
+      }
+    })
+  },
+  showPreview: {
+    type: Boolean,
+    default: false
   }
 })
 </script>
