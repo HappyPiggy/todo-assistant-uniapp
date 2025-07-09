@@ -9,7 +9,7 @@ const {
 } = require('../../common/utils')
 const { 
   getTodoBookTaskStats, 
-  getTodoBookMemberCount 
+  getTodoBookMemberCount
 } = require('../../lib/utils/database')
 const { ERROR_CODES } = require('../../common/constants')
 

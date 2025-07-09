@@ -12,7 +12,7 @@
 						v-model="formData.title" 
 						placeholder="请输入项目册名称"
 						:clearable="true"
-						:maxlength="100">
+						:maxlength="150">
 					</uni-easyinput>
 				</uni-forms-item>
 

@@ -108,6 +108,99 @@ async function getTodoBookMemberCount(context, todoBookId) {
 }
 
 /**
+ * 获取项目册未读评论数量
+ * @param {Object} context 云函数上下文
+ * @param {string} todoBookId 项目册ID
+ * @param {string} userId 用户ID
+ * @param {Object} lastViewTimes 本地存储的任务查看时间
+ * @returns {Object} 未读评论数量结果 { success: boolean, count?: number, error?: Object }
+ */
+async function getTodoBookUnreadCommentCount(context, todoBookId, userId, lastViewTimes = {}) {
+  const db = getDatabase(context)
+  
+  console.log('[Cloud] 计算项目册未读评论数量:', {
+    todoBookId,
+    userId,
+    lastViewTimesCount: Object.keys(lastViewTimes).length
+  })
+  
+  try {
+    // 获取项目册下所有任务
+    const tasksResult = await db.collection('todoitems')
+      .where({ todobook_id: todoBookId })
+      .field({ _id: true, comments: true, title: true })
+      .get()
+    
+    console.log(`[Cloud] 项目册 ${todoBookId} 包含 ${tasksResult.data?.length || 0} 个任务`)
+    
+    if (!tasksResult.data || tasksResult.data.length === 0) {
+      return { success: true, count: 0 }
+    }
+    
+    let unreadCount = 0
+    
+    for (const task of tasksResult.data) {
+      if (!task.comments || task.comments.length === 0) {
+        console.log(`[Cloud] 任务 ${task.title} 没有评论`)
+        continue
+      }
+      
+      // 获取该任务的最后查看时间
+      const lastViewTime = lastViewTimes[task._id] || 0
+      
+      console.log(`[Cloud] 任务 ${task.title}:`, {
+        taskId: task._id,
+        commentsCount: task.comments.length,
+        lastViewTime: new Date(lastViewTime).toLocaleString()
+      })
+      
+      // 统计该任务中未读的评论数量
+      const unreadComments = task.comments.filter(comment => {
+        // 不计算自己的评论
+        if (comment.user_id === userId) {
+          return false
+        }
+        
+        // 如果评论已删除，不计算
+        if (comment.is_deleted) {
+          return false
+        }
+        
+        // 如果评论创建时间晚于最后查看时间，则为未读
+        const commentTime = new Date(comment.created_at).getTime()
+        const isUnread = commentTime > lastViewTime
+        
+        if (isUnread) {
+          console.log(`[Cloud] 未读评论:`, {
+            content: comment.content?.substring(0, 50),
+            createdAt: new Date(comment.created_at).toLocaleString(),
+            userId: comment.user_id
+          })
+        }
+        
+        return isUnread
+      })
+      
+      console.log(`[Cloud] 任务 ${task.title} 未读评论数量: ${unreadComments.length}`)
+      unreadCount += unreadComments.length
+    }
+    
+    console.log(`[Cloud] 项目册 ${todoBookId} 总未读评论数量: ${unreadCount}`)
+    
+    return {
+      success: true,
+      count: unreadCount
+    }
+  } catch (error) {
+    console.error('获取未读评论数量失败:', error)
+    return {
+      success: false,
+      error: createErrorResponse(ERROR_CODES.INTERNAL_ERROR, '获取未读评论数量失败')
+    }
+  }
+}
+
+/**
  * 处理父子任务状态联动
  * @param {Object} context 云函数上下文
  * @param {Object} task 任务对象
@@ -188,5 +281,6 @@ module.exports = {
   updateTodoBookStats,
   getTodoBookTaskStats,
   getTodoBookMemberCount,
+  getTodoBookUnreadCommentCount,
   handleParentChildStatusUpdate
 }

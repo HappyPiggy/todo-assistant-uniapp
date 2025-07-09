@@ -389,9 +389,6 @@
 			// 加载任务详情和评论
 			this.loadTaskDetail()
 			this.loadComments()
-			
-			// 标记任务为已读
-			this.markTaskAsRead()
 		},
 		methods: {
 			// 加载任务详情
@@ -649,6 +646,11 @@
 							pageSize: result.data.pageSize,
 							hasMore: result.data.hasMore
 						}
+						
+						// 评论加载完成后，标记任务为已读
+						if (refresh) {
+							this.markTaskAsRead()
+						}
 					} else {
 						console.error('加载评论失败:', result.message)
 					}
@@ -831,6 +833,9 @@
 					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
 					lastViewTimes[this.taskId] = Date.now()
 					uni.setStorageSync('task_comment_view_times', lastViewTimes)
+					
+					// 输出日志，便于调试
+					console.log('任务已标记为已读:', this.taskId, '时间:', new Date().toLocaleString())
 				} catch (error) {
 					console.error('标记已读失败:', error)
 				}
