@@ -1,0 +1,149 @@
+// 颜色变量
+$primary-color: #007AFF;
+$success-color: #28a745;
+$error-color: #FF4757;
+$warning-color: #ff9800;
+$info-color: #17a2b8;
+
+// 次级颜色
+$gray-50: #f7f8fa;
+$gray-100: #f8f9fa;
+$gray-200: #e9ecef;
+$gray-300: #f0f0f0;
+$gray-400: #cccccc;
+$gray-500: #999999;
+$gray-600: #666666;
+$gray-700: #333333;
+$gray-800: #1f1f1f;
+
+// 背景颜色
+$bg-primary: #f5f5f5;
+$bg-secondary: #f8f9fa;
+$bg-white: #ffffff;
+$bg-light: #fafafa;
+
+// 文本颜色
+$text-color: #333333;
+$text-primary: #333333;
+$text-secondary: #666666;
+$text-tertiary: #999999;
+$text-light: #cccccc;
+
+// 尺寸变量
+$border-radius: 16rpx;
+$border-radius-small: 8rpx;
+$border-radius-large: 20rpx;
+$border-radius-circle: 50%;
+
+$padding-xs: 8rpx;
+$padding-sm: 16rpx;
+$padding-base: 30rpx;
+$padding-lg: 40rpx;
+$padding-xl: 60rpx;
+$padding-xxl: 80rpx;
+
+$margin-xs: 8rpx;
+$margin-sm: 16rpx;
+$margin-base: 20rpx;
+$margin-lg: 30rpx;
+$margin-xl: 40rpx;
+$margin-xxl: 60rpx;
+
+// 字体大小
+$font-size-xs: 22rpx;
+$font-size-sm: 24rpx;
+$font-size-base: 28rpx;
+$font-size-lg: 30rpx;
+$font-size-xl: 32rpx;
+$font-size-xxl: 36rpx;
+$font-size-2xl: 40rpx;
+
+// 字体重量
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-tight: 1.25;
+$line-height-base: 1.4;
+$line-height-relaxed: 1.6;
+$line-height-lg: 1.8;
+
+// 阴影
+$box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+$box-shadow-light: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+$box-shadow-medium: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+$box-shadow-heavy: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+
+// 边框
+$border-color: #e5e5e5;
+$border-color-light: #f0f0f0;
+$border-width: 1rpx;
+
+// 动画
+$transition-base: 0.3s ease;
+$transition-fast: 0.2s ease;
+$transition-slow: 0.5s ease;
+
+// Z-index层级
+$z-index-normal: 1;
+$z-index-dropdown: 10;
+$z-index-sticky: 50;
+$z-index-modal: 100;
+$z-index-popup: 1000;
+$z-index-tooltip: 1100;
+
+// 优先级颜色
+$priority-low-bg: #e8f5e8;
+$priority-low-color: #28a745;
+$priority-medium-bg: #fff3e0;
+$priority-medium-color: #ff9800;
+$priority-high-bg: #ffebee;
+$priority-high-color: #f44336;
+$priority-urgent-bg: #ffebee;
+$priority-urgent-color: #d32f2f;
+
+// 项目册颜色选项
+$color-blue: #007AFF;
+$color-green: #28A745;
+$color-orange: #FF9500;
+$color-red: #FF3B30;
+$color-purple: #AF52DE;
+$color-yellow: #FFCC00;
+$color-cyan: #5AC8FA;
+$color-pink: #FF2D92;
+
+// 状态颜色
+$status-todo-bg: #f0f6ff;
+$status-todo-color: #007AFF;
+$status-progress-bg: #fff8e1;
+$status-progress-color: #ff9800;
+$status-completed-bg: #e8f5e8;
+$status-completed-color: #28a745;
+$status-cancelled-bg: #ffebee;
+$status-cancelled-color: #f44336;
+
+// 屏幕断点
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+
+// 动画时长
+$animation-duration-fast: 0.15s;
+$animation-duration-base: 0.3s;
+$animation-duration-slow: 0.5s;
+
+// 安全区域
+$safe-area-top: env(safe-area-inset-top);
+$safe-area-bottom: env(safe-area-inset-bottom);
+$safe-area-left: env(safe-area-inset-left);
+$safe-area-right: env(safe-area-inset-right);
+
+// 断点（响应式）
+$breakpoint-xs: 480rpx;
+$breakpoint-sm-rpx: 640rpx;
+$breakpoint-md-rpx: 750rpx;
+$breakpoint-lg-rpx: 1024rpx;
+$breakpoint-xl-rpx: 1200rpx;

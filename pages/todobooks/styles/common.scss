@@ -1,0 +1,361 @@
+@import './variables.scss';
+@import './mixins.scss';
+
+// 全局样式重置
+/* #ifndef APP-NVUE */
+view {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+
+page {
+  background-color: $bg-color;
+}
+/* #endif */
+
+// 通用布局类
+.container {
+  flex: 1;
+  background-color: $bg-color;
+  min-height: 100vh;
+}
+
+.section {
+  @include card-style;
+  margin: $margin-base;
+}
+
+.section-header {
+  @include flex-between;
+  padding-bottom: $padding-base;
+  border-bottom: $border-width solid $border-color-light;
+  margin-bottom: $padding-base;
+  
+  .section-title {
+    font-size: $font-size-xl;
+    color: $text-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+// 按钮样式类
+.btn {
+  @include button-base;
+  height: 88rpx;
+  padding: 0 $padding-base;
+}
+
+.btn-primary {
+  @include button-primary;
+}
+
+.btn-secondary {
+  @include button-secondary;
+}
+
+.btn-danger {
+  @include button-danger;
+}
+
+.btn-small {
+  height: 60rpx;
+  font-size: $font-size-base;
+  padding: 0 $padding-sm;
+}
+
+.btn-large {
+  height: 100rpx;
+  font-size: $font-size-2xl;
+  padding: 0 $padding-lg;
+}
+
+// 文本样式类
+.text-primary {
+  color: $text-primary;
+}
+
+.text-secondary {
+  color: $text-secondary;
+}
+
+.text-tertiary {
+  color: $text-tertiary;
+}
+
+.text-success {
+  color: $success-color;
+}
+
+.text-error {
+  color: $error-color;
+}
+
+.text-warning {
+  color: $warning-color;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-truncate {
+  @include text-truncate;
+}
+
+.text-line-clamp-2 {
+  @include text-line-clamp(2);
+}
+
+.text-line-clamp-3 {
+  @include text-line-clamp(3);
+}
+
+// 字体大小类
+.font-xs { font-size: $font-size-xs; }
+.font-sm { font-size: $font-size-sm; }
+.font-base { font-size: $font-size-base; }
+.font-lg { font-size: $font-size-lg; }
+.font-xl { font-size: $font-size-xl; }
+.font-2xl { font-size: $font-size-2xl; }
+
+// 字体重量类
+.font-normal { font-weight: $font-weight-normal; }
+.font-medium { font-weight: $font-weight-medium; }
+.font-semibold { font-weight: $font-weight-semibold; }
+.font-bold { font-weight: $font-weight-bold; }
+
+// 间距类
+.p-xs { padding: $padding-xs; }
+.p-sm { padding: $padding-sm; }
+.p-base { padding: $padding-base; }
+.p-lg { padding: $padding-lg; }
+.p-xl { padding: $padding-xl; }
+
+.m-xs { margin: $margin-xs; }
+.m-sm { margin: $margin-sm; }
+.m-base { margin: $margin-base; }
+.m-lg { margin: $margin-lg; }
+.m-xl { margin: $margin-xl; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: $margin-xs; }
+.mb-sm { margin-bottom: $margin-sm; }
+.mb-base { margin-bottom: $margin-base; }
+.mb-lg { margin-bottom: $margin-lg; }
+.mb-xl { margin-bottom: $margin-xl; }
+
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: $margin-xs; }
+.mt-sm { margin-top: $margin-sm; }
+.mt-base { margin-top: $margin-base; }
+.mt-lg { margin-top: $margin-lg; }
+.mt-xl { margin-top: $margin-xl; }
+
+// Flex布局类
+.flex { display: flex; }
+.flex-column { @include flex-column; }
+.flex-center { @include flex-center; }
+.flex-between { @include flex-between; }
+.flex-start { @include flex-start; }
+.flex-end { @include flex-end; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+.flex-1 { flex: 1; }
+
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.justify-center { justify-content: center; }
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+// 状态样式类
+.loading {
+  @include loading-state;
+}
+
+.error {
+  @include error-state;
+}
+
+.empty {
+  @include empty-state;
+}
+
+// 优先级样式类
+.priority-low {
+  @include priority-low;
+}
+
+.priority-medium {
+  @include priority-medium;
+}
+
+.priority-high {
+  @include priority-high;
+}
+
+.priority-urgent {
+  @include priority-urgent;
+}
+
+// 状态样式类
+.status-todo {
+  @include status-todo;
+}
+
+.status-progress {
+  @include status-progress;
+}
+
+.status-completed {
+  @include status-completed;
+}
+
+.status-cancelled {
+  @include status-cancelled;
+}
+
+// 图标按钮类
+.icon-btn {
+  @include icon-button;
+}
+
+.icon-btn-lg {
+  @include icon-button(44rpx);
+}
+
+.icon-btn-sm {
+  @include icon-button(28rpx);
+}
+
+// 头像类
+.avatar {
+  @include avatar;
+}
+
+.avatar-lg {
+  @include avatar(60rpx);
+}
+
+.avatar-sm {
+  @include avatar(36rpx);
+}
+
+.avatar-placeholder {
+  @include avatar-placeholder;
+}
+
+.avatar-placeholder-lg {
+  @include avatar-placeholder(60rpx);
+}
+
+.avatar-placeholder-sm {
+  @include avatar-placeholder(36rpx);
+}
+
+// 卡片类
+.card {
+  @include card-style;
+}
+
+.card-hover {
+  @include card-hover;
+}
+
+.card-no-padding {
+  @include card-style(0);
+}
+
+// 分隔线
+.divider {
+  height: $border-width;
+  background-color: $border-color-light;
+  margin: $margin-sm 0;
+}
+
+.divider-vertical {
+  width: $border-width;
+  background-color: $border-color-light;
+  margin: 0 $margin-sm;
+}
+
+// 遮罩层
+.mask {
+  @include popup-mask;
+}
+
+// 固定定位类
+.fixed-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: $bg-white;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  @include safe-area-bottom;
+}
+
+// 工具类
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-scroll {
+  overflow: scroll;
+  @include custom-scrollbar;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.opacity-0 {
+  opacity: 0;
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+.hidden {
+  display: none;
+}
+
+// 动画类
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

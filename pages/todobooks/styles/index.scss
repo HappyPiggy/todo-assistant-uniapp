@@ -1,0 +1,348 @@
+// 样式统一入口文件
+// 为整个todobooks模块提供完整的样式系统
+
+// 基础变量（必须最先导入）
+@import './variables.scss';
+
+// 混入函数
+@import './mixins.scss';
+
+// 通用样式
+@import './common.scss';
+
+// 组件特定样式（可选导入）
+// 这些样式主要用于全局覆盖或特殊情况
+
+// 通用组件样式
+.loading-state,
+.error-state,
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  padding: $padding-xxl;
+  
+  .state-icon {
+    margin-bottom: $margin-base;
+  }
+  
+  .state-text {
+    font-size: $font-size-base;
+    color: $text-secondary;
+    text-align: center;
+    line-height: $line-height-relaxed;
+  }
+  
+  .state-action {
+    margin-top: $margin-lg;
+  }
+}
+
+// 项目册相关样式
+.book-header {
+  .progress-ring {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 80%;
+      border-radius: 50%;
+      background-color: $bg-white;
+    }
+  }
+}
+
+// 任务相关样式
+.task-priority-urgent {
+  @include priority-urgent;
+  
+  // 添加闪烁动画
+  animation: urgent-pulse 2s infinite;
+}
+
+@keyframes urgent-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+// 成员相关样式
+.member-status-online {
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2rpx;
+    right: -2rpx;
+    width: 16rpx;
+    height: 16rpx;
+    background-color: $success-color;
+    border: 2rpx solid $bg-white;
+    border-radius: 50%;
+  }
+}
+
+// 响应式设计
+@media screen and (max-width: 750rpx) {
+  .book-stats {
+    .stat-item {
+      min-width: 0;
+      flex: 1;
+      
+      .stat-number {
+        font-size: $font-size-lg;
+      }
+    }
+  }
+  
+  .task-card {
+    .task-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $margin-sm;
+      
+      .meta-left,
+      .task-tags {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// 深色模式支持（预留）
+@media (prefers-color-scheme: dark) {
+  // 深色模式下的样式调整
+  // 可以根据需要添加深色模式支持
+}
+
+// 打印样式（预留）
+@media print {
+  .task-card,
+  .book-header {
+    break-inside: avoid;
+  }
+  
+  .popup-mask,
+  .floating-button {
+    display: none !important;
+  }
+}
+
+// 无障碍样式优化
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// 高对比度模式
+@media (prefers-contrast: high) {
+  .task-card,
+  .member-item,
+  .book-form {
+    border-width: 2rpx;
+  }
+  
+  .button,
+  .tag {
+    border: 2rpx solid currentColor;
+  }
+}
+
+// 大字体模式支持
+@media (prefers-font-size: large) {
+  .task-title,
+  .book-title,
+  .member-name {
+    font-size: calc(#{$font-size-lg} * 1.2);
+  }
+  
+  .task-description,
+  .book-description {
+    font-size: calc(#{$font-size-base} * 1.1);
+  }
+}
+
+// 工具类（实用样式类）
+.text-overflow {
+  /* #ifndef APP-NVUE */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* #endif */
+}
+
+.text-overflow-2 {
+  /* #ifndef APP-NVUE */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* #endif */
+}
+
+.text-overflow-3 {
+  /* #ifndef APP-NVUE */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* #endif */
+}
+
+// 动画类
+.fade-in {
+  animation: fadeIn $animation-duration-base ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp $animation-duration-base ease-out;
+}
+
+.bounce-in {
+  animation: bounceIn $animation-duration-slow ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20rpx);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// 状态类
+.is-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.is-disabled {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.is-invisible {
+  visibility: hidden;
+}
+
+// 布局助手类
+.full-width {
+  width: 100%;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-none {
+  flex: none;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+// 间距助手类
+.mt-xs { margin-top: $margin-xs; }
+.mt-sm { margin-top: $margin-sm; }
+.mt-base { margin-top: $margin-base; }
+.mt-lg { margin-top: $margin-lg; }
+.mt-xl { margin-top: $margin-xl; }
+
+.mb-xs { margin-bottom: $margin-xs; }
+.mb-sm { margin-bottom: $margin-sm; }
+.mb-base { margin-bottom: $margin-base; }
+.mb-lg { margin-bottom: $margin-lg; }
+.mb-xl { margin-bottom: $margin-xl; }
+
+.ml-xs { margin-left: $margin-xs; }
+.ml-sm { margin-left: $margin-sm; }
+.ml-base { margin-left: $margin-base; }
+.ml-lg { margin-left: $margin-lg; }
+.ml-xl { margin-left: $margin-xl; }
+
+.mr-xs { margin-right: $margin-xs; }
+.mr-sm { margin-right: $margin-sm; }
+.mr-base { margin-right: $margin-base; }
+.mr-lg { margin-right: $margin-lg; }
+.mr-xl { margin-right: $margin-xl; }
+
+.pt-xs { padding-top: $padding-xs; }
+.pt-sm { padding-top: $padding-sm; }
+.pt-base { padding-top: $padding-base; }
+.pt-lg { padding-top: $padding-lg; }
+.pt-xl { padding-top: $padding-xl; }
+
+.pb-xs { padding-bottom: $padding-xs; }
+.pb-sm { padding-bottom: $padding-sm; }
+.pb-base { padding-bottom: $padding-base; }
+.pb-lg { padding-bottom: $padding-lg; }
+.pb-xl { padding-bottom: $padding-xl; }
+
+.pl-xs { padding-left: $padding-xs; }
+.pl-sm { padding-left: $padding-sm; }
+.pl-base { padding-left: $padding-base; }
+.pl-lg { padding-left: $padding-lg; }
+.pl-xl { padding-left: $padding-xl; }
+
+.pr-xs { padding-right: $padding-xs; }
+.pr-sm { padding-right: $padding-sm; }
+.pr-base { padding-right: $padding-base; }
+.pr-lg { padding-right: $padding-lg; }
+.pr-xl { padding-right: $padding-xl; }
