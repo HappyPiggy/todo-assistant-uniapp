@@ -43,10 +43,6 @@
 					<view class="card-header">
 						<view class="book-icon" :style="{ backgroundColor: book.color }">
 							<uni-icons color="#ffffff" size="24" :type="book.icon" />
-							<!-- 未读评论提醒标识 -->
-							<view v-if="book.unread_comment_count > 0" class="unread-badge">
-								<text class="unread-count">{{ book.unread_comment_count > 99 ? '99+' : book.unread_comment_count }}</text>
-							</view>
 						</view>
 						<view class="book-info">
 							<text class="book-title">{{ book.title }}</text>
@@ -153,7 +149,6 @@
 	import {
 		store
 	} from '@/uni_modules/uni-id-pages/common/store.js'
-	import { calculateBookUnreadCount } from '@/utils/commentUtils.js'
 	
 	export default {
 		data() {
@@ -239,8 +234,6 @@
 					if (result.code === 0) {
 						const { list, pagination } = result.data
 						
-						// 为每个项目册计算未读评论数量
-						await this.calculateUnreadCountsForBooks(list)
 						
 						if (isLoadMore) {
 							this.todoBooks = [...this.todoBooks, ...list]
@@ -271,44 +264,6 @@
 				}
 			},
 			
-			// 为项目册列表计算未读评论数量
-			async calculateUnreadCountsForBooks(books) {
-				if (!books || books.length === 0) {
-					return
-				}
-				
-				
-				// 并行获取每个项目册的任务和评论数据
-				const todoBooksObj = uniCloud.importObject('todobook-co')
-				
-				await Promise.all(books.map(async (book) => {
-					try {
-						// 获取项目册下的所有任务（包含评论）
-						const tasksResult = await todoBooksObj.getTodoBookDetail({
-							todoBookId: book._id,
-							include_comments: true
-						})
-						
-						if (tasksResult.code === 0 && tasksResult.data.tasks) {
-							// 使用工具函数计算未读数量
-							const unreadCount = calculateBookUnreadCount(
-								book._id, 
-								tasksResult.data.tasks, 
-								this.currentUserId
-							)
-							
-							book.unread_comment_count = unreadCount
-							
-							} else {
-							book.unread_comment_count = 0
-						}
-					} catch (error) {
-						console.error(`计算项目册 ${book.title} 未读数量失败:`, error)
-						book.unread_comment_count = 0
-					}
-				}))
-				
-			},
 
 			// 修改：刷新数据
 			async refreshTodoBooks() {
@@ -624,27 +579,6 @@
 		position: relative;
 	}
 
-	/* 未读评论提醒标识 */
-	.unread-badge {
-		position: absolute;
-		top: -8rpx;
-		right: -8rpx;
-		background-color: #ff4757;
-		border-radius: 16rpx;
-		min-width: 24rpx;
-		height: 24rpx;
-		justify-content: center;
-		align-items: center;
-		padding: 0 6rpx;
-		box-shadow: 0 2rpx 4rpx rgba(255, 71, 87, 0.3);
-	}
-
-	.unread-count {
-		font-size: 18rpx;
-		color: #ffffff;
-		font-weight: 500;
-		line-height: 24rpx;
-	}
 
 	.book-info {
 		flex: 1;

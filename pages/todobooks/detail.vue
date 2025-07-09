@@ -207,7 +207,7 @@
 </template>
 
 <script>
-	import { calculateUnreadCount, markTaskCommentsAsRead } from '@/utils/commentUtils.js'
+	import { calculateUnreadCount, extractCommentIds } from '@/utils/commentUtils.js'
 	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 	
 	export default {
@@ -303,9 +303,6 @@
 			if (this.bookId) {
 				this.refreshData()
 			}
-			
-			// 标记当前页面任务的评论为已读
-			this.markCurrentTasksAsRead()
 		},
 		onPullDownRefresh() {
 			this.refreshData()
@@ -603,11 +600,6 @@
 			},
 
 			openTask(task) {
-				// 标记任务评论为已读
-				if (task.comments && task.comments.length > 0) {
-					markTaskCommentsAsRead(task._id, task.comments)
-				}
-				
 				uni.navigateTo({
 					url: `/pages/tasks/detail?id=${task._id}&bookId=${this.bookId}`
 				})
@@ -651,6 +643,7 @@
 
 			// 加载任务评论数据
 			async loadTasksCommentCounts(tasks) {
+				console.log('[DEBUG] loadTasksCommentCounts 开始加载评论数据，任务数量:', tasks.length)
 				
 				try {
 					const todoBooksObj = uniCloud.importObject('todobook-co')
@@ -658,8 +651,11 @@
 					// 并行获取每个任务的评论数据
 					const commentPromises = tasks.map(async task => {
 						try {
+							console.log('[DEBUG] 获取任务评论:', task._id, task.title)
 							// 获取前50条评论，这样可以获取到评论的创建时间等详细信息
 							const result = await todoBooksObj.getTaskComments(task._id, 1, 50)
+							console.log('[DEBUG] 任务评论接口返回:', task._id, result)
+							
 							if (result.code === 0) {
 								// 扁平化评论数据，包含顶级评论和回复
 								const allComments = []
@@ -670,9 +666,16 @@
 									}
 								})
 								
+								console.log('[DEBUG] 任务评论处理结果:', {
+									taskId: task._id,
+									originalComments: result.data.comments.length,
+									allComments: allComments.length,
+									total: result.data.total
+								})
+								
 								return {
 									taskId: task._id,
-									comments: allComments,
+									comments: result.data.comments, // 保持原有结构
 									total: result.data.total
 								}
 							}
@@ -688,6 +691,7 @@
 					})
 					
 					const commentData = await Promise.all(commentPromises)
+					console.log('[DEBUG] 所有任务评论数据获取完成:', commentData)
 					
 					// 将评论数据添加到任务对象中
 					commentData.forEach(({ taskId, comments, total }) => {
@@ -695,6 +699,12 @@
 						if (task) {
 							task.comments = comments
 							task.comment_count = total
+							console.log('[DEBUG] 给任务添加评论数据:', {
+								taskId: task._id,
+								title: task.title,
+								commentsCount: comments.length,
+								total
+							})
 						}
 					})
 					
@@ -706,10 +716,17 @@
 								if (allTaskData && allTaskData.comments) {
 									subtask.comments = allTaskData.comments
 									subtask.comment_count = allTaskData.comment_count || 0
+									console.log('[DEBUG] 给子任务添加评论数据:', {
+										subtaskId: subtask._id,
+										title: subtask.title,
+										commentsCount: subtask.comments.length
+									})
 								}
 							})
 						}
 					})
+					
+					console.log('[DEBUG] loadTasksCommentCounts 完成，最终任务数据:', this.tasks)
 				} catch (error) {
 					console.error('加载评论数据失败:', error)
 				}
@@ -718,29 +735,46 @@
 			// 获取未读评论数量
 			getUnreadCommentCount(taskId) {
 				try {
+					console.log('[DEBUG] getUnreadCommentCount 开始计算:', taskId)
+					console.log('[DEBUG] 当前用户ID:', this.currentUserId)
+					console.log('[DEBUG] 任务总数:', this.tasks.length)
+					
 					// 先在父任务中查找
 					let task = this.tasks.find(t => t._id === taskId)
+					console.log('[DEBUG] 在父任务中查找结果:', task ? '找到' : '未找到')
 					
 					// 如果没找到，则在子任务中查找
 					if (!task) {
 						for (const parentTask of this.tasks) {
 							if (parentTask.subtasks && parentTask.subtasks.length > 0) {
 								task = parentTask.subtasks.find(subtask => subtask._id === taskId)
-								if (task) break
+								if (task) {
+									console.log('[DEBUG] 在子任务中找到任务')
+									break
+								}
 							}
 						}
 					}
 					
 					if (!task) {
+						console.log('[DEBUG] 任务未找到:', taskId)
 						return 0
 					}
 					
+					console.log('[DEBUG] 找到任务:', task.title)
+					console.log('[DEBUG] 任务评论数据:', task.comments)
+					console.log('[DEBUG] 评论数量:', task.comments ? task.comments.length : 0)
+					
 					if (!task.comments || task.comments.length === 0) {
+						console.log('[DEBUG] 任务无评论数据')
 						return 0
 					}
 					
 					// 使用工具函数计算未读数量
 					const unreadCount = calculateUnreadCount(taskId, task.comments, this.currentUserId)
+					console.log('[DEBUG] 计算出的未读数量:', unreadCount)
+					console.log('[DEBUG] 本地已读记录:', uni.getStorageSync('task_comment_read_records'))
+					
 					return unreadCount
 				} catch (error) {
 					console.error('计算未读评论数量失败:', error)
@@ -748,29 +782,6 @@
 				}
 			},
 			
-			// 标记当前页面任务的评论为已读
-			markCurrentTasksAsRead() {
-				if (!this.tasks || this.tasks.length === 0) {
-					return
-				}
-				
-				// 标记所有父任务的评论为已读
-				this.tasks.forEach(task => {
-					if (task.comments && task.comments.length > 0) {
-						markTaskCommentsAsRead(task._id, task.comments)
-					}
-					
-					// 标记子任务的评论为已读
-					if (task.subtasks && task.subtasks.length > 0) {
-						task.subtasks.forEach(subtask => {
-							if (subtask.comments && subtask.comments.length > 0) {
-								markTaskCommentsAsRead(subtask._id, subtask.comments)
-							}
-						})
-					}
-				})
-			},
-
 			getEmptyText() {
 				const map = {
 					all: '还没有任务，创建第一个吧',

@@ -342,6 +342,8 @@
 </template>
 
 <script>
+	import { markCommentIdsAsRead, extractCommentIds } from '@/utils/commentUtils.js'
+	
 	export default {
 		data() {
 			return {
@@ -369,6 +371,12 @@
 					parentCommentId: null
 				},
 				currentUser: null
+			}
+		},
+		onShow() {
+			// 页面显示时标记评论为已读
+			if (this.taskId && this.comments && this.comments.length > 0) {
+				this.markTaskAsRead()
 			}
 		},
 		onLoad(options) {
@@ -825,17 +833,24 @@
 				return false
 			},
 
-			// 标记任务为已读
+			// 标记任务评论为已读
 			markTaskAsRead() {
-				if (!this.taskId) return
+				if (!this.taskId || !this.comments || this.comments.length === 0) return
 				
 				try {
+					// 提取所有评论ID（包括回复）
+					const commentIds = extractCommentIds(this.comments)
+					
+					if (commentIds.length > 0) {
+						// 批量标记评论ID为已读
+						markCommentIdsAsRead(this.taskId, commentIds)
+						console.log('任务评论已标记为已读:', this.taskId, '评论数量:', commentIds.length)
+					}
+					
+					// 保留原有的查看时间记录（用于兼容性）
 					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
 					lastViewTimes[this.taskId] = Date.now()
 					uni.setStorageSync('task_comment_view_times', lastViewTimes)
-					
-					// 输出日志，便于调试
-					console.log('任务已标记为已读:', this.taskId, '时间:', new Date().toLocaleString())
 				} catch (error) {
 					console.error('标记已读失败:', error)
 				}
