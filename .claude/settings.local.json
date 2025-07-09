@@ -30,7 +30,9 @@
       "Bash(rm:*)",
       "Bash(git pull:*)",
       "Bash(git restore:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "WebFetch(domain:uniapp.dcloud.net.cn)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

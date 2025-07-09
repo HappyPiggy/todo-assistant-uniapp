@@ -21,9 +21,6 @@
 					<text class="book-title">{{ bookData.title }}</text>
 					<text class="book-description" v-if="bookData.description">{{ bookData.description }}</text>
 				</view>
-				<view class="header-actions" @click="showBookMenu">
-					<uni-icons color="#999999" size="24" type="more-filled" />
-				</view>
 			</view>
 
 			<view class="progress-section">
@@ -141,7 +138,7 @@
 						</view>
 					</view>
 
-					<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || (task.tags && task.tags.length > 0)">
+					<view class="task-meta" v-if="task.due_date || task.subtask_count > 0 || (task.tags && task.tags.length > 0) || getUnreadCommentCount(task._id) > 0">
 						<view class="meta-left">
 							<view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
 								<uni-icons color="#999999" size="14" type="calendar" />
@@ -150,6 +147,11 @@
 							<view class="subtasks" v-if="task.subtask_count > 0">
 								<uni-icons color="#999999" size="14" type="list" />
 								<text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
+							</view>
+							<!-- 未读评论提醒 -->
+							<view v-if="getUnreadCommentCount(task._id) > 0" class="comment-hint">
+								<uni-icons color="#ff9800" size="14" type="chatbubble" />
+								<text class="comment-count">{{ getUnreadCommentCount(task._id) }}</text>
 							</view>
 						</view>
 						<view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
@@ -169,6 +171,11 @@
 							<view class="subtask-content">
 								<text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text>
 								<text class="subtask-description" v-if="subtask.description">{{ subtask.description }}</text>
+								<!-- 子任务未读评论提醒 -->
+								<view v-if="getUnreadCommentCount(subtask._id) > 0" class="subtask-comment-hint">
+									<uni-icons color="#ff9800" size="12" type="chatbubble" />
+									<text class="subtask-comment-count">{{ getUnreadCommentCount(subtask._id) }}</text>
+								</view>
 							</view>
 							<view class="subtask-actions">
 								<view class="subtask-detail-btn" @click.stop="openTask(subtask)">
@@ -196,39 +203,13 @@
 			</view>
 		</view>
 
-		<!-- 项目册菜单弹窗 -->
-		<uni-popup ref="bookMenuPopup" type="bottom" background-color="#ffffff">
-			<view class="menu-sheet">
-				<view class="menu-header">
-					<text class="menu-title">项目册操作</text>
-				</view>
-				<view class="menu-list">
-					<view class="menu-item" @click="editTodoBook">
-						<uni-icons color="#007AFF" size="20" type="compose" />
-						<text class="menu-text">编辑信息</text>
-					</view>
-					<view class="menu-item" @click="manageMember">
-						<uni-icons color="#28a745" size="20" type="person-add" />
-						<text class="menu-text">成员管理</text>
-					</view>
-					<view class="menu-item" @click="showStatistics">
-						<uni-icons color="#17a2b8" size="20" type="bars" />
-						<text class="menu-text">数据统计</text>
-					</view>
-					<view class="menu-item" @click="exportTasks">
-						<uni-icons color="#6c757d" size="20" type="download" />
-						<text class="menu-text">导出任务</text>
-					</view>
-				</view>
-				<view class="menu-cancel" @click="hideBookMenu">
-					<text class="cancel-text">取消</text>
-				</view>
-			</view>
-		</uni-popup>
 	</view>
 </template>
 
 <script>
+	import { calculateUnreadCount, markTaskCommentsAsRead } from '@/utils/commentUtils.js'
+	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+	
 	export default {
 		data() {
 			return {
@@ -253,6 +234,9 @@
 			}
 		},
 		computed: {
+			currentUserId() {
+				return store.userInfo?._id || ''
+			},
 			filteredTasks() {
 				if (this.activeFilter === 'all') {
 					return this.tasks
@@ -319,6 +303,9 @@
 			if (this.bookId) {
 				this.refreshData()
 			}
+			
+			// 标记当前页面任务的评论为已读
+			this.markCurrentTasksAsRead()
 		},
 		onPullDownRefresh() {
 			this.refreshData()
@@ -393,7 +380,10 @@
 						this.updateFilterCounts()
 						
 						// 加载任务评论数据（用于显示未读提示）
-						this.loadTasksCommentCounts(allTasks)
+						await this.loadTasksCommentCounts(allTasks)
+						
+						// 标记当前页面任务的评论为已读
+						this.markCurrentTasksAsRead()
 					} else {
 						this.tasksError = result.message || '获取任务列表失败'
 						uni.showToast({
@@ -613,6 +603,11 @@
 			},
 
 			openTask(task) {
+				// 标记任务评论为已读
+				if (task.comments && task.comments.length > 0) {
+					markTaskCommentsAsRead(task._id, task.comments)
+				}
+				
 				uni.navigateTo({
 					url: `/pages/tasks/detail?id=${task._id}&bookId=${this.bookId}`
 				})
@@ -624,42 +619,6 @@
 				})
 			},
 
-			showBookMenu() {
-				this.$refs.bookMenuPopup.open()
-			},
-
-			hideBookMenu() {
-				this.$refs.bookMenuPopup.close()
-			},
-
-			editTodoBook() {
-				this.hideBookMenu()
-				uni.navigateTo({
-					url: `/pages/todobooks/edit?id=${this.bookId}`
-				})
-			},
-
-			manageMember() {
-				this.hideBookMenu()
-				uni.navigateTo({
-					url: `/pages/todobooks/members?id=${this.bookId}`
-				})
-			},
-
-			showStatistics() {
-				this.hideBookMenu()
-				uni.navigateTo({
-					url: `/pages/todobooks/statistics?id=${this.bookId}`
-				})
-			},
-
-			exportTasks() {
-				this.hideBookMenu()
-				uni.showToast({
-					title: '功能开发中',
-					icon: 'none'
-				})
-			},
 
 			getPriorityText(priority) {
 				const map = {
@@ -690,68 +649,126 @@
 				return `逾期${Math.abs(diffDays)}天`
 			},
 
-			// 加载任务评论数量
+			// 加载任务评论数据
 			async loadTasksCommentCounts(tasks) {
+				
 				try {
 					const todoBooksObj = uniCloud.importObject('todobook-co')
 					
-					// 并行获取每个任务的评论数量
+					// 并行获取每个任务的评论数据
 					const commentPromises = tasks.map(async task => {
 						try {
-							const result = await todoBooksObj.getTaskComments(task._id, 1, 1)
-							return {
-								taskId: task._id,
-								total: result.code === 0 ? result.data.total : 0
+							// 获取前50条评论，这样可以获取到评论的创建时间等详细信息
+							const result = await todoBooksObj.getTaskComments(task._id, 1, 50)
+							if (result.code === 0) {
+								// 扁平化评论数据，包含顶级评论和回复
+								const allComments = []
+								result.data.comments.forEach(comment => {
+									allComments.push(comment)
+									if (comment.replies && comment.replies.length > 0) {
+										allComments.push(...comment.replies)
+									}
+								})
+								
+								return {
+									taskId: task._id,
+									comments: allComments,
+									total: result.data.total
+								}
 							}
 						} catch (error) {
-							console.error(`获取任务${task._id}评论数量失败:`, error)
-							return {
-								taskId: task._id,
-								total: 0
-							}
+							console.error(`获取任务${task._id}评论数据失败:`, error)
+						}
+						
+						return {
+							taskId: task._id,
+							comments: [],
+							total: 0
 						}
 					})
 					
-					const commentCounts = await Promise.all(commentPromises)
+					const commentData = await Promise.all(commentPromises)
 					
-					// 将评论数量添加到任务对象中
-					commentCounts.forEach(({ taskId, total }) => {
+					// 将评论数据添加到任务对象中
+					commentData.forEach(({ taskId, comments, total }) => {
 						const task = tasks.find(t => t._id === taskId)
 						if (task) {
+							task.comments = comments
 							task.comment_count = total
 						}
 					})
+					
+					// 确保子任务也能获取到评论数据（从allTasks中同步到this.tasks的子任务中）
+					this.tasks.forEach(parentTask => {
+						if (parentTask.subtasks && parentTask.subtasks.length > 0) {
+							parentTask.subtasks.forEach(subtask => {
+								const allTaskData = tasks.find(t => t._id === subtask._id)
+								if (allTaskData && allTaskData.comments) {
+									subtask.comments = allTaskData.comments
+									subtask.comment_count = allTaskData.comment_count || 0
+								}
+							})
+						}
+					})
 				} catch (error) {
-					console.error('加载评论数量失败:', error)
+					console.error('加载评论数据失败:', error)
 				}
 			},
 
 			// 获取未读评论数量
 			getUnreadCommentCount(taskId) {
 				try {
-					const task = this.tasks.find(t => t._id === taskId)
-					if (!task || !task.comment_count) return 0
+					// 先在父任务中查找
+					let task = this.tasks.find(t => t._id === taskId)
 					
-					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
-					const lastViewTime = lastViewTimes[taskId] || 0
-					
-					// 这里简化处理，如果有评论且用户从未查看过此任务的评论，则显示总数
-					// 实际项目中可以通过比较评论的创建时间来精确计算
-					if (lastViewTime === 0) {
-						return task.comment_count
+					// 如果没找到，则在子任务中查找
+					if (!task) {
+						for (const parentTask of this.tasks) {
+							if (parentTask.subtasks && parentTask.subtasks.length > 0) {
+								task = parentTask.subtasks.find(subtask => subtask._id === taskId)
+								if (task) break
+							}
+						}
 					}
 					
-					// 简化处理：如果最后查看时间超过1小时，显示有新评论的提示
-					const hoursSinceLastView = (Date.now() - lastViewTime) / (1000 * 60 * 60)
-					if (hoursSinceLastView > 1 && task.comment_count > 0) {
-						return Math.min(task.comment_count, 99) // 最多显示99
+					if (!task) {
+						return 0
 					}
 					
-					return 0
+					if (!task.comments || task.comments.length === 0) {
+						return 0
+					}
+					
+					// 使用工具函数计算未读数量
+					const unreadCount = calculateUnreadCount(taskId, task.comments, this.currentUserId)
+					return unreadCount
 				} catch (error) {
 					console.error('计算未读评论数量失败:', error)
 					return 0
 				}
+			},
+			
+			// 标记当前页面任务的评论为已读
+			markCurrentTasksAsRead() {
+				if (!this.tasks || this.tasks.length === 0) {
+					return
+				}
+				
+				// 标记所有父任务的评论为已读
+				this.tasks.forEach(task => {
+					if (task.comments && task.comments.length > 0) {
+						markTaskCommentsAsRead(task._id, task.comments)
+					}
+					
+					// 标记子任务的评论为已读
+					if (task.subtasks && task.subtasks.length > 0) {
+						task.subtasks.forEach(subtask => {
+							if (subtask.comments && subtask.comments.length > 0) {
+								markTaskCommentsAsRead(subtask._id, subtask.comments)
+							}
+						})
+					}
+				})
 			},
 
 			getEmptyText() {
@@ -825,9 +842,6 @@
 		line-height: 1.5;
 	}
 
-	.header-actions {
-		padding: 10rpx;
-	}
 
 	/* 进度区域 */
 	.progress-section {
@@ -1296,6 +1310,27 @@
 		line-height: 1.4;
 	}
 
+	/* 子任务未读评论提醒 */
+	.subtask-comment-hint {
+		flex-direction: row;
+		align-items: center;
+		gap: 4rpx;
+		background-color: #fff8e1;
+		padding: 4rpx 8rpx;
+		border-radius: 8rpx;
+		border: 1rpx solid #ffcc80;
+		margin-top: 8rpx;
+		align-self: flex-start;
+	}
+
+	.subtask-comment-count {
+		font-size: 18rpx;
+		color: #ff9800;
+		font-weight: 500;
+		min-width: 12rpx;
+		text-align: center;
+	}
+
 	.subtask-actions {
 		flex-direction: row;
 		align-items: center;
@@ -1322,61 +1357,4 @@
 		align-items: center;
 	}
 
-	/* 菜单弹窗 */
-	.menu-sheet {
-		background-color: #ffffff;
-		border-radius: 20rpx 20rpx 0 0;
-		padding-bottom: 40rpx;
-	}
-
-	.menu-header {
-		padding: 30rpx;
-		border-bottom: 1rpx solid #f0f0f0;
-		align-items: center;
-	}
-
-	.menu-title {
-		font-size: 32rpx;
-		color: #333333;
-		font-weight: 500;
-	}
-
-	.menu-list {
-		padding: 0 20rpx;
-	}
-
-	.menu-item {
-		flex-direction: row;
-		align-items: center;
-		padding: 24rpx 20rpx;
-		border-radius: 12rpx;
-		margin: 8rpx 0;
-	}
-
-	.menu-item:active {
-		background-color: #f8f8f8;
-	}
-
-	.menu-text {
-		font-size: 30rpx;
-		color: #333333;
-		margin-left: 16rpx;
-	}
-
-	.menu-cancel {
-		margin: 20rpx;
-		padding: 24rpx;
-		background-color: #f8f8f8;
-		border-radius: 16rpx;
-		align-items: center;
-	}
-
-	.menu-cancel:active {
-		background-color: #e8e8e8;
-	}
-
-	.cancel-text {
-		font-size: 30rpx;
-		color: #666666;
-	}
 </style>

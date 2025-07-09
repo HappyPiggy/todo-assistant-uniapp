@@ -107,7 +107,7 @@
 						</view>
 						<view class="attr-content">
 							<text class="attr-label">负责人</text>
-							<text class="attr-value">{{ assigneeInfo.nickname || assigneeInfo.username }}</text>
+							<text class="attr-value">{{ assigneeInfo.nickname || assigneeInfo.username || '未知用户' }}</text>
 						</view>
 					</view>
 				</view>
@@ -389,9 +389,6 @@
 			// 加载任务详情和评论
 			this.loadTaskDetail()
 			this.loadComments()
-			
-			// 标记任务为已读
-			this.markTaskAsRead()
 		},
 		methods: {
 			// 加载任务详情
@@ -412,9 +409,9 @@
 							this.loadParentTask()
 						}
 						
-						// 获取负责人信息
-						if (this.task.assignee_id) {
-							this.loadAssigneeInfo()
+						// 设置负责人信息
+						if (result.data.assignee) {
+							this.assigneeInfo = result.data.assignee
 						}
 
 						// 设置页面标题
@@ -445,14 +442,6 @@
 				}
 			},
 
-			async loadAssigneeInfo() {
-				// 这里可以调用用户信息接口获取负责人详情
-				// 暂时使用mock数据
-				this.assigneeInfo = {
-					nickname: '当前用户',
-					username: 'user'
-				}
-			},
 
 			async loadParentTask() {
 				try {
@@ -657,6 +646,11 @@
 							pageSize: result.data.pageSize,
 							hasMore: result.data.hasMore
 						}
+						
+						// 评论加载完成后，标记任务为已读
+						if (refresh) {
+							this.markTaskAsRead()
+						}
 					} else {
 						console.error('加载评论失败:', result.message)
 					}
@@ -839,6 +833,9 @@
 					const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
 					lastViewTimes[this.taskId] = Date.now()
 					uni.setStorageSync('task_comment_view_times', lastViewTimes)
+					
+					// 输出日志，便于调试
+					console.log('任务已标记为已读:', this.taskId, '时间:', new Date().toLocaleString())
 				} catch (error) {
 					console.error('标记已读失败:', error)
 				}

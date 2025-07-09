@@ -405,3 +405,47 @@ const state = {
 5. **同步机制**: 数据同步是应用的核心功能，需要特别注意同步状态管理
 
 本项目采用现代化的云原生架构，具有良好的扩展性和维护性，适合作为企业级待办事项管理系统的基础架构。
+
+## 重要开发经验
+
+### 云函数开发陷阱与解决方案
+
+#### 1. 云对象模块中的上下文传递失效
+**问题**: 在云对象的子模块中，通过 `const { db, userInfo, uid } = this` 获取的值可能为 `null`
+**原因**: `_beforeEach` 中设置的上下文在模块调用时可能未正确传递
+**解决方案**:
+```javascript
+// ❌ 错误：依赖外部上下文
+const { db, userInfo, uid } = this
+
+// ✅ 正确：模块内独立验证
+const token = this.getUniIdToken()
+const payload = await this.uniID.checkToken(token)
+const uid = payload.uid
+const db = this.db || uniCloud.database()
+```
+
+#### 2. 数组嵌套查询语法限制
+**问题**: 使用 `'comments._id': commentId` 查询数组中的元素可能失败
+**原因**: uniCloud 不支持复杂的数组嵌套查询语法
+**解决方案**:
+```javascript
+// ❌ 错误：数组字段查询
+const tasksResult = await db.collection('todoitems')
+  .where({'comments._id': commentId})
+  .get()
+
+// ✅ 正确：利用ID结构直接查询
+const taskId = commentId.split('_')[0]  // 从评论ID提取任务ID
+const taskResult = await db.collection('todoitems')
+  .doc(taskId)
+  .get()
+```
+
+#### 3. 核心开发原则
+1. **云对象的子模块不能依赖外部上下文**，必须独立进行用户验证
+2. **避免复杂的数组查询**，利用ID设计实现高效查询
+3. **确保ID生成逻辑与查询逻辑完全匹配**
+4. **使用备用的数据库连接方式**：`this.db || uniCloud.database()`
+
+这些经验可以避免在 uni-app 云函数开发中重复犯类似的错误。

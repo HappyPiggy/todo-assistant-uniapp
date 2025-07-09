@@ -43,6 +43,10 @@
 					<view class="card-header">
 						<view class="book-icon" :style="{ backgroundColor: book.color }">
 							<uni-icons color="#ffffff" size="24" :type="book.icon" />
+							<!-- 未读评论提醒标识 -->
+							<view v-if="book.unread_comment_count > 0" class="unread-badge">
+								<text class="unread-count">{{ book.unread_comment_count > 99 ? '99+' : book.unread_comment_count }}</text>
+							</view>
 						</view>
 						<view class="book-info">
 							<text class="book-title">{{ book.title }}</text>
@@ -102,32 +106,44 @@
 		</view>
 
 		<!-- 操作弹窗 -->
-		<uni-popup ref="actionPopup" type="bottom" background-color="#ffffff">
+		<uni-popup ref="actionPopup" type="bottom" background-color="#ffffff" :safe-area="true">
 			<view class="action-sheet">
 				<view class="action-header">
 					<text class="action-title">{{ currentBook?.title }}</text>
 				</view>
-				<view class="action-list">
+				<scroll-view scroll-y class="action-scroll">
+					<view class="action-list">
 					<view class="action-item" @click="editTodoBook">
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="action-text">编辑</text>
 					</view>
 					<view class="action-item" @click="shareTodoBook">
-						<uni-icons color="#28a745" size="20" type="person-add" />
+						<uni-icons color="#28a745" size="20" type="staff" />
 						<text class="action-text">成员管理</text>
 					</view>
+					<view class="action-item" @click="showStatistics">
+						<uni-icons color="#17a2b8" size="20" type="bars" />
+						<text class="action-text">数据统计</text>
+					</view>
+					<view class="action-item" @click="exportTasks">
+						<uni-icons color="#6c757d" size="20" type="download" />
+						<text class="action-text">导出任务</text>
+					</view>
 					<view class="action-item" @click="archiveTodoBook">
-						<uni-icons color="#ffc107" size="20" type="archive" />
+						<uni-icons color="#ffc107" size="20" type="folder-add" />
 						<text class="action-text">归档</text>
 					</view>
 					<view class="action-item danger" @click="deleteTodoBook">
 						<uni-icons color="#FF4757" size="20" type="trash" />
 						<text class="action-text">删除</text>
 					</view>
-				</view>
+					</view>
+				</scroll-view>
 				<view class="action-cancel" @click="hideActionSheet">
 					<text class="cancel-text">取消</text>
 				</view>
+				<!-- 底部占位空间，确保不被tab栏遮挡 -->
+				<view class="bottom-spacer"></view>
 			</view>
 		</uni-popup>
 	</view>
@@ -137,6 +153,7 @@
 	import {
 		store
 	} from '@/uni_modules/uni-id-pages/common/store.js'
+	import { calculateBookUnreadCount } from '@/utils/commentUtils.js'
 	
 	export default {
 		data() {
@@ -162,6 +179,9 @@
 		computed: {
 			hasLogin() {
 				return store.hasLogin
+			},
+			currentUserId() {
+				return store.userInfo?._id || ''
 			}
 		},
 		onLoad() {
@@ -208,6 +228,7 @@
 				
 				try {
 					const todoBooksObj = uniCloud.importObject('todobook-co')
+					
 					const result = await todoBooksObj.getTodoBooks({
 						include_archived: false,
 						page: this.currentPage,
@@ -217,6 +238,9 @@
 					
 					if (result.code === 0) {
 						const { list, pagination } = result.data
+						
+						// 为每个项目册计算未读评论数量
+						await this.calculateUnreadCountsForBooks(list)
 						
 						if (isLoadMore) {
 							this.todoBooks = [...this.todoBooks, ...list]
@@ -245,6 +269,45 @@
 					this.loading = false
 					uni.stopPullDownRefresh()
 				}
+			},
+			
+			// 为项目册列表计算未读评论数量
+			async calculateUnreadCountsForBooks(books) {
+				if (!books || books.length === 0) {
+					return
+				}
+				
+				
+				// 并行获取每个项目册的任务和评论数据
+				const todoBooksObj = uniCloud.importObject('todobook-co')
+				
+				await Promise.all(books.map(async (book) => {
+					try {
+						// 获取项目册下的所有任务（包含评论）
+						const tasksResult = await todoBooksObj.getTodoBookDetail({
+							todoBookId: book._id,
+							include_comments: true
+						})
+						
+						if (tasksResult.code === 0 && tasksResult.data.tasks) {
+							// 使用工具函数计算未读数量
+							const unreadCount = calculateBookUnreadCount(
+								book._id, 
+								tasksResult.data.tasks, 
+								this.currentUserId
+							)
+							
+							book.unread_comment_count = unreadCount
+							
+							} else {
+							book.unread_comment_count = 0
+						}
+					} catch (error) {
+						console.error(`计算项目册 ${book.title} 未读数量失败:`, error)
+						book.unread_comment_count = 0
+					}
+				}))
+				
 			},
 
 			// 修改：刷新数据
@@ -408,6 +471,24 @@
 				})
 			},
 
+			showStatistics() {
+				const bookId = this.currentBook?._id
+				this.hideActionSheet()
+				if (bookId) {
+					uni.navigateTo({
+						url: `/pages/todobooks/statistics?id=${bookId}`
+					})
+				}
+			},
+
+			exportTasks() {
+				this.hideActionSheet()
+				uni.showToast({
+					title: '功能开发中',
+					icon: 'none'
+				})
+			},
+
 			calculateProgress(book) {
 				if (!book.item_count || book.item_count === 0) return 0
 				return Math.round((book.completed_count / book.item_count) * 100)
@@ -540,6 +621,29 @@
 		justify-content: center;
 		align-items: center;
 		margin-right: 20rpx;
+		position: relative;
+	}
+
+	/* 未读评论提醒标识 */
+	.unread-badge {
+		position: absolute;
+		top: -8rpx;
+		right: -8rpx;
+		background-color: #ff4757;
+		border-radius: 16rpx;
+		min-width: 24rpx;
+		height: 24rpx;
+		justify-content: center;
+		align-items: center;
+		padding: 0 6rpx;
+		box-shadow: 0 2rpx 4rpx rgba(255, 71, 87, 0.3);
+	}
+
+	.unread-count {
+		font-size: 18rpx;
+		color: #ffffff;
+		font-weight: 500;
+		line-height: 24rpx;
 	}
 
 	.book-info {
@@ -669,12 +773,22 @@
 		background-color: #ffffff;
 		border-radius: 20rpx 20rpx 0 0;
 		padding-bottom: 40rpx;
+		/* #ifndef APP-NVUE */
+		padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+		z-index: 9999;
+		position: relative;
+		/* #endif */
 	}
 
 	.action-header {
 		padding: 30rpx;
 		border-bottom: 1rpx solid #f0f0f0;
 		align-items: center;
+	}
+
+	.action-scroll {
+		max-height: 60vh;
+		flex: 1;
 	}
 
 	.action-title {
@@ -711,10 +825,14 @@
 
 	.action-cancel {
 		margin: 20rpx;
+		margin-bottom: 60rpx;
 		padding: 24rpx;
 		background-color: #f8f8f8;
 		border-radius: 16rpx;
 		align-items: center;
+		/* #ifndef APP-NVUE */
+		margin-bottom: calc(60rpx + env(safe-area-inset-bottom));
+		/* #endif */
 	}
 
 	.action-cancel:active {
@@ -724,6 +842,13 @@
 	.cancel-text {
 		font-size: 30rpx;
 		color: #666666;
+	}
+
+	.bottom-spacer {
+		height: 120rpx;
+		/* #ifndef APP-NVUE */
+		height: calc(120rpx + env(safe-area-inset-bottom));
+		/* #endif */
 	}
 
 	/* 安全区域适配 */
