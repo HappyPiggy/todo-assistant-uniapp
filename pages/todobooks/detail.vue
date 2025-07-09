@@ -3,7 +3,7 @@
     <!-- 项目册头部信息 -->
     <BookHeader
       v-if="!bookLoading && !bookError"
-      :book-data="bookData"
+      :book-data="bookData.value"
       :overall-progress="overallProgress"
       :task-stats="taskStats"
       :member-count="memberCount"
@@ -19,7 +19,7 @@
       @retry="loadBookDetail" />
 
     <!-- 任务筛选标签 -->
-    <TaskFilter
+<TaskFilter
       v-if="!bookLoading && !bookError"
       :filter-tabs="filterTabs"
       :active-filter="activeFilter"
@@ -80,7 +80,7 @@ const {
   taskStats,
   memberCount,
   loadBookDetail,
-  updateBookInfo
+  updateBook
 } = useBookData(bookId)
 
 const {
@@ -235,8 +235,16 @@ const handleSubtaskTouchEnd = (event) => {
 
 // 生命周期
 onMounted(() => {
+  console.log('detail.vue onMounted 开始')
+  console.log('detail.vue bookId:', bookId)
+  console.log('detail.vue 初始 bookData:', bookData.value)
+  console.log('detail.vue 初始 bookLoading:', bookLoading.value)
+  console.log('detail.vue 初始 bookError:', bookError.value)
+  
   loadBookDetail()
   loadTasks()
+  
+  console.log('detail.vue onMounted 结束')
 })
 
 onUnmounted(() => {

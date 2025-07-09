@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { defineProps, watchEffect } from 'vue'
 
 const props = defineProps({
   bookData: {
@@ -63,6 +63,13 @@ const props = defineProps({
     type: Number,
     default: 0
   }
+})
+
+// 监听 bookData 变化，添加调试日志
+watchEffect(() => {
+  console.log('BookHeader 组件 bookData 变化:', props.bookData)
+  console.log('BookHeader 组件 bookData.title:', props.bookData?.title)
+  console.log('BookHeader 组件 bookData 类型:', typeof props.bookData)
 })
 </script>
 

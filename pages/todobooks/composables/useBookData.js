@@ -8,8 +8,10 @@ import { API_CODES, ERROR_MESSAGES } from '../utils/constants.js'
  * @returns {Object} 项目册数据和操作方法
  */
 export function useBookData(bookId = null) {
+  console.log('useBookData 初始化, bookId:', bookId)
+  
   // 响应式数据
-  const bookData = ref(null)
+  const bookData = ref({})
   const loading = ref(false)
   const error = ref(null)
   const memberCount = ref(0)
@@ -50,23 +52,31 @@ export function useBookData(bookId = null) {
    * @param {string} id - 项目册ID
    */
   const loadBookDetail = async (id = bookId) => {
+    console.log('loadBookDetail 开始, id:', id, 'bookId:', bookId)
+    
     if (!id) {
+      console.log('loadBookDetail 错误: 项目册ID不能为空')
       error.value = '项目册ID不能为空'
       return
     }
     
-    if (loading.value) return
+    if (loading.value) {
+      console.log('loadBookDetail 跳过: 正在加载中')
+      return
+    }
     
     loading.value = true
     error.value = null
     
     try {
       const todoBooksObj = uniCloud.importObject('todobook-co')
+      
       const result = await todoBooksObj.getTodoBookDetail(id)
       
       if (result.code === API_CODES.SUCCESS) {
         bookData.value = result.data.book
         memberCount.value = result.data.members ? result.data.members.length : 0
+        console.log('loadBookDetail 成功, 更新后 bookData.value:', JSON.stringify(bookData.value, null, 2))
         
         // 设置页面标题
         if (bookData.value?.title) {
@@ -75,6 +85,7 @@ export function useBookData(bookId = null) {
           })
         }
       } else {
+        console.log('loadBookDetail 失败, 错误信息:', result.message)
         error.value = result.message || ERROR_MESSAGES.DATA_NOT_FOUND
         uni.showToast({
           title: error.value,
@@ -141,7 +152,7 @@ export function useBookData(bookId = null) {
       
       if (result.code === API_CODES.SUCCESS) {
         // 清空本地数据
-        bookData.value = null
+        bookData.value = {}
         memberCount.value = 0
         return result
       } else {
@@ -201,7 +212,7 @@ export function useBookData(bookId = null) {
    * 重置状态
    */
   const resetState = () => {
-    bookData.value = null
+    bookData.value = {}
     loading.value = false
     error.value = null
     memberCount.value = 0

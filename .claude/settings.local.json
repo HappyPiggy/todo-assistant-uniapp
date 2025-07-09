@@ -46,7 +46,8 @@
       "Bash(apt-get install:*)",
       "Bash(time git push origin main)",
       "Bash(git rm:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
