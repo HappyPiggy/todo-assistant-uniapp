@@ -61,7 +61,6 @@ const {
   formData,
   submitting,
   errors,
-  validateForm,
   resetForm,
   fillForm,
   updateBook

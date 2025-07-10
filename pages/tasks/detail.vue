@@ -286,14 +286,6 @@
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="menu-text">编辑任务</text>
 					</view>
-					<view class="menu-item" @click="updateProgress">
-						<uni-icons color="#28a745" size="20" type="gear" />
-						<text class="menu-text">更新进度</text>
-					</view>
-					<view class="menu-item" @click="addTimeRecord">
-						<uni-icons color="#17a2b8" size="20" type="clock" />
-						<text class="menu-text">记录工时</text>
-					</view>
 					<view class="menu-item danger" @click="deleteTask">
 						<uni-icons color="#FF4757" size="20" type="trash" />
 						<text class="menu-text">删除任务</text>
@@ -575,22 +567,6 @@
 				this.hideTaskMenu()
 				uni.navigateTo({
 					url: `/pages/tasks/edit?id=${this.taskId}&bookId=${this.bookId}`
-				})
-			},
-
-			updateProgress() {
-				this.hideTaskMenu()
-				uni.showToast({
-					title: '功能开发中',
-					icon: 'none'
-				})
-			},
-
-			addTimeRecord() {
-				this.hideTaskMenu()
-				uni.showToast({
-					title: '功能开发中',
-					icon: 'none'
 				})
 			},
 

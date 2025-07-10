@@ -27,26 +27,9 @@ const {
   formData,
   submitting,
   errors,
-  validateForm,
   resetForm,
   saveBook
 } = useBookForm()
-
-// 预览相关
-const showPreview = ref(false)
-const previewData = computed(() => ({
-  title: formData.title || '新项目册',
-  description: formData.description || '这是一个新的项目册',
-  color: formData.color || '#007AFF',
-  icon: formData.icon || 'folder',
-  created_at: new Date(),
-  stats: {
-    total: 0,
-    completed: 0,
-    members: 1,
-    progress: 0
-  }
-}))
 
 // 事件处理
 const handleSubmit = async (data) => {

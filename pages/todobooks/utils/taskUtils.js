@@ -173,13 +173,11 @@ export function filterTasks(tasks, filter) {
  * @returns {Object} 验证结果
  */
 export function validateTaskCompletion(task) {
-  // 如果有子任务且不是全部完成，不允许直接完成父任务
-  if (task.subtask_count > 0 && 
-      task.completed_subtask_count < task.subtask_count && 
-      task.status !== TASK_CONSTANTS.STATUS.COMPLETED) {
+  // 如果有子任务，不允许手动切换状态
+  if (task.subtask_count > 0) {
     return {
       canComplete: false,
-      message: '请先完成所有子任务'
+      message: '有子任务的任务不能手动切换状态'
     }
   }
   

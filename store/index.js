@@ -413,7 +413,8 @@ const todoBookActions = {
         console.log('找到项目册索引:', index, '总数:', state.todoBooks.list.length)
         
         if (index >= 0) {
-          const updatedList = [...state.todoBooks.list]
+          let updatedList = [...state.todoBooks.list]
+          
           // 如果云函数返回了完整数据，使用完整数据；否则合并更新数据
           if (result.data && result.data._id) {
             console.log('使用云函数返回的完整数据更新缓存')
@@ -424,6 +425,13 @@ const todoBookActions = {
           }
           
           console.log('更新后的项目册:', JSON.stringify(updatedList[index], null, 2))
+          
+          // 如果项目册被归档，从列表中移除
+          if (updateData.is_archived === true || updatedList[index].is_archived === true) {
+            console.log('项目册被归档，从列表中移除')
+            updatedList = updatedList.filter(book => book._id !== bookId)
+          }
+          
           this.updateTodoBooksCache(updatedList)
         } else {
           console.warn('未找到要更新的项目册，bookId:', bookId)

@@ -3,10 +3,8 @@ import { BOOK_CONSTANTS, VALIDATION_RULES } from '@/pages/todobooks/utils/consta
 import { 
   getColorOptions, 
   getIconOptions, 
-  validateBookForm, 
   formatBookDataForSubmit,
-  hasBookFormChanges,
-  generateBookPreview
+  hasBookFormChanges
 } from '@/pages/todobooks/utils/bookUtils.js'
 import globalStore from '@/store/index.js'
 
@@ -36,18 +34,9 @@ export function useBookForm(initialData = null) {
   // 表单验证规则
   const rules = ref(VALIDATION_RULES.BOOK_FORM)
   
-  // 计算属性
-  const isValid = computed(() => {
-    const validation = validateBookForm(formData)
-    return validation.isValid
-  })
   
   const hasChanges = computed(() => {
     return hasBookFormChanges(formData, initialData)
-  })
-  
-  const previewData = computed(() => {
-    return generateBookPreview(formData)
   })
   
   /**
@@ -74,15 +63,6 @@ export function useBookForm(initialData = null) {
     }
   }
   
-  /**
-   * 验证表单
-   * @returns {boolean} 是否通过验证
-   */
-  const validateForm = () => {
-    const validation = validateBookForm(formData)
-    errors.value = validation.errors
-    return validation.isValid
-  }
   
   /**
    * 清除特定字段错误
@@ -239,14 +219,11 @@ export function useBookForm(initialData = null) {
     rules,
     
     // 计算属性
-    isValid,
     hasChanges,
-    previewData,
     
     // 方法
     selectColor,
     selectIcon,
-    validateForm,
     clearFieldError,
     clearErrors,
     resetForm,

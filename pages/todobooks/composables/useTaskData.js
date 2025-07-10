@@ -43,13 +43,21 @@ export function useTaskData(bookId) {
    * @param {string} id - 项目册ID
    */
   const loadTasks = async (id = bookId) => {
+    console.log('=== useTaskData.loadTasks 开始 ===')
+    console.log('参数 id:', id)
+    console.log('当前 loading.value:', loading.value)
+    
     if (!id) {
       error.value = '项目册ID不能为空'
       return
     }
     
-    if (loading.value) return
+    if (loading.value) {
+      console.log('loadTasks 跳过: 正在加载中')
+      return
+    }
     
+    console.log('设置 loading = true')
     loading.value = true
     error.value = null
     
@@ -87,8 +95,10 @@ export function useTaskData(bookId) {
         icon: 'none'
       })
     } finally {
+      console.log('=== useTaskData.loadTasks finally ===')
+      console.log('设置 loading = false')
       loading.value = false
-      uni.stopPullDownRefresh()
+      console.log('loading.value 现在是:', loading.value)
     }
   }
   
@@ -129,7 +139,7 @@ export function useTaskData(bookId) {
       
       if (result.code === API_CODES.SUCCESS) {
         // 处理父子任务关系的本地更新
-        handleLocalParentChildUpdate(task, newStatus)
+        await handleLocalParentChildUpdate(task, newStatus)
       } else {
         // 如果失败，回滚本地更新
         task.status = oldStatus
@@ -158,8 +168,8 @@ export function useTaskData(bookId) {
    * @param {Object} task - 任务对象
    * @param {string} newStatus - 新状态
    */
-  const handleLocalParentChildUpdate = (task, newStatus) => {
-    // 如果是子任务，更新父任务的完成子任务计数
+  const handleLocalParentChildUpdate = async (task, newStatus) => {
+    // 如果是子任务，更新父任务的完成子任务计数和状态
     if (task.parent_id) {
       // 查找父任务
       let parentTask = null
@@ -184,6 +194,15 @@ export function useTaskData(bookId) {
           parentTask.status = TASK_CONSTANTS.STATUS.COMPLETED
           parentTask.completed_at = new Date()
           parentTask.updated_at = new Date()
+          parentTask.last_activity_at = new Date()
+          
+          // 调用云函数更新父任务状态
+          try {
+            const todoBooksObj = uniCloud.importObject('todobook-co')
+            await todoBooksObj.updateTodoItemStatus(parentTask._id, TASK_CONSTANTS.STATUS.COMPLETED)
+          } catch (err) {
+            console.error('更新父任务状态失败:', err)
+          }
         }
         // 如果父任务已完成但有子任务变为未完成，父任务回退
         else if (parentTask.completed_subtask_count < parentTask.subtask_count && 
@@ -191,6 +210,15 @@ export function useTaskData(bookId) {
           parentTask.status = TASK_CONSTANTS.STATUS.TODO
           parentTask.completed_at = null
           parentTask.updated_at = new Date()
+          parentTask.last_activity_at = new Date()
+          
+          // 调用云函数更新父任务状态
+          try {
+            const todoBooksObj = uniCloud.importObject('todobook-co')
+            await todoBooksObj.updateTodoItemStatus(parentTask._id, TASK_CONSTANTS.STATUS.TODO)
+          } catch (err) {
+            console.error('更新父任务状态失败:', err)
+          }
         }
       }
     }
@@ -352,6 +380,67 @@ export function useTaskData(bookId) {
   }
   
   /**
+   * 切换子任务状态
+   * @param {Object} subtask - 子任务对象
+   */
+  const toggleSubtaskStatus = async (subtask) => {
+    // 验证子任务是否可以完成
+    const validation = validateTaskCompletion(subtask)
+    if (!validation.canComplete) {
+      uni.showToast({
+        title: validation.message,
+        icon: 'none'
+      })
+      return
+    }
+    
+    const oldStatus = subtask.status
+    const newStatus = subtask.status === TASK_CONSTANTS.STATUS.COMPLETED 
+      ? TASK_CONSTANTS.STATUS.TODO 
+      : TASK_CONSTANTS.STATUS.COMPLETED
+    
+    // 先乐观更新UI
+    subtask.status = newStatus
+    subtask.updated_at = new Date()
+    subtask.last_activity_at = new Date()
+    
+    if (newStatus === TASK_CONSTANTS.STATUS.COMPLETED) {
+      subtask.completed_at = new Date()
+    } else {
+      subtask.completed_at = null
+    }
+    
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      const result = await todoBooksObj.updateTodoItemStatus(subtask._id, newStatus)
+      
+      if (result.code === API_CODES.SUCCESS) {
+        // 处理父子任务关系的本地更新
+        await handleLocalParentChildUpdate(subtask, newStatus)
+      } else {
+        // 如果失败，回滚本地更新
+        subtask.status = oldStatus
+        subtask.updated_at = new Date()
+        subtask.last_activity_at = new Date()
+        
+        if (oldStatus === TASK_CONSTANTS.STATUS.COMPLETED) {
+          subtask.completed_at = new Date()
+        } else {
+          subtask.completed_at = null
+        }
+        
+        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
+      }
+    } catch (err) {
+      console.error('更新子任务状态失败:', err)
+      uni.showToast({
+        title: err.message || ERROR_MESSAGES.OPERATION_FAILED,
+        icon: 'error'
+      })
+    }
+  }
+  
+  /**
    * 设置筛选器
    * @param {string} filter - 筛选条件
    */
@@ -392,6 +481,7 @@ export function useTaskData(bookId) {
     // 方法
     loadTasks,
     toggleTaskStatus,
+    toggleSubtaskStatus,
     toggleTaskExpand,
     deleteTask,
     updateTaskOrder,

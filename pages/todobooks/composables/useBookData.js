@@ -52,6 +52,7 @@ export function useBookData(bookId = null) {
    * @param {string} id - 项目册ID
    */
   const loadBookDetail = async (id = bookId) => {
+    
     if (!id) {
       console.log('loadBookDetail 错误: 项目册ID不能为空')
       error.value = '项目册ID不能为空'
@@ -63,6 +64,7 @@ export function useBookData(bookId = null) {
       return
     }
     
+    console.log('设置 loading = true')
     loading.value = true
     error.value = null
     
@@ -99,7 +101,7 @@ export function useBookData(bookId = null) {
       })
     } finally {
       loading.value = false
-      uni.stopPullDownRefresh()
+      console.log('loading.value 现在是:', loading.value)
     }
   }
   

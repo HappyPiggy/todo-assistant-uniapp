@@ -244,6 +244,11 @@ defineExpose({
   color: $text-primary;
   font-weight: $font-weight-medium;
   margin-bottom: $margin-sm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  min-width: 200rpx;
 }
 
 .form-section ::v-deep .uni-easyinput__content {
