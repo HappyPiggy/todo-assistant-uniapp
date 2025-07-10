@@ -125,9 +125,9 @@ const previewData = computed(() => {
     color: props.formData.color,
     icon: props.formData.icon,
     stats: {
-      total: props.statsData?.item_count || 0,
-      completed: props.statsData?.completed_count || 0,
-      members: props.statsData?.member_count || 1,
+      total: (props.statsData && props.statsData.item_count) || 0,
+      completed: (props.statsData && props.statsData.completed_count) || 0,
+      members: (props.statsData && props.statsData.member_count) || 1,
       progress: props.statsData ? calculateCompletionRate(props.statsData) : 0
     }
   }
@@ -162,7 +162,7 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .book-form {
   gap: $margin-base;

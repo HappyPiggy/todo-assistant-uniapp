@@ -176,7 +176,7 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .role-change-modal {
   width: 600rpx;

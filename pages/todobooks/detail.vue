@@ -3,7 +3,7 @@
     <!-- 项目册头部信息 -->
     <BookHeader
       v-if="!bookLoading && !bookError"
-      :book-data="bookData.value"
+      :book-data="bookData"
       :overall-progress="overallProgress"
       :task-stats="taskStats"
       :member-count="memberCount"
@@ -56,13 +56,13 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import BookHeader from './components/book/BookHeader.vue'
-import TaskFilter from './components/task/TaskFilter.vue'
-import TaskList from './components/task/TaskList.vue'
-import LoadingState from './components/common/LoadingState.vue'
-import ErrorState from './components/common/ErrorState.vue'
-import { useBookData } from './composables/useBookData.js'
-import { useTaskData } from './composables/useTaskData.js'
+import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
+import TaskFilter from '@/pages/todobooks/components/task/TaskFilter.vue'
+import TaskList from '@/pages/todobooks/components/task/TaskList.vue'
+import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
+import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 import { calculateUnreadCount, extractCommentIds } from '@/utils/commentUtils.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
@@ -99,7 +99,7 @@ const {
 
 // 当前用户ID
 const currentUserId = computed(() => {
-  return store.userInfo?._id || ''
+  return (store.userInfo && store.userInfo._id) || ''
 })
 
 // 当前任务（用于菜单操作）
@@ -255,7 +255,7 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import './styles/variables.scss';
+@import '@/pages/todobooks/styles/variables.scss';
 
 .detail-page {
   min-height: 100vh;

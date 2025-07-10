@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
-import { calculateCompletionRate } from '../utils/bookUtils.js'
-import { API_CODES, ERROR_MESSAGES } from '../utils/constants.js'
+import { calculateCompletionRate } from '@/pages/todobooks/utils/bookUtils.js'
+import { API_CODES, ERROR_MESSAGES } from '@/pages/todobooks/utils/constants.js'
 
 /**
  * 项目册数据管理组合式函数
@@ -79,7 +79,7 @@ export function useBookData(bookId = null) {
         console.log('loadBookDetail 成功, 更新后 bookData.value:', JSON.stringify(bookData.value, null, 2))
         
         // 设置页面标题
-        if (bookData.value?.title) {
+        if (bookData.value && bookData.value.title) {
           uni.setNavigationBarTitle({
             title: bookData.value.title
           })

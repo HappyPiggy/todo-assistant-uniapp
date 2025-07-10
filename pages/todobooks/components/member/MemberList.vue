@@ -156,7 +156,7 @@ const handleMenuCancel = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .member-list {
   flex: 1;

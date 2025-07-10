@@ -109,7 +109,7 @@ const handleTouchEnd = (event) => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .subtask-item {
   @include flex-between;

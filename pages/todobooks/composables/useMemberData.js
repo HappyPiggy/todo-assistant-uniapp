@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
-import { formatJoinTime } from '../utils/dateUtils.js'
-import { API_CODES, ERROR_MESSAGES, MEMBER_CONSTANTS } from '../utils/constants.js'
+import { formatJoinTime } from '@/pages/todobooks/utils/dateUtils.js'
+import { API_CODES, ERROR_MESSAGES, MEMBER_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 
 /**
  * 成员数据管理组合式函数
@@ -18,7 +18,7 @@ export function useMemberData(bookId) {
   const isOwner = computed(() => {
     if (!currentUserId.value || !members.value.length) return false
     const currentMember = members.value.find(m => m.user_id === currentUserId.value)
-    return currentMember?.role === MEMBER_CONSTANTS.ROLES.OWNER
+    return currentMember && currentMember.role === MEMBER_CONSTANTS.ROLES.OWNER
   })
   
   const memberCount = computed(() => {

@@ -2,12 +2,12 @@
   <view class="book-header">
     <!-- 项目册基本信息 -->
     <view class="header-top">
-      <view class="book-icon" :style="{ backgroundColor: bookData?.color || '#007AFF' }">
-        <uni-icons color="#ffffff" size="32" :type="bookData?.icon || 'folder'" />
+      <view class="book-icon" :style="{ backgroundColor: (bookData && bookData.color) || '#007AFF' }">
+        <uni-icons color="#ffffff" size="32" :type="(bookData && bookData.icon) || 'folder'" />
       </view>
       <view class="book-meta">
-        <text class="book-title">{{ bookData?.title || '项目册' }}</text>
-        <text class="book-description" v-if="bookData?.description">{{ bookData.description }}</text>
+        <text class="book-title">{{ (bookData && bookData.title) || '项目册' }}</text>
+        <text class="book-description" v-if="bookData && bookData.description">{{ bookData.description }}</text>
       </view>
     </view>
 
@@ -20,7 +20,7 @@
       <view class="progress-bar">
         <view 
           class="progress-fill" 
-          :style="{ width: overallProgress + '%', backgroundColor: bookData?.color || '#007AFF' }">
+          :style="{ width: overallProgress + '%', backgroundColor: (bookData && bookData.color) || '#007AFF' }">
         </view>
       </view>
     </view>
@@ -68,13 +68,13 @@ const props = defineProps({
 // 监听 bookData 变化，添加调试日志
 watchEffect(() => {
   console.log('BookHeader 组件 bookData 变化:', props.bookData)
-  console.log('BookHeader 组件 bookData.title:', props.bookData?.title)
+  console.log('BookHeader 组件 bookData.title:', props.bookData && props.bookData.title)
   console.log('BookHeader 组件 bookData 类型:', typeof props.bookData)
 })
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .book-header {
   @include card-style;

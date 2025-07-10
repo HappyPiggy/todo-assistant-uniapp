@@ -114,7 +114,7 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .member-actions-sheet {
   background-color: $bg-white;

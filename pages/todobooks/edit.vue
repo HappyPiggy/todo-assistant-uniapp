@@ -33,11 +33,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import LoadingState from './components/common/LoadingState.vue'
-import ErrorState from './components/common/ErrorState.vue'
-import BookForm from './components/book/BookForm.vue'
-import { useBookForm } from './composables/useBookForm.js'
-import { useBookData } from './composables/useBookData.js'
+import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
+import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
+import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
+import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 
 // 获取路由参数
 const pages = getCurrentPages()
@@ -141,8 +141,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import './styles/variables.scss';
-@import './styles/mixins.scss';
+@import '@/pages/todobooks/styles/variables.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .edit-todobook {
   min-height: 100vh;

@@ -87,7 +87,7 @@ const handleMaskClick = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .confirm-dialog-mask {
   @include popup-mask;

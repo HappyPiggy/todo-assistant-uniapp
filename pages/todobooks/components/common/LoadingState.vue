@@ -21,7 +21,7 @@ const props = defineProps({
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .loading-state {
   @include loading-state;

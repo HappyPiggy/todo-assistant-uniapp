@@ -58,7 +58,7 @@ const handleRetry = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .error-state {
   @include error-state;

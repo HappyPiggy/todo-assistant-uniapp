@@ -90,7 +90,7 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .task-menu-sheet {
   background-color: $bg-white;

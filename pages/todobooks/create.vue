@@ -24,9 +24,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import BookForm from './components/book/BookForm.vue'
-import BookPreview from './components/book/BookPreview.vue'
-import { useBookForm } from './composables/useBookForm.js'
+import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
+import BookPreview from '@/pages/todobooks/components/book/BookPreview.vue'
+import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
 
 // 使用组合函数
 const {
@@ -97,8 +97,8 @@ const handleCancel = () => {
 </script>
 
 <style lang="scss" scoped>
-@import './styles/variables.scss';
-@import './styles/mixins.scss';
+@import '@/pages/todobooks/styles/variables.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .create-todobook {
   min-height: 100vh;

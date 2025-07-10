@@ -45,7 +45,7 @@ const handleAddTask = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .task-filter {
   @include card-style(0);

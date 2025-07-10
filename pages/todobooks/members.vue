@@ -64,12 +64,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import MemberList from './components/member/MemberList.vue'
-import InviteModal from './components/member/InviteModal.vue'
-import RoleChangeModal from './components/member/RoleChangeModal.vue'
-import ConfirmDialog from './components/common/ConfirmDialog.vue'
-import { useMemberData } from './composables/useMemberData.js'
-import { useBookData } from './composables/useBookData.js'
+import MemberList from '@/pages/todobooks/components/member/MemberList.vue'
+import InviteModal from '@/pages/todobooks/components/member/InviteModal.vue'
+import RoleChangeModal from '@/pages/todobooks/components/member/RoleChangeModal.vue'
+import ConfirmDialog from '@/pages/todobooks/components/common/ConfirmDialog.vue'
+import { useMemberData } from '@/pages/todobooks/composables/useMemberData.js'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 // 获取路由参数
@@ -98,7 +98,7 @@ const {
 
 // 当前用户ID
 const currentUserId = computed(() => {
-  return store.userInfo?._id || ''
+  return (store.userInfo && store.userInfo._id) || ''
 })
 
 // 组件引用
@@ -116,7 +116,9 @@ const goBack = () => {
 }
 
 const openInviteModal = () => {
-  inviteModal.value?.open()
+  if (inviteModal.value && inviteModal.value.open) {
+    inviteModal.value.open()
+  }
 }
 
 const handleInviteConfirm = async (inviteData) => {
@@ -142,7 +144,9 @@ const handleInviteCancel = () => {
 
 const handleChangeRole = (member) => {
   selectedMember.value = member
-  roleChangeModal.value?.open()
+  if (roleChangeModal.value && roleChangeModal.value.open) {
+    roleChangeModal.value.open()
+  }
 }
 
 const handleRoleChangeConfirm = async (member, newRole) => {
@@ -170,7 +174,8 @@ const handleRemoveMember = (member) => {
   selectedMember.value = member
   confirmAction.value = 'removeMember'
   
-  confirmDialog.value?.open({
+  if (confirmDialog.value && confirmDialog.value.open) {
+    confirmDialog.value.open({
     title: '确认移除',
     content: `确定要将 ${member.nickname || member.username} 移出项目册吗？`,
     confirmText: '移除',
@@ -215,8 +220,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import './styles/variables.scss';
-@import './styles/mixins.scss';
+@import '@/pages/todobooks/styles/variables.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .members-page {
   min-height: 100vh;

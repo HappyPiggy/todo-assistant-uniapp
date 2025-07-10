@@ -40,7 +40,7 @@ const selectIcon = (icon) => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .icon-picker {
   @include flex-start;

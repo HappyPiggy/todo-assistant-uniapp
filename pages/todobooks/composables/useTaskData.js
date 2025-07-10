@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
-import { organizeParentChildTasks, calculateTaskStats, filterTasks, validateTaskCompletion } from '../utils/taskUtils.js'
+import { organizeParentChildTasks, calculateTaskStats, filterTasks, validateTaskCompletion } from '@/pages/todobooks/utils/taskUtils.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
-import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '../utils/constants.js'
+import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 /**
@@ -18,7 +18,7 @@ export function useTaskData(bookId) {
   
   // 计算属性
   const currentUserId = computed(() => {
-    return store.userInfo?._id || ''
+    return (store.userInfo && store.userInfo._id) || ''
   })
   
   const filteredTasks = computed(() => {

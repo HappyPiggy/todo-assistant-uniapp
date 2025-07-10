@@ -1,5 +1,5 @@
 import { ref, reactive, computed } from 'vue'
-import { BOOK_CONSTANTS, VALIDATION_RULES } from '../utils/constants.js'
+import { BOOK_CONSTANTS, VALIDATION_RULES } from '@/pages/todobooks/utils/constants.js'
 import { 
   getColorOptions, 
   getIconOptions, 
@@ -7,7 +7,7 @@ import {
   formatBookDataForSubmit,
   hasBookFormChanges,
   generateBookPreview
-} from '../utils/bookUtils.js'
+} from '@/pages/todobooks/utils/bookUtils.js'
 
 /**
  * 项目册表单管理组合式函数

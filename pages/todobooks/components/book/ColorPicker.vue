@@ -38,7 +38,7 @@ const selectColor = (color) => {
 </script>
 
 <style lang="scss" scoped>
-@import '../../styles/mixins.scss';
+@import '@/pages/todobooks/styles/mixins.scss';
 
 .color-picker {
   @include flex-start;
