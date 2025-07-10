@@ -19,11 +19,6 @@
 				<text class="user-name" v-else @click="toLogin">点击登录</text>
 				<text class="user-id" v-if="hasLogin">ID: {{userInfo._id}}</text>
 			</view>
-			
-			<view class="sync-status" v-if="hasLogin">
-				<uni-icons :color="syncStatusColor" size="24" :type="syncStatusIcon" />
-				<text class="sync-text">{{syncStatusText}}</text>
-			</view>
 		</view>
 
 		<!-- 功能卡片区域 -->
@@ -38,20 +33,6 @@
 					<uni-list-item title="编辑资料" link @click="toEditProfile" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
 					<uni-list-item title="修改密码" link @click="toChangePassword" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-				</uni-list>
-			</view>
-
-			<!-- 数据同步卡片 -->
-			<view class="card" v-if="hasLogin">
-				<view class="card-header">
-					<uni-icons color="#28a745" size="24" type="refresh" />
-					<text class="card-title">数据同步</text>
-				</view>
-				<uni-list class="card-list">
-					<uni-list-item title="手动同步" :rightText="lastSyncTime" @click="manualSync" :show-extra-icon="true" :extraIcon="{type:'refresh',color:'#28a745'}">
-					</uni-list-item>
-					<uni-list-item title="同步设置" link @click="toSyncSettings" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
 				</uni-list>
 			</view>
@@ -88,8 +69,7 @@
 	export default {
 		data() {
 			return {
-				syncStatus: 'idle', // idle, syncing, success, error
-				lastSyncTime: '从未同步'
+				// 基本数据
 			}
 		},
 		computed: {
@@ -100,34 +80,10 @@
 			},
 			hasLogin(){
 				return store.hasLogin
-			},
-			syncStatusColor() {
-				switch(this.syncStatus) {
-					case 'syncing': return '#ffc107'
-					case 'success': return '#28a745' 
-					case 'error': return '#dc3545'
-					default: return '#6c757d'
-				}
-			},
-			syncStatusIcon() {
-				switch(this.syncStatus) {
-					case 'syncing': return 'refresh'
-					case 'success': return 'checkmarkempty'
-					case 'error': return 'closeempty'
-					default: return 'circle'
-				}
-			},
-			syncStatusText() {
-				switch(this.syncStatus) {
-					case 'syncing': return '同步中...'
-					case 'success': return '已同步'
-					case 'error': return '同步失败'
-					default: return '未同步'
-				}
 			}
 		},
 		onLoad() {
-			this.loadSyncStatus()
+			// 基本初始化
 		},
 		methods: {
 			toLogin() {
@@ -152,47 +108,6 @@
 			toChangePassword() {
 				uni.navigateTo({
 					url: '/uni_modules/uni-id-pages/pages/pwd/pwd'
-				})
-			},
-			async manualSync() {
-				if (this.syncStatus === 'syncing') {
-					uni.showToast({
-						title: '正在同步中...',
-						icon: 'none'
-					})
-					return
-				}
-				
-				this.syncStatus = 'syncing'
-				
-				try {
-					// 使用状态管理的同步功能
-					const result = await this.$store.sync.performFullSync()
-					
-					if (result.success) {
-						this.syncStatus = 'success'
-						this.lastSyncTime = this.formatTime(new Date())
-						this.saveSyncStatus()
-						
-						uni.showToast({
-							title: '同步成功',
-							icon: 'success'
-						})
-					} else {
-						throw new Error(result.error || '同步失败')
-					}
-				} catch (error) {
-					this.syncStatus = 'error'
-					console.error('同步失败:', error)
-					uni.showToast({
-						title: error.message || '同步失败',
-						icon: 'error'
-					})
-				}
-			},
-			toSyncSettings() {
-				uni.navigateTo({
-					url: '/pages/ucenter/sync/settings'
 				})
 			},
 			toStatistics() {
@@ -233,38 +148,6 @@
 				})
 			},
 
-			// clearLocalData() {
-			// 	// 清除同步状态
-			// 	this.syncStatus = 'idle'
-			// 	this.lastSyncTime = '从未同步'
-			// 	uni.removeStorageSync('syncStatus')
-			// 	uni.removeStorageSync('lastSyncTime')
-			// 	// TODO: 清除其他本地数据
-			// },
-			loadSyncStatus() {
-				const syncStatus = uni.getStorageSync('syncStatus')
-				const lastSyncTime = uni.getStorageSync('lastSyncTime')
-				
-				if (syncStatus) {
-					this.syncStatus = syncStatus === 'syncing' ? 'idle' : syncStatus
-				}
-				if (lastSyncTime) {
-					this.lastSyncTime = lastSyncTime
-				}
-			},
-			saveSyncStatus() {
-				uni.setStorageSync('syncStatus', this.syncStatus)
-				uni.setStorageSync('lastSyncTime', this.lastSyncTime)
-			},
-			formatTime(date) {
-				const year = date.getFullYear()
-				const month = String(date.getMonth() + 1).padStart(2, '0')
-				const day = String(date.getDate()).padStart(2, '0')
-				const hours = String(date.getHours()).padStart(2, '0')
-				const minutes = String(date.getMinutes()).padStart(2, '0')
-				
-				return `${year}-${month}-${day} ${hours}:${minutes}`
-			}
 		}
 	}
 </script>

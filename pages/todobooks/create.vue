@@ -7,25 +7,19 @@
 
     <!-- 项目册表单 -->
     <BookForm
+      :form-data="formData"
       :loading="submitting"
       :errors="errors"
       @submit="handleSubmit"
       @cancel="handleCancel"
     />
 
-    <!-- 项目册预览 -->
-    <BookPreview
-      :preview-data="previewData"
-      :show-preview="showPreview"
-      @close-preview="showPreview = false"
-    />
   </view>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
-import BookPreview from '@/pages/todobooks/components/book/BookPreview.vue'
 import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
 
 // 使用组合函数
@@ -41,10 +35,10 @@ const {
 // 预览相关
 const showPreview = ref(false)
 const previewData = computed(() => ({
-  title: formData.value.title || '新项目册',
-  description: formData.value.description || '这是一个新的项目册',
-  color: formData.value.color || '#007AFF',
-  icon: formData.value.icon || 'folder',
+  title: formData.title || '新项目册',
+  description: formData.description || '这是一个新的项目册',
+  color: formData.color || '#007AFF',
+  icon: formData.icon || 'folder',
   created_at: new Date(),
   stats: {
     total: 0,
@@ -56,7 +50,11 @@ const previewData = computed(() => ({
 
 // 事件处理
 const handleSubmit = async (data) => {
+  if (submitting.value) return // 防止重复提交
+  
   try {
+    submitting.value = true // 开始提交
+    
     const result = await saveBook(data)
     if (result.success) {
       uni.showToast({
@@ -64,11 +62,9 @@ const handleSubmit = async (data) => {
         icon: 'success'
       })
       
-      // 跳转到详情页
+      // 返回列表页面而不是跳转到详情页
       setTimeout(() => {
-        uni.redirectTo({
-          url: `/pages/todobooks/detail?id=${result.data._id}`
-        })
+        uni.navigateBack()
       }, 1000)
     }
   } catch (error) {
@@ -76,11 +72,13 @@ const handleSubmit = async (data) => {
       title: '创建失败',
       icon: 'error'
     })
+  } finally {
+    submitting.value = false // 结束提交
   }
 }
 
 const handleCancel = () => {
-  if (formData.value.title || formData.value.description) {
+  if (formData.title || formData.description) {
     uni.showModal({
       title: '确认退出',
       content: '退出后将丢失已编辑的内容，确定要退出吗？',

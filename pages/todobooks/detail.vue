@@ -79,8 +79,7 @@ const {
   overallProgress,
   taskStats,
   memberCount,
-  loadBookDetail,
-  updateBook
+  loadBookDetail
 } = useBookData(bookId)
 
 const {

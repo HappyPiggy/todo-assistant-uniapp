@@ -260,7 +260,7 @@ class LocalStorageManager {
       return this.deserializeData(data) || {
         syncOnStartup: true,
         syncOnBackground: false,
-        autoSyncInterval: 300,
+        autoSyncInterval: 0, // 设置为0禁用定时同步
         theme: 'light',
         language: 'zh-CN',
         conflictResolution: 'server_wins',

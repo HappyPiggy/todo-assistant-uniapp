@@ -83,16 +83,31 @@
         </view>
       </view>
     </uni-forms>
+
+    <!-- 操作按钮 -->
+    <view class="form-actions">
+      <button 
+        class="cancel-btn" 
+        @click="handleCancel">
+        取消
+      </button>
+      <button 
+        class="submit-btn" 
+        @click="handleSubmit"
+        :loading="loading">
+        {{ loading ? (mode === 'edit' ? '保存中...' : '创建中...') : (mode === 'edit' ? '保存' : '创建') }}
+      </button>
+    </view>
   </view>
 </template>
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
-import ColorPicker from './ColorPicker.vue'
-import IconPicker from './IconPicker.vue'
-import BookPreview from './BookPreview.vue'
-import { calculateCompletionRate } from '../../utils/bookUtils.js'
-import { VALIDATION_RULES } from '../../utils/constants.js'
+import ColorPicker from '@/pages/todobooks/components/book/ColorPicker.vue'
+import IconPicker from '@/pages/todobooks/components/book//IconPicker.vue'
+import BookPreview from '@/pages/todobooks/components/book//BookPreview.vue'
+import { calculateCompletionRate } from '@/pages/todobooks/utils/bookUtils.js'
+import { VALIDATION_RULES } from '@/pages/todobooks/utils/constants.js'
 
 const props = defineProps({
   formData: {
@@ -111,19 +126,38 @@ const props = defineProps({
   statsData: {
     type: Object,
     default: null
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:formData', 'titleChange', 'descriptionChange', 'colorChange', 'iconChange'])
+const emit = defineEmits(['update:formData', 'titleChange', 'descriptionChange', 'colorChange', 'iconChange', 'submit', 'cancel'])
 
 const rules = VALIDATION_RULES.BOOK_FORM
 
 const previewData = computed(() => {
+  if (!props.formData) {
+    return {
+      title: '项目册名称',
+      description: '项目描述',
+      color: '#007AFF',
+      icon: 'folder',
+      stats: {
+        total: 0,
+        completed: 0,
+        members: 1,
+        progress: 0
+      }
+    }
+  }
+  
   return {
     title: props.formData.title || '项目册名称',
     description: props.formData.description || '项目描述',
-    color: props.formData.color,
-    icon: props.formData.icon,
+    color: props.formData.color || '#007AFF',
+    icon: props.formData.icon || 'folder',
     stats: {
       total: (props.statsData && props.statsData.item_count) || 0,
       completed: (props.statsData && props.statsData.completed_count) || 0,
@@ -147,6 +181,14 @@ const handleColorChange = (color) => {
 
 const handleIconChange = (icon) => {
   emit('iconChange', icon)
+}
+
+const handleSubmit = () => {
+  emit('submit', props.formData)
+}
+
+const handleCancel = () => {
+  emit('cancel')
 }
 
 // 暴露表单验证方法
@@ -251,5 +293,38 @@ defineExpose({
   font-size: $font-size-xl;
   color: $text-primary;
   font-weight: $font-weight-semibold;
+}
+
+/* 操作按钮 */
+.form-actions {
+  display: flex;
+  gap: $margin-base;
+  padding: $padding-lg;
+  position: sticky;
+  bottom: 0;
+  background-color: $bg-white;
+  border-top: 1rpx solid $border-color-light;
+  /* #ifndef APP-NVUE */
+  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.1);
+  /* #endif */
+}
+
+.cancel-btn {
+  flex: 1;
+  height: 88rpx;
+  font-size: $font-size-base;
+  border: 1rpx solid $border-color;
+  border-radius: $border-radius;
+  color: $text-secondary;
+  background-color: $bg-light;
+}
+
+.submit-btn {
+  flex: 1;
+  height: 88rpx;
+  font-size: $font-size-base;
+  border-radius: $border-radius;
+  background-color: $primary-color;
+  color: $bg-white;
 }
 </style>

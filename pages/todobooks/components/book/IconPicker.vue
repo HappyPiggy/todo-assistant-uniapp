@@ -16,7 +16,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue'
-import { getIconOptions } from '../../utils/bookUtils.js'
+import { getIconOptions } from '@/pages/todobooks/utils/bookUtils.js'
 
 const props = defineProps({
   selectedIcon: {

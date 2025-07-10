@@ -92,7 +92,12 @@ async function updateTodoBook(bookId, updateData) {
       .doc(bookId)
       .update(updates)
     
-    return createSuccessResponse(null, '更新项目册成功')
+    // 查询更新后的数据
+    const updatedBook = await db.collection('todobooks')
+      .doc(bookId)
+      .get()
+    
+    return createSuccessResponse(updatedBook.data[0], '更新项目册成功')
   } catch (error) {
     console.error('更新项目册失败:', error)
     return createErrorResponse(ERROR_CODES.INTERNAL_ERROR, '更新项目册失败')

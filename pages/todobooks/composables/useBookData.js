@@ -52,8 +52,6 @@ export function useBookData(bookId = null) {
    * @param {string} id - 项目册ID
    */
   const loadBookDetail = async (id = bookId) => {
-    console.log('loadBookDetail 开始, id:', id, 'bookId:', bookId)
-    
     if (!id) {
       console.log('loadBookDetail 错误: 项目册ID不能为空')
       error.value = '项目册ID不能为空'
@@ -76,7 +74,7 @@ export function useBookData(bookId = null) {
       if (result.code === API_CODES.SUCCESS) {
         bookData.value = result.data.book
         memberCount.value = result.data.members ? result.data.members.length : 0
-        console.log('loadBookDetail 成功, 更新后 bookData.value:', JSON.stringify(bookData.value, null, 2))
+        // console.log('loadBookDetail 成功, 更新后 bookData.value:', JSON.stringify(bookData.value, null, 2))
         
         // 设置页面标题
         if (bookData.value && bookData.value.title) {
@@ -105,37 +103,6 @@ export function useBookData(bookId = null) {
     }
   }
   
-  /**
-   * 更新项目册信息
-   * @param {string} id - 项目册ID
-   * @param {Object} updateData - 更新数据
-   */
-  const updateBook = async (id = bookId, updateData) => {
-    if (!id) {
-      throw new Error('项目册ID不能为空')
-    }
-    
-    try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.updateTodoBook(id, {
-        ...updateData,
-        updated_at: Date.now()
-      })
-      
-      if (result.code === API_CODES.SUCCESS) {
-        // 更新本地数据
-        if (bookData.value) {
-          Object.assign(bookData.value, updateData)
-        }
-        return result
-      } else {
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
-      }
-    } catch (err) {
-      console.error('更新项目册失败:', err)
-      throw err
-    }
-  }
   
   /**
    * 删除项目册
@@ -232,7 +199,6 @@ export function useBookData(bookId = null) {
     
     // 方法
     loadBookDetail,
-    updateBook,
     deleteBook,
     createBook,
     updateLocalStats,

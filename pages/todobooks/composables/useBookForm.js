@@ -8,6 +8,7 @@ import {
   hasBookFormChanges,
   generateBookPreview
 } from '@/pages/todobooks/utils/bookUtils.js'
+import globalStore from '@/store/index.js'
 
 /**
  * 项目册表单管理组合式函数
@@ -139,70 +140,6 @@ export function useBookForm(initialData = null) {
   }
   
   /**
-   * 处理表单提交
-   * @param {Function} submitFn - 提交函数
-   * @param {Object} options - 选项
-   */
-  const handleSubmit = async (submitFn, options = {}) => {
-    const {
-      showLoading = true,
-      loadingText = '提交中...',
-      successText = '提交成功',
-      validate = true
-    } = options
-    
-    // 验证表单
-    if (validate && !validateForm()) {
-      const firstError = Object.values(errors.value)[0]
-      if (firstError) {
-        uni.showToast({
-          title: firstError,
-          icon: 'none'
-        })
-      }
-      return false
-    }
-    
-    submitting.value = true
-    
-    if (showLoading) {
-      uni.showLoading({
-        title: loadingText
-      })
-    }
-    
-    try {
-      const submitData = getSubmitData()
-      const result = await submitFn(submitData)
-      
-      if (showLoading) {
-        uni.hideLoading()
-      }
-      
-      uni.showToast({
-        title: successText,
-        icon: 'success'
-      })
-      
-      return result
-    } catch (error) {
-      if (showLoading) {
-        uni.hideLoading()
-      }
-      
-      console.error('表单提交失败:', error)
-      uni.showToast({
-        title: error.message || '提交失败',
-        icon: 'error'
-      })
-      
-      throw error
-    } finally {
-      submitting.value = false
-    }
-  }
-  
-  /**
    * 处理取消操作
    * @param {Object} options - 选项
    */
@@ -238,18 +175,12 @@ export function useBookForm(initialData = null) {
    */
   const saveBook = async (data) => {
     try {
-      const result = await uniCloud.callFunction({
-        name: 'todobook-co',
-        data: {
-          action: 'createTodoBook',
-          ...data
-        }
-      })
+      // 使用全局store创建项目册
+      const result = await globalStore.todoBook.createTodoBook(data)
       
-      if (result.result.success) {
-        return result.result
-      } else {
-        throw new Error(result.result.message || '创建失败')
+      return {
+        success: true,
+        data: result
       }
     } catch (error) {
       console.error('创建项目册失败:', error)
@@ -265,19 +196,12 @@ export function useBookForm(initialData = null) {
    */
   const updateBook = async (bookId, data) => {
     try {
-      const result = await uniCloud.callFunction({
-        name: 'todobook-co',
-        data: {
-          action: 'updateTodoBook',
-          todobook_id: bookId,
-          ...data
-        }
-      })
+      // 使用全局store更新项目册
+      const result = await globalStore.todoBook.updateTodoBook(bookId, data)
       
-      if (result.result.success) {
-        return result.result
-      } else {
-        throw new Error(result.result.message || '更新失败')
+      return {
+        success: true,
+        data: result
       }
     } catch (error) {
       console.error('更新项目册失败:', error)
@@ -328,7 +252,6 @@ export function useBookForm(initialData = null) {
     resetForm,
     fillForm,
     getSubmitData,
-    handleSubmit,
     handleCancel,
     saveBook,
     updateBook,

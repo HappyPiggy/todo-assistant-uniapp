@@ -149,6 +149,7 @@
 	import {
 		store
 	} from '@/uni_modules/uni-id-pages/common/store.js'
+	import globalStore from '@/store/index.js'
 	
 	export default {
 		data() {
@@ -159,6 +160,7 @@
 				todoBooks: [],
 				totalCount: 0,
 				searchTimer: null,
+				isFirstLoad: true, // 添加首次加载标识
 				
 				// 保留原有
 				searchKeyword: '',
@@ -179,8 +181,14 @@
 				return store.userInfo?._id || ''
 			}
 		},
+		onShow() {
+			// 统一在onShow中处理数据加载，避免重复请求
+			if (this.hasLogin) {
+				this.loadTodoBooksOptimized()
+			}
+		},
 		onLoad() {
-			// 检查登录状态
+			// 只检查登录状态，不加载数据
 			if (!this.hasLogin) {
 				uni.showToast({
 					title: '请先登录',
@@ -191,15 +199,13 @@
 						url: '/pages/login/login-withpwd'
 					})
 				}, 1500)
-			} else {
-				this.loadTodoBooks()
 			}
-		},
-		onShow() {
-			// 页面显示时刷新数据
-			if (this.hasLogin) {
-				this.refreshTodoBooks()
-			}
+			
+			// 监听缓存更新事件
+			uni.$on('todobooks-cache-updated', this.onCacheUpdated)
+			
+			// 监听用户切换事件
+			uni.$on('user-switched', this.onUserSwitched)
 		},
 		onPullDownRefresh() {
 			this.refreshTodoBooks()
@@ -212,8 +218,97 @@
 			if (this.searchTimer) {
 				clearTimeout(this.searchTimer)
 			}
+			
+			// 移除事件监听
+			uni.$off('todobooks-cache-updated', this.onCacheUpdated)
+			uni.$off('user-switched', this.onUserSwitched)
 		},
 		methods: {
+			// 处理缓存更新事件
+			onCacheUpdated(updatedBooks) {
+				console.log('收到缓存更新通知，刷新页面数据，数据条数:', updatedBooks.length)
+				console.log('更新前页面数据条数:', this.todoBooks.length)
+				
+				this.todoBooks = updatedBooks
+				this.totalCount = updatedBooks.length
+				this.loadMoreStatus = 'noMore'
+				
+				console.log('更新后页面数据条数:', this.todoBooks.length)
+				
+				// 可选：显示更新提示
+				// uni.showToast({
+				//   title: '数据已更新',
+				//   icon: 'none',
+				//   duration: 1000
+				// })
+			},
+
+			// 处理用户切换事件
+			onUserSwitched(newUserId) {
+				console.log('收到用户切换通知，清空页面数据')
+				
+				// 清空当前显示的数据
+				this.todoBooks = []
+				this.totalCount = 0
+				this.loadMoreStatus = 'more'
+				this.loading = false
+				this.error = null
+				
+				// 如果新用户已登录，重新加载数据
+				if (newUserId && this.hasLogin) {
+					setTimeout(() => {
+						this.loadTodoBooksOptimized()
+					}, 500)
+				}
+			},
+
+			// 优化的加载方法 - 缓存优先策略
+			async loadTodoBooksOptimized() {
+				// 如果正在加载，直接返回
+				if (this.loading) return
+				
+				try {
+					this.loading = true
+					this.error = null
+					
+					// 优先从缓存获取数据
+					const cached = globalStore.todoBook.getTodoBooksFromCache()
+					if (cached.success) {
+						console.log('使用缓存数据:', cached.source)
+						this.todoBooks = cached.data
+						this.totalCount = cached.data.length
+						this.loadMoreStatus = 'noMore'
+						
+						// 标记首次加载完成
+						this.isFirstLoad = false
+						return
+					}
+					
+					// 缓存无效，从云端加载
+					console.log('缓存无效，从云端加载')
+					const books = await globalStore.todoBook.loadTodoBooks({
+						include_archived: false,
+						keyword: this.searchKeyword
+					})
+					
+					this.todoBooks = books
+					this.totalCount = books.length
+					this.loadMoreStatus = 'noMore'
+					this.isFirstLoad = false
+					
+				} catch (error) {
+					console.error('加载项目册失败:', error)
+					this.error = '加载失败，请重试'
+					uni.showToast({
+						title: '加载失败，请重试',
+						icon: 'none'
+					})
+				} finally {
+					this.loading = false
+					uni.stopPullDownRefresh()
+				}
+			},
+
 			// 新增：加载项目册数据
 			async loadTodoBooks(isLoadMore = false) {
 				if (this.loading) return
@@ -265,13 +360,32 @@
 			},
 			
 
-			// 修改：刷新数据
+			// 修改：刷新数据（强制从云端获取）
 			async refreshTodoBooks() {
-				this.currentPage = 1
-				this.hasMore = true
-				this.loadMoreStatus = 'more'
-				this.todoBooks = []
-				await this.loadTodoBooks(false)
+				try {
+					this.loading = true
+					this.error = null
+					console.log('强制刷新项目册...')
+					
+					const books = await globalStore.todoBook.refreshTodoBooks()
+					
+					this.todoBooks = books
+					this.totalCount = books.length
+					this.loadMoreStatus = 'noMore'
+					this.currentPage = 1
+					this.hasMore = false
+					
+				} catch (error) {
+					console.error('刷新项目册失败:', error)
+					this.error = '刷新失败，请重试'
+					uni.showToast({
+						title: '刷新失败，请重试',
+						icon: 'none'
+					})
+				} finally {
+					this.loading = false
+					uni.stopPullDownRefresh()
+				}
 			},
 
 			// 修改：加载更多
@@ -356,21 +470,16 @@
 					success: async (res) => {
 						if (res.confirm) {
 							try {
-								const todoBooksObj = uniCloud.importObject('todobook-co')
-								const result = await todoBooksObj.updateTodoBook(bookToArchive._id, {
+								// 使用全局store更新（缓存更新后会自动通过事件通知页面刷新）
+								await globalStore.todoBook.updateTodoBook(bookToArchive._id, {
 									is_archived: true,
 									archived_at: new Date()
 								})
 
-								if (result.code === 0) {
-									uni.showToast({
-										title: '归档成功',
-										icon: 'success'
-									})
-									this.refreshTodoBooks()
-								} else {
-									throw new Error(result.message || '归档失败')
-								}
+								uni.showToast({
+									title: '归档成功',
+									icon: 'success'
+								})
 							} catch (error) {
 								console.error('归档失败:', error)
 								uni.showToast({
@@ -399,20 +508,15 @@
 									title: '删除中...'
 								})
 
-								const todoBooksObj = uniCloud.importObject('todobook-co')
-								const result = await todoBooksObj.deleteTodoBook(bookToDelete._id)
+								// 使用全局store删除（缓存更新后会自动通过事件通知页面刷新）
+								await globalStore.todoBook.deleteTodoBook(bookToDelete._id)
 
 								uni.hideLoading()
 								
-								if (result.code === 0) {
-									uni.showToast({
-										title: '删除成功',
-										icon: 'success'
-									})
-									this.refreshTodoBooks()
-								} else {
-									throw new Error(result.message || '删除失败')
-								}
+								uni.showToast({
+									title: '删除成功',
+									icon: 'success'
+								})
 							} catch (error) {
 								uni.hideLoading()
 								console.error('删除失败:', error)

@@ -67,9 +67,9 @@ const props = defineProps({
 
 // 监听 bookData 变化，添加调试日志
 watchEffect(() => {
-  console.log('BookHeader 组件 bookData 变化:', props.bookData)
-  console.log('BookHeader 组件 bookData.title:', props.bookData && props.bookData.title)
-  console.log('BookHeader 组件 bookData 类型:', typeof props.bookData)
+  // console.log('BookHeader 组件 bookData 变化:', props.bookData)
+  // console.log('BookHeader 组件 bookData.title:', props.bookData && props.bookData.title)
+  // console.log('BookHeader 组件 bookData 类型:', typeof props.bookData)
 })
 </script>
 

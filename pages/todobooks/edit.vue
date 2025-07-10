@@ -70,7 +70,6 @@ const {
 
 // 加载数据
 const loadBookData = async () => {
-  console.log('loadBookData 开始加载')
   await loadBookDetail()
   console.log('loadBookDetail 完成，bookData.value:', JSON.stringify(bookData.value, null, 2))
   
@@ -111,7 +110,6 @@ const handleSubmit = async (data) => {
       icon: data.icon
     }
     
-    console.log('调用 updateBook，cleanData:', JSON.stringify(cleanData, null, 2))
     const result = await updateBook(bookId, cleanData)
     console.log('updateBook 返回结果:', JSON.stringify(result, null, 2))
     

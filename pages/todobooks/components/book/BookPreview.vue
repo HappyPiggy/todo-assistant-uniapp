@@ -1,5 +1,5 @@
 <template>
-  <view v-if="showPreview" class="book-preview">
+  <view class="book-preview">
     <view class="preview-card">
       <view class="card-header">
         <view class="book-icon" :style="{ backgroundColor: (previewData && previewData.color) || '#007AFF' }">
@@ -50,10 +50,6 @@ const props = defineProps({
         progress: 0
       }
     })
-  },
-  showPreview: {
-    type: Boolean,
-    default: false
   }
 })
 </script>

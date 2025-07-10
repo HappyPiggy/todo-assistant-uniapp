@@ -1,62 +1,183 @@
 # CLAUDE.md
 
-本文件为 Claude Code 在处理此代码库时提供指导。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概述
+## Project Overview
 
-这是一个基于 **uni-app + Vue 3 + uniCloud** 的现代化待办事项管理应用，支持分层级的任务管理和实时云端同步。应用采用 B/S 架构，支持多平台部署（H5、小程序、原生应用）。
+This is a modern task management application built with **uni-app + Vue 3 + uniCloud**, supporting hierarchical task management and real-time cloud synchronization. The application uses a B/S architecture and supports multi-platform deployment (H5, mini-programs, native apps).
 
-## 技术栈
+## Tech Stack
 
-### 前端架构
-- **框架**: uni-app (Vue 3 Composition API)
-- **UI组件**: uni-ui 组件库
-- **状态管理**: 自定义 Vuex 替代方案（基于 Vue 3 reactive API）
-- **样式**: SCSS + uni-scss 设计系统
-- **用户认证**: uni-id-pages 认证页面模块
+### Frontend Architecture
+- **Framework**: uni-app (Vue 3 Composition API)
+- **UI Components**: uni-ui component library
+- **State Management**: Custom Vuex alternative (based on Vue 3 reactive API)
+- **Styling**: SCSS + uni-scss design system
+- **Authentication**: uni-id-pages authentication module
 
-### 后端架构
-- **云平台**: uniCloud 阿里云版本
-- **数据库**: MongoDB (uniCloud DB)
-- **云函数**: Node.js 云对象（Object）
-- **认证系统**: uni-id-common
+### Backend Architecture
+- **Cloud Platform**: uniCloud Aliyun version
+- **Database**: MongoDB (uniCloud DB)
+- **Cloud Functions**: Node.js Cloud Objects
+- **Authentication System**: uni-id-common
 
-## 项目结构
+## Project Structure
 
-### 核心目录
+### Core Directories
 ```
 /
-├── pages/                    # 页面文件
-│   ├── list/list.vue        # 项目册列表（首页）
-│   ├── ucenter/ucenter.vue  # 用户中心
-│   ├── todobooks/           # 项目册相关页面
-│   │   ├── detail.vue       # 项目册详情
-│   │   ├── create.vue       # 创建项目册
-│   │   ├── edit.vue         # 编辑项目册
-│   │   └── members.vue      # 成员管理
-│   ├── tasks/               # 任务相关页面
-│   │   ├── detail.vue       # 任务详情
-│   │   └── create.vue       # 创建任务
-│   ├── statistics/          # 统计页面
-│   │   └── overview.vue     # 数据统计概览
-│   └── debug/debug.vue      # 数据库调试页面
-├── store/                   # 状态管理
-│   ├── index.js            # 主状态管理文件
-│   ├── storage.js          # 本地存储管理
-│   └── sync.js             # 同步逻辑
-├── uniCloud-alipay/        # 云端代码
-│   ├── cloudfunctions/     # 云函数
-│   │   ├── todobook-co/    # 项目册管理云对象
-│   │   ├── sync-co/        # 数据同步云对象
-│   │   └── user-co/        # 用户管理云对象
-│   └── database/           # 数据库Schema
-├── uni_modules/            # uni-app 模块
-├── static/                 # 静态资源
-└── main.js                 # 应用入口
+├── pages/                    # Page files
+│   ├── list/list.vue        # TodoBook list (homepage)
+│   ├── ucenter/ucenter.vue  # User center
+│   ├── todobooks/           # TodoBook pages
+│   │   ├── detail.vue       # TodoBook details
+│   │   ├── create.vue       # Create TodoBook
+│   │   ├── edit.vue         # Edit TodoBook
+│   │   └── members.vue      # Member management
+│   ├── tasks/               # Task pages
+│   │   ├── detail.vue       # Task details
+│   │   └── create.vue       # Create task
+│   ├── statistics/          # Statistics pages
+│   │   └── overview.vue     # Data overview
+│   └── debug/debug.vue      # Database debugging page
+├── store/                   # State management
+│   ├── index.js            # Main state management file
+│   ├── storage.js          # Local storage management
+│   └── sync.js             # Sync logic
+├── uniCloud-alipay/        # Cloud code
+│   ├── cloudfunctions/     # Cloud functions
+│   │   ├── todobook-co/    # TodoBook cloud object
+│   │   ├── sync-co/        # Data sync cloud object
+│   │   └── user-co/        # User management cloud object
+│   └── database/           # Database Schema
+├── uni_modules/            # uni-app modules
+├── static/                 # Static resources
+└── main.js                 # Application entry
 ```
 
+## Common Development Commands
 
-## 调试技巧与最佳实践
+### Running the Application
+Since this is a uni-app project, use HBuilderX IDE for development:
 
-### 日志打印最佳实践
-- 当需要打印调试日志时，值类型直接打印，对象类型使用JSON.stringify(对象变量名, null, 2)进行打印
+1. **Run to Browser (H5)**:
+   - Open project in HBuilderX
+   - Click "Run" → "Run to Browser" → Select browser
+   - Default dev server runs on http://localhost:8080
+
+2. **Run to WeChat Mini Program**:
+   - Configure WeChat AppID in manifest.json
+   - Click "Run" → "Run to Mini Program Simulator" → "WeChat Developer Tools"
+
+3. **Run to Mobile App**:
+   - Click "Run" → "Run to Phone or Emulator" → Select target
+
+### Cloud Function Development
+
+1. **Deploy Cloud Functions**:
+   - Right-click on cloud function folder in HBuilderX
+   - Select "Upload and Deploy"
+
+2. **Initialize Database**:
+   - Access uniCloud web console
+   - Create database collections based on schemas in `/uniCloud-alipay/database/`
+
+### Testing and Debugging
+
+- **Database Debugging**: Navigate to `/pages/debug/debug.vue` in the running app
+- **Console Logging**: Use `console.log()` for debugging, objects should be logged with `JSON.stringify(object, null, 2)`
+
+## Architecture Patterns
+
+### Frontend Patterns
+- **Component Design**: Single File Components (SFC) with Composition API
+- **State Management**: Centralized store using Vue 3 reactive system (see `/store/index.js`)
+- **Data Flow**: Unidirectional data flow with reactive state
+- **Routing**: uni-app built-in routing system (configured in `pages.json`)
+
+### Backend Patterns
+- **Cloud Objects**: Object-oriented cloud functions replacing traditional functions
+- **Module Organization**: Each cloud object organized by functional modules
+- **Permission Control**: Schema-based permission configuration
+
+### Data Architecture
+- **Database**: MongoDB document store
+- **Schema Validation**: JSON Schema validation
+- **Relationships**: Foreign key references (e.g., todobook_id, user_id)
+- **Sync Strategy**: Incremental sync with conflict detection
+
+## Key Features
+
+### Hierarchical Task Management
+- Three-level structure: TodoBook → TodoItem → SubItem
+- Task states: todo, in_progress, completed
+- Priority levels: low, medium, high, urgent
+
+### Real-time Cloud Sync
+- Incremental sync mechanism
+- Conflict detection and resolution
+- Offline operation support
+- Auto/manual sync modes
+
+### Team Collaboration
+- TodoBook sharing
+- Member role management (owner, admin, member)
+- Permission control system
+
+## Development Guidelines
+
+### Code Conventions
+- Follow existing code style in neighboring files
+- Use uni-ui components when available
+- Maintain consistent naming patterns
+- Log objects using `JSON.stringify(object, null, 2)` for debugging
+
+### State Management
+- Global state is managed in `/store/index.js`
+- Use `store.state` for accessing state
+- Use `store.mutations` for state updates
+- Local storage managed via `/store/storage.js`
+
+#### Cache Architecture
+- **Three-layer cache system**: Memory cache (`state.todoBooks.list`) → Local storage (with user ID isolation) → Cloud data, prioritizing the fastest available cache
+- **User isolation mechanism**: All cache keys include user ID suffix (e.g., `cached_todobooks_userId`) to ensure data isolation in multi-user environments
+- **Auto-update notification**: After updating cache via `updateTodoBooksCache()`, automatically emits `todobooks-cache-updated` event to notify all pages to refresh
+- **Cache validity period**: Local storage cache has a default 10-minute validity period, automatically fetches from cloud after expiration
+- **Graceful degradation**: Returns expired cache data on network failure to ensure offline usability
+
+#### Cache Operation APIs
+**Reading Cache:**
+- `getTodoBooksFromCache()` - Read cache by priority (memory → local storage → return empty)
+- `getCacheStatus()` - Get current cache status (count, update time, validity)
+
+**Updating Cache:**
+- `updateTodoBooksCache(books)` - Update all three cache layers and emit update event
+- `loadTodoBooks(options, forceRefresh)` - Load data (supports cache-first or force refresh)
+- `refreshTodoBooks()` - Force refresh from cloud and update cache
+
+**Clearing Cache:**
+- `clearTodoBooksCache()` - Clear all cache for current user
+- `onUserSwitch(newUserId)` - Clear cache on user switch and emit switch event
+
+**Cache Sync:**
+- `silentSyncTodoBooks()` - Background silent sync without affecting current display
+- `createTodoBook()` / `updateTodoBook()` / `deleteTodoBook()` - CRUD operations auto-update cache
+
+### Component Development
+- Check existing components in `/pages/todobooks/components/` for patterns
+- Use Composition API for new components
+- Implement proper props validation
+- Handle loading and error states
+
+### Cloud Function Development
+- Follow the cloud object pattern in existing functions
+- Implement proper error handling
+- Add permission checks for sensitive operations
+- Return consistent response formats
+
+## Important Notes
+
+- This is a uni-app project requiring HBuilderX IDE for full functionality
+- Cloud functions require uniCloud account and space configuration
+- Database collections must be created before first use
+- Authentication is handled by uni-id system

@@ -18,7 +18,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue'
-import { getColorOptions } from '../../utils/bookUtils.js'
+import { getColorOptions } from '@/pages/todobooks/utils/bookUtils.js'
 
 const props = defineProps({
   selectedColor: {

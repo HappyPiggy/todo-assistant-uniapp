@@ -7,8 +7,7 @@ const syncState = reactive({
   isSyncing: false,
   syncQueue: [],
   conflictItems: [],
-  lastSyncTime: null,
-  autoSyncTimer: null
+  lastSyncTime: null
 })
 
 // 同步策略配置
@@ -71,31 +70,8 @@ class SyncManager {
         this.performSync({ strategy: SYNC_STRATEGIES.DELAYED })
       }, 2000)
     }
-    
-    if (settings.autoSyncInterval > 0) {
-      // 定时自动同步
-      this.startAutoSync(settings.autoSyncInterval)
-    }
   }
 
-  // 开始自动同步
-  startAutoSync(interval) {
-    this.stopAutoSync()
-    
-    syncState.autoSyncTimer = setInterval(() => {
-      if (syncState.isOnline && !syncState.isSyncing) {
-        this.performSync({ strategy: SYNC_STRATEGIES.BATCH })
-      }
-    }, interval * 1000)
-  }
-
-  // 停止自动同步
-  stopAutoSync() {
-    if (syncState.autoSyncTimer) {
-      clearInterval(syncState.autoSyncTimer)
-      syncState.autoSyncTimer = null
-    }
-  }
 
   // 记录数据变更
   recordChange(type, entityType, entityId, data, strategy = SYNC_STRATEGIES.DELAYED) {
