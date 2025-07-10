@@ -1,5 +1,5 @@
 <template>
-  <view class="task-card" @click="handleTaskClick">
+  <view class="task-card" :class="{ 'completed': task.status === 'completed' }" @click="handleTaskClick">
     <view class="task-header">
       <view class="task-left">
         <view class="task-priority" :class="task.priority">
@@ -17,23 +17,23 @@
         </view>
       </view>
       <view class="task-right">
+        <view class="task-status" v-if="task.subtask_count === 0" @click.stop="handleStatusToggle">
+          <uni-icons 
+            v-if="task.status === 'completed'"
+            color="#28a745" 
+            size="28" 
+            type="checkmarkempty" />
+          <uni-icons 
+            v-else
+            color="#cccccc" 
+            size="28" 
+            type="circle" />
+        </view>
         <view class="task-detail-btn" @click.stop="handleMenuClick">
           <uni-icons 
             color="#999999" 
             size="20" 
             type="more-filled" />
-        </view>
-        <view class="task-status" v-if="task.subtask_count === 0" @click.stop="handleStatusToggle">
-          <uni-icons 
-            v-if="task.status === 'completed'"
-            color="#28a745" 
-            size="24" 
-            type="checkmarkempty" />
-          <uni-icons 
-            v-else
-            color="#cccccc" 
-            size="24" 
-            type="circle" />
         </view>
       </view>
     </view>
@@ -167,6 +167,24 @@ const handleSubtaskTouchEnd = (event) => {
   @include card-hover;
   margin-bottom: $margin-sm;
   cursor: pointer;
+  position: relative;
+  transition: all $transition-base;
+  
+  &.completed {
+    background-color: #f0f9f4;
+    border: 1rpx solid #d4edda;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4rpx;
+      background-color: #28a745;
+      border-radius: $border-radius 0 0 $border-radius;
+    }
+  }
 }
 
 .task-header {
@@ -250,7 +268,7 @@ const handleSubtaskTouchEnd = (event) => {
 }
 
 .task-status {
-  @include icon-button(44rpx);
+  @include icon-button(52rpx);
   border: 1rpx solid $border-color;
 }
 

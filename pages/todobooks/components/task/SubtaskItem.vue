@@ -1,7 +1,7 @@
 <template>
   <view 
     class="subtask-item"
-    :class="{ 'dragging': isDragging }"
+    :class="{ 'dragging': isDragging, 'completed': subtask.status === 'completed' }"
     @click="handleClick"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
@@ -21,23 +21,23 @@
       </view>
     </view>
     <view class="subtask-actions">
+      <view class="subtask-status" @click.stop="handleStatusToggle">
+        <uni-icons 
+          v-if="subtask.status === 'completed'"
+          color="#28a745" 
+          size="24" 
+          type="checkmarkempty" />
+        <uni-icons 
+          v-else
+          color="#cccccc" 
+          size="24" 
+          type="circle" />
+      </view>
       <view class="subtask-detail-btn" @click.stop="handleMenuClick">
         <uni-icons 
           color="#999999" 
           size="18" 
           type="more-filled" />
-      </view>
-      <view class="subtask-status" @click.stop="handleStatusToggle">
-        <uni-icons 
-          v-if="subtask.status === 'completed'"
-          color="#28a745" 
-          size="20" 
-          type="checkmarkempty" />
-        <uni-icons 
-          v-else
-          color="#cccccc" 
-          size="20" 
-          type="circle" />
       </view>
     </view>
   </view>
@@ -120,9 +120,26 @@ const handleTouchEnd = (event) => {
   margin-left: $margin-lg;
   transition: all $transition-base;
   cursor: pointer;
+  position: relative;
   
   &:active {
     background-color: $gray-200;
+  }
+  
+  &.completed {
+    background-color: #e8f5e9;
+    border: 1rpx solid #c3e6cb;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3rpx;
+      background-color: #28a745;
+      border-radius: $border-radius-small 0 0 $border-radius-small;
+    }
   }
   
   &.dragging {
@@ -221,6 +238,6 @@ const handleTouchEnd = (event) => {
 }
 
 .subtask-status {
-  @include icon-button(36rpx);
+  @include icon-button(44rpx);
 }
 </style>
