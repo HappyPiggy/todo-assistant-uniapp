@@ -8,10 +8,7 @@
  * @returns {number} 未读评论数量
  */
 export function calculateUnreadCount(taskId, comments, currentUserId) {
-  console.log('[DEBUG] calculateUnreadCount 开始:', { taskId, commentsLength: comments?.length, currentUserId })
-  
   if (!comments || comments.length === 0) {
-    console.log('[DEBUG] 无评论数据，返回0')
     return 0
   }
   
@@ -19,8 +16,6 @@ export function calculateUnreadCount(taskId, comments, currentUserId) {
   const commentReadRecords = uni.getStorageSync('task_comment_read_records') || {}
   const taskReadRecords = commentReadRecords[taskId] || {}
   
-  console.log('[DEBUG] 任务已读记录:', taskReadRecords)
-  console.log('[DEBUG] 全部已读记录:', commentReadRecords)
   
   let unreadCount = 0
   

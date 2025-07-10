@@ -282,10 +282,10 @@
 					<text class="menu-title">任务操作</text>
 				</view>
 				<view class="menu-list">
-					<view class="menu-item" @click="editTask">
+					<!-- <view class="menu-item" @click="editTask">
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="menu-text">编辑任务</text>
-					</view>
+					</view> -->
 					<view class="menu-item danger" @click="deleteTask">
 						<uni-icons color="#FF4757" size="20" type="trash" />
 						<text class="menu-text">删除任务</text>
