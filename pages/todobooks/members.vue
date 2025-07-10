@@ -6,8 +6,7 @@
         <uni-icons color="#333333" size="20" type="left" />
       </view>
       <text class="page-title">成员管理</text>
-      <view class="header-right" @click="openInviteModal">
-        <uni-icons color="#007AFF" size="20" type="plus" />
+      <view class="header-right">
       </view>
     </view>
 
@@ -35,6 +34,7 @@
       @invite="openInviteModal"
       @change-role="handleChangeRole"
       @remove-member="handleRemoveMember"
+      @leave-todobook="handleLeaveTodobook"
     />
 
     <!-- 邀请弹窗 -->
@@ -56,6 +56,10 @@
     <!-- 确认对话框 -->
     <ConfirmDialog
       ref="confirmDialog"
+      v-model:visible="confirmDialogVisible"
+      :title="confirmDialogTitle"
+      :message="confirmDialogMessage"
+      :type="confirmDialogType"
       @confirm="handleConfirm"
       @cancel="handleCancel"
     />
@@ -89,12 +93,19 @@ const {
   members,
   loading: membersLoading,
   error: membersError,
-  currentUserRole,
+  currentMember,
   loadMembers,
-  inviteMember,
+  inviteUser,
   updateMemberRole,
-  removeMember
+  removeMember,
+  leaveBook:currentUserLeaveBook
 } = useMemberData(bookId)
+
+// 计算当前用户角色
+const currentUserRole = computed(() => {
+  if (!currentMember.value) return 'member'
+  return currentMember.value.role || 'member'
+})
 
 // 当前用户ID
 const currentUserId = computed(() => {
@@ -110,6 +121,12 @@ const confirmDialog = ref(null)
 const selectedMember = ref(null)
 const confirmAction = ref(null)
 
+// 确认对话框的状态
+const confirmDialogVisible = ref(false)
+const confirmDialogTitle = ref('')
+const confirmDialogMessage = ref('')
+const confirmDialogType = ref('default')
+
 // 页面方法
 const goBack = () => {
   uni.navigateBack()
@@ -123,7 +140,7 @@ const openInviteModal = () => {
 
 const handleInviteConfirm = async (inviteData) => {
   try {
-    await inviteMember(inviteData)
+    await inviteUser(inviteData.nickname)
     uni.showToast({
       title: '邀请成功',
       icon: 'success'
@@ -174,19 +191,26 @@ const handleRemoveMember = (member) => {
   selectedMember.value = member
   confirmAction.value = 'removeMember'
   
-  if (confirmDialog.value && confirmDialog.value.open) {
-    confirmDialog.value.open({
-    title: '确认移除',
-    content: `确定要将 ${member.nickname || member.username} 移出项目册吗？`,
-    confirmText: '移除',
-    cancelText: '取消'
-  })
+  confirmDialogTitle.value = '确认移除'
+  confirmDialogMessage.value = `确定要将 ${member['user_info.nickname'] || member.username} 移出项目册吗？`
+  confirmDialogType.value = 'danger'
+  confirmDialogVisible.value = true
+}
+
+const handleLeaveTodobook = (member) => {
+  selectedMember.value = member
+  confirmAction.value = 'leaveTodobook'
+  
+  confirmDialogTitle.value = '确认退出'
+  confirmDialogMessage.value = '确定要退出这个项目册吗？退出后将无法访问项目册中的任务。'
+  confirmDialogType.value = 'danger'
+  confirmDialogVisible.value = true
 }
 
 const handleConfirm = async () => {
   if (confirmAction.value === 'removeMember' && selectedMember.value) {
     try {
-      await removeMember(selectedMember.value._id)
+      await removeMember(selectedMember.value.user_id)
       uni.showToast({
         title: '移除成功',
         icon: 'success'
@@ -199,17 +223,36 @@ const handleConfirm = async () => {
         icon: 'error'
       })
     }
+  } else if (confirmAction.value === 'leaveTodobook' && selectedMember.value) {
+    try {
+      await currentUserLeaveBook()
+      uni.showToast({
+        title: '退出成功',
+        icon: 'success'
+      })
+      // 退出成功后返回上一页
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1000)
+    } catch (error) {
+      uni.showToast({
+        title: '退出失败',
+        icon: 'error'
+      })
+    }
   }
   
   // 清理状态
   selectedMember.value = null
   confirmAction.value = null
+  confirmDialogVisible.value = false
 }
 
 const handleCancel = () => {
   // 清理状态
   selectedMember.value = null
   confirmAction.value = null
+  confirmDialogVisible.value = false
 }
 
 // 生命周期

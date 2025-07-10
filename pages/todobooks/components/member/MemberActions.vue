@@ -11,22 +11,16 @@
       </view>
       
       <view class="actions-list">
-        <!-- 修改角色 -->
-        <view class="action-item" @click="handleChangeRole" v-if="canChangeRole">
-          <uni-icons color="#007AFF" size="20" type="person" />
-          <text class="action-text">修改角色</text>
-        </view>
-        
-        <!-- 发送消息 -->
-        <view class="action-item" @click="handleSendMessage">
-          <uni-icons color="#28a745" size="20" type="chatbubble" />
-          <text class="action-text">发送消息</text>
-        </view>
-        
-        <!-- 移除成员 -->
-        <view class="action-item danger" @click="handleRemoveMember" v-if="canRemove">
+        <!-- 移除成员 (owner对其他成员) -->
+        <view class="action-item danger" @click="handleRemoveMember" v-if="canRemove && !isSelf">
           <uni-icons color="#FF4757" size="20" type="trash" />
-          <text class="action-text">移除成员</text>
+          <text class="action-text">移除</text>
+        </view>
+        
+        <!-- 退出项目册 (普通成员对自己) -->
+        <view class="action-item danger" @click="handleLeaveTodobook" v-if="isSelf && props.currentUserRole !== 'owner'">
+          <uni-icons color="#FF4757" size="20" type="logout" />
+          <text class="action-text">退出</text>
         </view>
       </view>
       
@@ -38,7 +32,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref } from 'vue'
+import { defineProps, defineEmits, ref, computed } from 'vue'
 
 const props = defineProps({
   currentMember: {
@@ -46,6 +40,10 @@ const props = defineProps({
     default: null
   },
   currentUserId: {
+    type: String,
+    required: true
+  },
+  currentUserRole: {
     type: String,
     required: true
   },
@@ -67,10 +65,15 @@ const emit = defineEmits([
   'changeRole',
   'removeMember',
   'sendMessage',
+  'leaveTodobook',
   'cancel'
 ])
 
 const popup = ref(null)
+
+const isSelf = computed(() => {
+  return props.currentMember && props.currentMember.user_id === props.currentUserId
+})
 
 const open = () => {
   popup.value?.open()
@@ -92,6 +95,11 @@ const handleSendMessage = () => {
 
 const handleRemoveMember = () => {
   emit('removeMember', props.currentMember)
+  close()
+}
+
+const handleLeaveTodobook = () => {
+  emit('leaveTodobook', props.currentMember)
   close()
 }
 

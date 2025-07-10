@@ -33,7 +33,7 @@
           :key="member._id"
           :member="member"
           :current-user-id="currentUserId"
-          :show-actions="canManage"
+          :show-actions="shouldShowMemberActions(member)"
           @menu-click="handleMemberMenu"
         />
       </view>
@@ -44,10 +44,12 @@
       ref="memberActions"
       :current-member="currentMember"
       :current-user-id="currentUserId"
+      :current-user-role="currentUserRole"
       :can-remove="canRemoveMember"
       :can-change-role="canChangeRole"
       @change-role="handleChangeRole"
       @remove-member="handleRemoveMember"
+      @leave-todobook="handleLeaveTodobook"
       @cancel="handleMenuCancel"
     />
   </view>
@@ -92,7 +94,8 @@ const emit = defineEmits([
   'retry',
   'invite',
   'changeRole',
-  'removeMember'
+  'removeMember',
+  'leaveTodobook'
 ])
 
 const memberActions = ref(null)
@@ -129,6 +132,16 @@ const canChangeRole = computed(() => {
   return props.currentUserRole === 'owner'
 })
 
+const shouldShowMemberActions = (member) => {
+  // owner可以对除自己外的所有成员显示菜单
+  if (props.currentUserRole === 'owner') {
+    return member.user_id !== props.currentUserId
+  }
+  
+  // 普通成员只能对自己显示菜单
+  return member.user_id === props.currentUserId
+}
+
 const handleRetry = () => {
   emit('retry')
 }
@@ -148,6 +161,10 @@ const handleChangeRole = (member, newRole) => {
 
 const handleRemoveMember = (member) => {
   emit('removeMember', member)
+}
+
+const handleLeaveTodobook = (member) => {
+  emit('leaveTodobook', member)
 }
 
 const handleMenuCancel = () => {
