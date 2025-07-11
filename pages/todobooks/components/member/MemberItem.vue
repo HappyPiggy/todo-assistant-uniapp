@@ -33,16 +33,13 @@
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 
 const emit = defineEmits(['menuClick'])
 
 const props = defineProps({
   member: {
     type: Object,
-    required: true
-  },
-  currentUserId: {
-    type: String,
     required: true
   },
   showActions: {
@@ -52,7 +49,7 @@ const props = defineProps({
 })
 
 const isCurrentUser = computed(() => {
-  return props.member.user_id === props.currentUserId
+  return props.member.user_id === currentUserId.value
 })
 
 const getAvatarText = (name) => {

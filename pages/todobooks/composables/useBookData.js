@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { calculateCompletionRate } from '@/pages/todobooks/utils/bookUtils.js'
 import { API_CODES, ERROR_MESSAGES } from '@/pages/todobooks/utils/constants.js'
 
 /**
@@ -15,37 +14,7 @@ export function useBookData(bookId = null) {
   const loading = ref(false)
   const error = ref(null)
   const memberCount = ref(0)
-  
-  // 计算属性
-  const overallProgress = computed(() => {
-    if (!bookData.value) return 0
-    return calculateCompletionRate(bookData.value)
-  })
-  
-  const taskStats = computed(() => {
-    if (!bookData.value) {
-      return { total: 0, completed: 0, todo: 0 }
-    }
-    
-    const total = bookData.value.item_count || 0
-    const completed = bookData.value.completed_count || 0
-    const todo = total - completed
-    
-    return { total, completed, todo }
-  })
-  
-  const isOwner = computed(() => {
-    if (!bookData.value) return false
-    
-    // 获取当前用户信息
-    try {
-      const currentUser = uniCloud.getCurrentUserInfo()
-      return bookData.value.creator_id === currentUser.uid
-    } catch (error) {
-      console.error('获取当前用户信息失败:', error)
-      return false
-    }
-  })
+
   
   /**
    * 加载项目册详情
@@ -193,11 +162,6 @@ export function useBookData(bookId = null) {
     loading,
     error,
     memberCount,
-    
-    // 计算属性
-    overallProgress,
-    taskStats,
-    isOwner,
     
     // 方法
     loadBookDetail,

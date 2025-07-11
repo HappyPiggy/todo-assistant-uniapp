@@ -17,16 +17,35 @@ export function useTaskData(bookId) {
   const activeFilter = ref('all')
   
   // 计算属性
-  const currentUserId = computed(() => {
-    return (store.userInfo && store.userInfo._id) || ''
-  })
-  
   const filteredTasks = computed(() => {
     return filterTasks(tasks.value, activeFilter.value)
   })
   
   const taskStats = computed(() => {
-    return calculateTaskStats(tasks.value)
+    let total = 0
+    let completed = 0
+    
+    if (!tasks.value) return { total: 0, completed: 0, todo: 0 }
+  
+    tasks.value.forEach(task => {
+      total++
+      if (task.status === 'completed') {
+        completed++
+      }
+    })
+    
+    tasks.value.forEach(task => {
+      if (task.subtasks && task.subtasks.length > 0) {
+        total += task.subtasks.length
+        task.subtasks.forEach(subtask => {
+          if (subtask.status === 'completed') {
+            completed++
+          }
+        })
+      }
+    })
+    
+    return { total, completed, todo: total - completed }
   })
   
   const filterTabs = computed(() => {
@@ -236,14 +255,6 @@ export function useTaskData(bookId) {
   }
   
   /**
-   * 切换任务展开状态
-   * @param {Object} task - 任务对象
-   */
-  const toggleTaskExpand = (task) => {
-    task.expanded = !task.expanded
-  }
-  
-  /**
    * 删除任务
    * @param {string} taskId - 任务ID
    */
@@ -261,27 +272,6 @@ export function useTaskData(bookId) {
       }
     } catch (err) {
       console.error('删除任务失败:', err)
-      throw err
-    }
-  }
-  
-  /**
-   * 更新任务排序
-   * @param {string} taskId - 任务ID
-   * @param {number} newOrder - 新排序
-   */
-  const updateTaskOrder = async (taskId, newOrder) => {
-    try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.updateTaskOrder(taskId, newOrder)
-      
-      if (result.code !== API_CODES.SUCCESS) {
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
-      }
-      
-      return result
-    } catch (err) {
-      console.error('更新任务排序失败:', err)
       throw err
     }
   }
@@ -344,38 +334,6 @@ export function useTaskData(bookId) {
       
     } catch (error) {
       console.error('加载评论数据失败:', error)
-    }
-  }
-  
-  /**
-   * 获取未读评论数量
-   * @param {string} taskId - 任务ID
-   * @returns {number} 未读数量
-   */
-  const getUnreadCommentCount = (taskId) => {
-    try {
-      // 先在父任务中查找
-      let task = tasks.value.find(t => t._id === taskId)
-      
-      // 如果没找到，则在子任务中查找
-      if (!task) {
-        for (const parentTask of tasks.value) {
-          if (parentTask.subtasks && parentTask.subtasks.length > 0) {
-            task = parentTask.subtasks.find(subtask => subtask._id === taskId)
-            if (task) break
-          }
-        }
-      }
-      
-      if (!task || !task.comments || task.comments.length === 0) {
-        return 0
-      }
-      
-      // 使用工具函数计算未读数量
-      return calculateUnreadCount(taskId, task.comments, currentUserId.value)
-    } catch (error) {
-      console.error('计算未读评论数量失败:', error)
-      return 0
     }
   }
   
@@ -449,13 +407,6 @@ export function useTaskData(bookId) {
   }
   
   /**
-   * 刷新数据
-   */
-  const refreshData = async () => {
-    await loadTasks(bookId)
-  }
-  
-  /**
    * 重置状态
    */
   const resetState = () => {
@@ -464,6 +415,13 @@ export function useTaskData(bookId) {
     error.value = null
     activeFilter.value = 'all'
   }
+
+  const overallProgress = computed(() => {
+    const stats = taskStats.value
+    if (stats.total === 0) return 0
+    return Math.round((stats.completed / stats.total) * 100)
+  })
+  
   
   return {
     // 响应式数据
@@ -473,21 +431,17 @@ export function useTaskData(bookId) {
     activeFilter,
     
     // 计算属性
-    currentUserId,
     filteredTasks,
     taskStats,
+    overallProgress,
     filterTabs,
     
     // 方法
     loadTasks,
     toggleTaskStatus,
     toggleSubtaskStatus,
-    toggleTaskExpand,
     deleteTask,
-    updateTaskOrder,
-    getUnreadCommentCount,
     setActiveFilter,
-    refreshData,
     resetState
   }
 }

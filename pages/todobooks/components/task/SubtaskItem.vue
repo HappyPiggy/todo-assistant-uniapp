@@ -45,6 +45,7 @@
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 import { getPriorityText } from '../../utils/taskUtils.js'
 
 const props = defineProps({
@@ -58,10 +59,6 @@ const props = defineProps({
   },
   parentTask: {
     type: Object,
-    required: true
-  },
-  currentUserId: {
-    type: String,
     required: true
   },
   isDragging: {

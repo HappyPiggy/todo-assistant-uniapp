@@ -70,7 +70,7 @@
         :subtask="subtask"
         :index="index"
         :parentTask="task"
-        :currentUserId="currentUserId"
+        :currentUserId="currentUserId.value"
         @statusToggle="handleSubtaskStatusToggle"
         @menuClick="handleSubtaskMenuClick"
         @click="handleSubtaskClick"
@@ -84,6 +84,7 @@
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 import SubtaskItem from './SubtaskItem.vue'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
@@ -91,10 +92,6 @@ import { isOverdue } from '../../utils/dateUtils.js'
 const props = defineProps({
   task: {
     type: Object,
-    required: true
-  },
-  currentUserId: {
-    type: String,
     required: true
   },
   unreadCommentCount: {

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 import { formatJoinTime } from '@/pages/todobooks/utils/dateUtils.js'
 import { API_CODES, ERROR_MESSAGES, MEMBER_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 
@@ -12,7 +13,6 @@ export function useMemberData(bookId) {
   const members = ref([])
   const loading = ref(false)
   const error = ref(null)
-  const currentUserId = ref('')
   
   // 计算属性
   const isOwner = computed(() => {
@@ -32,20 +32,6 @@ export function useMemberData(bookId) {
   const otherMembers = computed(() => {
     return members.value.filter(m => m.user_id !== currentUserId.value)
   })
-  
-  /**
-   * 获取当前用户信息
-   */
-  const getCurrentUser = async () => {
-    try {
-      const userInfo = uni.getStorageSync('uni-id-pages-userInfo')
-      if (userInfo) {
-        currentUserId.value = userInfo._id
-      }
-    } catch (error) {
-      console.error('获取用户信息失败:', error)
-    }
-  }
   
   /**
    * 加载成员列表
@@ -275,18 +261,13 @@ export function useMemberData(bookId) {
     members.value = []
     loading.value = false
     error.value = null
-    currentUserId.value = ''
   }
-  
-  // 初始化时获取当前用户信息
-  getCurrentUser()
   
   return {
     // 响应式数据
     members,
     loading,
     error,
-    currentUserId,
     
     // 计算属性
     isOwner,
@@ -295,7 +276,6 @@ export function useMemberData(bookId) {
     otherMembers,
     
     // 方法
-    getCurrentUser,
     loadMembers,
     inviteUser,
     removeMember,

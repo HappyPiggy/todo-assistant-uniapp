@@ -1,11 +1,12 @@
 <script>
 	import globalStore from '@/store/index.js'
 	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+	import { currentUserId } from '@/store/storage.js'
 	
 	export default {
 		data() {
 			return {
-				currentUserId: null // 跟踪当前用户ID
+				currentUserIdLocal: null // 跟踪当前用户ID
 			}
 		},
 		onLaunch: function() {
@@ -16,7 +17,7 @@
 			globalStore.init()
 			
 			// 记录当前用户ID
-			this.currentUserId = this.getCurrentUserId()
+			this.currentUserIdLocal = currentUserId.value
 			
 			// 延迟1秒后检查是否需要启动同步
 			setTimeout(() => {
@@ -33,33 +34,13 @@
 			console.log('App Hide')
 		},
 		methods: {
-			// 获取当前用户ID
-			getCurrentUserId() {
-				try {
-					// 尝试从store获取
-					if (store && store.userInfo && store.userInfo._id) {
-						return store.userInfo._id
-					}
-					
-					// 从本地存储获取
-					const userInfo = uni.getStorageSync('uni-id-pages-userInfo')
-					if (userInfo && userInfo._id) {
-						return userInfo._id
-					}
-					
-					return null
-				} catch (error) {
-					console.warn('获取用户ID失败:', error)
-					return null
-				}
-			},
 
 			// 检查用户切换
 			checkUserSwitch() {
-				const newUserId = this.getCurrentUserId()
+				const newUserId = currentUserId.value
 				
-				if (this.currentUserId !== newUserId) {
-					console.log(`检测到用户切换: ${this.currentUserId} -> ${newUserId}`)
+				if (this.currentUserIdLocal !== newUserId) {
+					console.log(`检测到用户切换: ${this.currentUserIdLocal} -> ${newUserId}`)
 					
 					// 通知store用户已切换
 					if (newUserId) {
@@ -67,7 +48,7 @@
 					}
 					
 					// 更新当前用户ID
-					this.currentUserId = newUserId
+					this.currentUserIdLocal = newUserId
 					
 					// 如果有新用户，触发启动同步
 					if (newUserId) {
@@ -84,8 +65,8 @@
 			async performStartupSync() {
 				try {
 					// 检查用户是否已登录
-					const currentUserId = this.getCurrentUserId()
-					if (!currentUserId) {
+					const userId = currentUserId.value
+					if (!userId) {
 						console.log('用户未登录，跳过启动同步')
 						return
 					}

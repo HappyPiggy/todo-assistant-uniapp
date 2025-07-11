@@ -74,6 +74,7 @@ import RoleChangeModal from '@/pages/todobooks/components/member/RoleChangeModal
 import ConfirmDialog from '@/pages/todobooks/components/common/ConfirmDialog.vue'
 import { useMemberData } from '@/pages/todobooks/composables/useMemberData.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { currentUserId } from '@/store/storage.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 // 获取路由参数
@@ -105,11 +106,6 @@ const {
 const currentUserRole = computed(() => {
   if (!currentMember.value) return 'member'
   return currentMember.value.role || 'member'
-})
-
-// 当前用户ID
-const currentUserId = computed(() => {
-  return (store.userInfo && store.userInfo._id) || ''
 })
 
 // 组件引用
