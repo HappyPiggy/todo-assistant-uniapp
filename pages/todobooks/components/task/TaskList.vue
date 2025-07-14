@@ -23,7 +23,7 @@
         v-for="task in tasks"
         :key="task._id"
         :task="task"
-        :current-user-id="currentUserId"
+        :current-user-id="currentUserId.value"
         :unread-comment-count="getUnreadCommentCount(task)"
         @task-click="handleTaskClick"
         @status-toggle="handleStatusToggle"
@@ -51,6 +51,7 @@
 
 <script setup>
 import { defineProps, defineEmits, ref, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 import LoadingState from '../common/LoadingState.vue'
 import ErrorState from '../common/ErrorState.vue'
 import EmptyState from '../common/EmptyState.vue'
@@ -73,10 +74,6 @@ const props = defineProps({
   activeFilter: {
     type: String,
     default: 'all'
-  },
-  currentUserId: {
-    type: String,
-    required: true
   },
   getUnreadCommentCount: {
     type: Function,

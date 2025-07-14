@@ -33,15 +33,12 @@
 
 <script setup>
 import { defineProps, defineEmits, ref, computed } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 
 const props = defineProps({
   currentMember: {
     type: Object,
     default: null
-  },
-  currentUserId: {
-    type: String,
-    required: true
   },
   currentUserRole: {
     type: String,
@@ -72,7 +69,7 @@ const emit = defineEmits([
 const popup = ref(null)
 
 const isSelf = computed(() => {
-  return props.currentMember && props.currentMember.user_id === props.currentUserId
+  return props.currentMember && props.currentMember.user_id === currentUserId.value
 })
 
 const open = () => {

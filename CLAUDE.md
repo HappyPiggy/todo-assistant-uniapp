@@ -181,3 +181,8 @@ Since this is a uni-app project, use HBuilderX IDE for development:
 - Cloud functions require uniCloud account and space configuration
 - Database collections must be created before first use
 - Authentication is handled by uni-id system
+
+## Language Guidelines
+
+- 回答使用中文
+- 专属词、特定词不用翻译（如：uni-app, Vue, TodoBook, Cloud Functions 等技术术语保持英文）

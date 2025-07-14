@@ -149,6 +149,7 @@
 	import {
 		store
 	} from '@/uni_modules/uni-id-pages/common/store.js'
+	import { currentUserId } from '@/store/storage.js'
 	import globalStore from '@/store/index.js'
 	
 	export default {
@@ -176,9 +177,6 @@
 		computed: {
 			hasLogin() {
 				return store.hasLogin
-			},
-			currentUserId() {
-				return store.userInfo?._id || ''
 			}
 		},
 		onShow() {

@@ -1,5 +1,6 @@
 // 全局状态管理
 import { reactive } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 
 // 全局状态
 const state = reactive({
@@ -47,45 +48,9 @@ const state = reactive({
 
 // 同步相关操作
 const syncActions = {
-  // 获取当前用户ID（简化版）
-  getCurrentUserId() {
-    try {
-      // 方法1：从本地存储获取用户信息
-      const userInfo = uni.getStorageSync('uni-id-pages-userInfo')
-      if (userInfo && userInfo._id) {
-        return userInfo._id
-      }
-      
-      // 方法2：尝试从uni存储获取
-      const uniUserInfo = uni.getStorageSync('uniIdToken')
-      if (uniUserInfo) {
-        // 解析token获取用户信息（如果可能）
-        try {
-          const payload = JSON.parse(atob(uniUserInfo.split('.')[1]))
-          if (payload.uid) {
-            return payload.uid
-          }
-        } catch (e) {
-          // token解析失败，忽略
-        }
-      }
-      
-      // 方法3：从其他可能的存储位置获取
-      const storedUser = uni.getStorageSync('user') || uni.getStorageSync('userInfo')
-      if (storedUser && storedUser._id) {
-        return storedUser._id
-      }
-      
-      return null
-    } catch (error) {
-      console.warn('获取用户ID失败:', error)
-      return null
-    }
-  },
-
   // 获取用户专属的缓存key
   getUserCacheKey(key) {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     return userId ? `${key}_${userId}` : key
   },
 
@@ -215,11 +180,6 @@ const syncActions = {
 
 // 项目册相关操作
 const todoBookActions = {
-  // 获取当前用户ID
-  getCurrentUserId() {
-    return syncActions.getCurrentUserId()
-  },
-
   // 获取用户专属的缓存key  
   getUserCacheKey(key) {
     return syncActions.getUserCacheKey(key)
@@ -227,7 +187,7 @@ const todoBookActions = {
 
   // 从缓存获取项目册列表（用户隔离）
   getTodoBooksFromCache() {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     
     // 如果没有用户ID，返回空
     if (!userId) {
@@ -293,7 +253,7 @@ const todoBookActions = {
 
   // 更新项目册缓存（统一事件通知 + 用户隔离）
   updateTodoBooksCache(books) {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     
     if (!userId) {
       console.warn('未找到用户ID，无法更新缓存')
@@ -470,7 +430,7 @@ const todoBookActions = {
 
   // 清除缓存（用户隔离）
   clearTodoBooksCache() {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     
     if (!userId) {
       console.warn('未找到用户ID，清除所有缓存')
@@ -508,7 +468,7 @@ const todoBookActions = {
 
   // 静默后台同步（不影响当前显示）
   async silentSyncTodoBooks() {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     
     if (!userId) {
       console.warn('未找到用户ID，无法执行同步')
@@ -540,7 +500,7 @@ const todoBookActions = {
 
   // 获取缓存状态（用户隔离）
   getCacheStatus() {
-    const userId = this.getCurrentUserId()
+    const userId = currentUserId.value
     
     if (!userId) {
       return {
