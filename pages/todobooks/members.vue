@@ -28,9 +28,8 @@
       :members="members"
       :loading="membersLoading"
       :error="membersError"
-      :current-user-id="currentUserId"
+      :current-user-id="currentUserId.value"
       :current-user-role="currentUserRole"
-      @retry="loadMembers"
       @invite="openInviteModal"
       @change-role="handleChangeRole"
       @remove-member="handleRemoveMember"
@@ -75,12 +74,11 @@ import ConfirmDialog from '@/pages/todobooks/components/common/ConfirmDialog.vue
 import { useMemberData } from '@/pages/todobooks/composables/useMemberData.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { currentUserId } from '@/store/storage.js'
-import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
-// 获取路由参数
-const pages = getCurrentPages()
-const currentPage = pages[pages.length - 1]
-const bookId = currentPage.options.id
+const bookId = ref(null)
+const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
+
 
 // 使用组合函数
 const {
@@ -88,7 +86,7 @@ const {
   loading: bookLoading,
   error: bookError,
   loadBookDetail
-} = useBookData(bookId)
+} = useBookData()
 
 const {
   members,
@@ -100,7 +98,7 @@ const {
   updateMemberRole,
   removeMember,
   leaveBook:currentUserLeaveBook
-} = useMemberData(bookId)
+} = useMemberData()
 
 // 计算当前用户角色
 const currentUserRole = computed(() => {
@@ -123,6 +121,32 @@ const confirmDialogTitle = ref('')
 const confirmDialogMessage = ref('')
 const confirmDialogType = ref('default')
 
+onLoad((options) => {
+  console.log("onLoad options", JSON.stringify(options, null, 2))
+  if (options && options.id) {
+    bookId.value = options.id
+    loadBookDetail(bookId.value)
+    loadMembers(bookId.value)
+  } else {
+    console.error('错误：未能从路由参数中获取到 id')
+    uni.showToast({ title: '页面参数错误', icon: 'error' })
+  }
+})
+
+onShow(() => {
+  // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
+  if (hasInitialized.value && bookId.value) {
+    Promise.all([
+      loadBookDetail(bookId.value),
+      loadMembers(bookId.value)
+    ])
+  }
+})
+
+onMounted(() => {
+  hasInitialized.value = true
+})
+
 // 页面方法
 const goBack = () => {
   uni.navigateBack()
@@ -142,7 +166,7 @@ const handleInviteConfirm = async (inviteData) => {
       icon: 'success'
     })
     // 重新加载成员列表
-    loadMembers()
+    loadMembers(bookId.value)
   } catch (error) {
     uni.showToast({
       title: '邀请失败',
@@ -170,7 +194,7 @@ const handleRoleChangeConfirm = async (member, newRole) => {
       icon: 'success'
     })
     // 重新加载成员列表
-    loadMembers()
+    loadMembers(bookId.value)
   } catch (error) {
     uni.showToast({
       title: '角色更新失败',
@@ -212,7 +236,7 @@ const handleConfirm = async () => {
         icon: 'success'
       })
       // 重新加载成员列表
-      loadMembers()
+      loadMembers(bookId.value)
     } catch (error) {
       uni.showToast({
         title: '移除失败',
@@ -250,12 +274,6 @@ const handleCancel = () => {
   confirmAction.value = null
   confirmDialogVisible.value = false
 }
-
-// 生命周期
-onMounted(() => {
-  loadBookDetail()
-  loadMembers()
-})
 </script>
 
 <style lang="scss" scoped>

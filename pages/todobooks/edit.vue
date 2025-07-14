@@ -42,11 +42,10 @@ import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
 import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
-// 获取路由参数
-const pages = getCurrentPages()
-const currentPage = pages[pages.length - 1]
-const bookId = currentPage.options.id
+const bookId = ref(null)
+const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 
 // 使用组合函数
 const {
@@ -55,7 +54,7 @@ const {
   error: bookError,
   memberCount,
   loadBookDetail
-} = useBookData(bookId)
+} = useBookData()
 
 const {
   formData,
@@ -67,17 +66,37 @@ const {
 } = useBookForm()
 
 
+onLoad((options) => {
+  console.log("onLoad options", JSON.stringify(options, null, 2))
+  if (options && options.id) {
+    bookId.value = options.id
+    loadBookData()
+  } else {
+    console.error('错误：未能从路由参数中获取到 id')
+    uni.showToast({ title: '页面参数错误', icon: 'error' })
+  }
+})
+
+onShow(() => {
+  // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
+  if (hasInitialized.value && bookId.value) {
+    Promise.all([
+      loadBookData()
+    ])
+  }
+})
+
 // 加载数据
 const loadBookData = async () => {
-  await loadBookDetail()
-  console.log('loadBookDetail 完成，bookData.value:', JSON.stringify(bookData.value, null, 2))
+  await loadBookDetail(bookId.value)
+  console.log('loadBookDetail 完成，bookData.value:', bookId.value, JSON.stringify(bookData.value, null, 2))
   
   // 加载完成后初始化表单数据
   if (bookData.value && Object.keys(bookData.value).length > 0) {
-    console.log('填充表单数据')
+    //console.log('填充表单数据')
     // 使用 fillForm 方法正确初始化表单数据
     fillForm(bookData.value)
-    console.log('fillForm 完成，formData:', JSON.stringify(formData, null, 2))
+   // console.log('fillForm 完成，formData:', JSON.stringify(formData, null, 2))
   } else {
     console.log('bookData 为空，无法填充表单')
   }
@@ -166,7 +185,7 @@ const handleCancel = () => {
 
 // 生命周期
 onMounted(() => {
-  loadBookData()
+  hasInitialized.value = true
 })
 </script>
 

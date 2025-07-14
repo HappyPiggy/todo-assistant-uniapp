@@ -32,7 +32,7 @@
           v-for="member in members"
           :key="member._id"
           :member="member"
-          :current-user-id="currentUserId.value"
+          :current-user-id="currentUserId"
           :show-actions="shouldShowMemberActions(member)"
           @menu-click="handleMemberMenu"
         />
@@ -57,7 +57,6 @@
 
 <script setup>
 import { defineProps, defineEmits, ref, computed } from 'vue'
-import { currentUserId } from '@/store/storage.js'
 import LoadingState from '../common/LoadingState.vue'
 import ErrorState from '../common/ErrorState.vue'
 import EmptyState from '../common/EmptyState.vue'
@@ -74,6 +73,10 @@ const props = defineProps({
     default: false
   },
   error: {
+    type: String,
+    default: null
+  },
+  currentUserId: {
     type: String,
     default: null
   },
@@ -110,7 +113,7 @@ const canRemoveMember = computed(() => {
   if (!currentMember.value) return false
   
   // 不能移除自己
-  if (currentMember.value.user_id === currentUserId.value) return false
+  if (currentMember.value.user_id === props.currentUserId) return false
   
   // 只有所有者能移除管理员
   if (currentMember.value.role === 'admin' && props.currentUserRole !== 'owner') return false
@@ -123,7 +126,7 @@ const canChangeRole = computed(() => {
   if (!currentMember.value) return false
   
   // 不能修改自己的角色
-  if (currentMember.value.user_id === currentUserId.value) return false
+  if (currentMember.value.user_id === props.currentUserId) return false
   
   // 只有所有者能修改角色
   return props.currentUserRole === 'owner'
@@ -132,11 +135,11 @@ const canChangeRole = computed(() => {
 const shouldShowMemberActions = (member) => {
   // owner可以对除自己外的所有成员显示菜单
   if (props.currentUserRole === 'owner') {
-    return member.user_id !== currentUserId.value
+    return member.user_id !== props.currentUserId
   }
   
   // 普通成员只能对自己显示菜单
-  return member.user_id === currentUserId.value
+  return member.user_id === props.currentUserId
 }
 
 const handleRetry = () => {

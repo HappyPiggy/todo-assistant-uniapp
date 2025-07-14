@@ -70,7 +70,6 @@ export function useBookData(bookId = null) {
       })
     } finally {
       loading.value = false
-      console.log('loading.value 现在是:', loading.value)
     }
   }
   

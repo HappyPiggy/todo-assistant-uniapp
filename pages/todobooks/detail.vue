@@ -68,7 +68,6 @@ import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
-import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
 const bookId = ref(null)
