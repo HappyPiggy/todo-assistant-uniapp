@@ -79,6 +79,7 @@ export default {
     // 获取路由参数
     const pages = getCurrentPages()
     const currentPage = pages[pages.length - 1]
+	console.log("setup", JSON.stringify(currentPage, null, 2))
     const bookId = currentPage.options.id
 
     // 使用组合函数
