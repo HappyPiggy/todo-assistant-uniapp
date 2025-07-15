@@ -5,10 +5,9 @@ import { API_CODES, ERROR_MESSAGES, MEMBER_CONSTANTS } from '@/pages/todobooks/u
 
 /**
  * 成员数据管理组合式函数
- * @param {string} bookId - 项目册ID
  * @returns {Object} 成员数据和操作方法
  */
-export function useMemberData(bookId) {
+export function useMemberData() {
   // 响应式数据
   const members = ref([])
   const loading = ref(false)
@@ -35,10 +34,10 @@ export function useMemberData(bookId) {
   
   /**
    * 加载成员列表
-   * @param {string} id - 项目册ID
+   * @param {string} bookId - 项目册ID
    */
-  const loadMembers = async (id = bookId) => {
-    if (!id) {
+  const loadMembers = async (bookId) => {
+    if (!bookId) {
       error.value = '项目册ID不能为空'
       return
     }
@@ -48,7 +47,7 @@ export function useMemberData(bookId) {
     
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getMembers(id)
+      const result = await todoBookCo.getMembers(bookId)
       
       if (result.code === API_CODES.SUCCESS) {
         members.value = result.data.members || []
@@ -88,11 +87,12 @@ export function useMemberData(bookId) {
   
   /**
    * 邀请用户
+   * @param {string} bookId - 项目册ID
    * @param {string} nickname - 用户昵称
    */
-  const inviteUser = async (nickname) => {
-    if (!nickname || !nickname.trim()) {
-      throw new Error('请输入用户昵称')
+  const inviteUser = async (bookId, nickname) => {
+    if (!bookId || !nickname || !nickname.trim()) {
+      throw new Error('项目册ID和用户昵称不能为空')
     }
     
     try {
@@ -114,11 +114,12 @@ export function useMemberData(bookId) {
   
   /**
    * 移除成员
+   * @param {string} bookId - 项目册ID
    * @param {string} userId - 用户ID
    */
-  const removeMember = async (userId) => {
-    if (!userId) {
-      throw new Error('用户ID不能为空')
+  const removeMember = async (bookId, userId) => {
+    if (!bookId || !userId) {
+      throw new Error('项目册ID和用户ID不能为空')
     }
     
     try {
@@ -140,8 +141,13 @@ export function useMemberData(bookId) {
   
   /**
    * 退出项目册
+   * @param {string} bookId - 项目册ID
    */
-  const leaveBook = async () => {
+  const leaveBook = async (bookId) => {
+    if (!bookId) {
+      throw new Error('项目册ID不能为空')
+    }
+    
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
       const result = await todoBookCo.leaveBook(bookId)
@@ -159,12 +165,13 @@ export function useMemberData(bookId) {
   
   /**
    * 更新成员角色
+   * @param {string} bookId - 项目册ID
    * @param {string} userId - 用户ID
    * @param {string} role - 新角色
    */
-  const updateMemberRole = async (userId, role) => {
-    if (!userId || !role) {
-      throw new Error('用户ID和角色不能为空')
+  const updateMemberRole = async (bookId, userId, role) => {
+    if (!bookId || !userId || !role) {
+      throw new Error('项目册ID、用户ID和角色不能为空')
     }
     
     try {
@@ -249,8 +256,9 @@ export function useMemberData(bookId) {
   
   /**
    * 刷新数据
+   * @param {string} bookId - 项目册ID
    */
-  const refreshData = async () => {
+  const refreshData = async (bookId) => {
     await loadMembers(bookId)
   }
   

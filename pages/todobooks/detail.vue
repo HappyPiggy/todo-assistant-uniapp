@@ -70,7 +70,7 @@ import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
-const bookId = ref(null)
+let bookId = null
 
 // 初始化组合式函数，此时不传入 bookId
 const {
@@ -115,9 +115,9 @@ const dragState = ref({
 onLoad((options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
-    bookId.value = options.id
-    loadBookDetail(bookId.value)
-    loadTasks(bookId.value)
+    bookId = options.id
+    loadBookDetail(bookId)
+    loadTasks(bookId)
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })
@@ -132,24 +132,24 @@ onMounted(() => {
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
   // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
-  if (hasInitialized.value && bookId.value) {
+  if (hasInitialized.value && bookId) {
     Promise.all([
-      loadTasks(bookId.value),
-      loadBookDetail(bookId.value)
+      loadTasks(bookId),
+      loadBookDetail(bookId)
     ])
   }
 })
 
 // 下拉刷新
 onPullDownRefresh(async () => {
-  if (!bookId.value) {
+  if (!bookId) {
     uni.stopPullDownRefresh()
     return
   }
   try {
     await Promise.all([
-      loadBookDetail(bookId.value),
-      loadTasks(bookId.value)
+      loadBookDetail(bookId),
+      loadTasks(bookId)
     ])
   } catch (error) {
     console.error('下拉刷新失败:', error)
@@ -179,7 +179,7 @@ const getUnreadCommentCount = (task) => {
 
 const addTask = () => {
   uni.navigateTo({
-    url: `/pages/tasks/create?bookId=${bookId.value}`
+    url: `/pages/tasks/create?bookId=${bookId}`
   })
 }
 
@@ -188,7 +188,7 @@ const handleTaskClick = (task) => {
     task.expanded = !task.expanded
   } else {
     uni.navigateTo({
-      url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId.value}`
+      url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`
     })
   }
 }
@@ -199,13 +199,13 @@ const showTaskMenu = (task) => {
 
 const viewTaskDetail = (task) => {
   uni.navigateTo({
-    url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId.value}`
+    url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`
   })
 }
 
 const editTask = (task) => {
   uni.navigateTo({
-    url: `/pages/tasks/edit?id=${task._id}&bookId=${bookId.value}`
+    url: `/pages/tasks/edit?id=${task._id}&bookId=${bookId}`
   })
 }
 
@@ -237,7 +237,7 @@ const showSubtaskMenu = (subtask) => {
 
 const handleSubtaskClick = (subtask) => {
   uni.navigateTo({
-    url: `/pages/tasks/detail?id=${subtask._id}&bookId=${bookId.value}`
+    url: `/pages/tasks/detail?id=${subtask._id}&bookId=${bookId}`
   })
 }
 

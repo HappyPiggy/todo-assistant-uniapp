@@ -44,7 +44,7 @@ import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
-const bookId = ref(null)
+let bookId = null
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 
 // 使用组合函数
@@ -69,7 +69,7 @@ const {
 onLoad((options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
-    bookId.value = options.id
+    bookId = options.id
     loadBookData()
   } else {
     console.error('错误：未能从路由参数中获取到 id')
@@ -79,7 +79,7 @@ onLoad((options) => {
 
 onShow(() => {
   // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
-  if (hasInitialized.value && bookId.value) {
+  if (hasInitialized.value && bookId) {
     Promise.all([
       loadBookData()
     ])
@@ -88,8 +88,8 @@ onShow(() => {
 
 // 加载数据
 const loadBookData = async () => {
-  await loadBookDetail(bookId.value)
-  console.log('loadBookDetail 完成，bookData.value:', bookId.value, JSON.stringify(bookData.value, null, 2))
+  await loadBookDetail(bookId)
+  console.log('loadBookDetail 完成，bookData.value:', bookId, JSON.stringify(bookData.value, null, 2))
   
   // 加载完成后初始化表单数据
   if (bookData.value && Object.keys(bookData.value).length > 0) {

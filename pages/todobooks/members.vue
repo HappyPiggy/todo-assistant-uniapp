@@ -160,7 +160,7 @@ const openInviteModal = () => {
 
 const handleInviteConfirm = async (inviteData) => {
   try {
-    await inviteUser(inviteData.nickname)
+    await inviteUser(bookId.value, inviteData.nickname)
     uni.showToast({
       title: '邀请成功',
       icon: 'success'
@@ -188,7 +188,7 @@ const handleChangeRole = (member) => {
 
 const handleRoleChangeConfirm = async (member, newRole) => {
   try {
-    await updateMemberRole(member._id, newRole)
+    await updateMemberRole(bookId.value, member._id, newRole)
     uni.showToast({
       title: '角色更新成功',
       icon: 'success'
@@ -230,7 +230,7 @@ const handleLeaveTodobook = (member) => {
 const handleConfirm = async () => {
   if (confirmAction.value === 'removeMember' && selectedMember.value) {
     try {
-      await removeMember(selectedMember.value.user_id)
+      await removeMember(bookId.value, selectedMember.value.user_id)
       uni.showToast({
         title: '移除成功',
         icon: 'success'
@@ -245,7 +245,7 @@ const handleConfirm = async () => {
     }
   } else if (confirmAction.value === 'leaveTodobook' && selectedMember.value) {
     try {
-      await currentUserLeaveBook()
+      await currentUserLeaveBook(bookId.value)
       uni.showToast({
         title: '退出成功',
         icon: 'success'
