@@ -79,7 +79,7 @@
 					</view>
 
 					<view class="card-footer">
-						<text class="last-activity">{{ formatTime(book.last_activity_at || book.updated_at) }}</text>
+						<text class="last-activity">{{ formatRelativeTime(book.last_activity_at || book.updated_at) }}</text>
 						<view v-if="book.member_count > 1" class="share-badge">
 							<uni-icons color="#28a745" size="14" type="checkmarkempty" />
 							<text class="share-text">协作</text>
@@ -97,34 +97,34 @@
 		</view>
 
 		<!-- 操作弹窗 -->
-		<uni-popup ref="actionPopup" type="bottom" background-color="#ffffff" :safe-area="true">
+		<uni-popup ref="actionPopupRef" type="bottom" background-color="#ffffff" :safe-area="true">
 			<view class="action-sheet">
 				<view class="action-header">
 					<text class="action-title">{{ currentBook?.title }}</text>
 				</view>
 				<scroll-view scroll-y class="action-scroll">
 					<view class="action-list">
-					<view class="action-item" @click="editTodoBook">
+					<view class="action-item" @click="handleEditTodoBook">
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="action-text">编辑</text>
 					</view>
-					<view class="action-item" @click="shareTodoBook">
+					<view class="action-item" @click="handleShareTodoBook">
 						<uni-icons color="#28a745" size="20" type="staff" />
 						<text class="action-text">成员管理</text>
 					</view>
-					<view class="action-item" @click="showStatistics">
+					<view class="action-item" @click="handleShowStatistics">
 						<uni-icons color="#17a2b8" size="20" type="bars" />
 						<text class="action-text">数据统计</text>
 					</view>
-					<view class="action-item" @click="exportTasks">
+					<view class="action-item" @click="handleExportTasks">
 						<uni-icons color="#6c757d" size="20" type="download" />
 						<text class="action-text">导出任务</text>
 					</view>
-					<view class="action-item" @click="archiveTodoBook">
+					<view class="action-item" @click="handleArchiveTodoBook">
 						<uni-icons color="#ffc107" size="20" type="folder-add" />
 						<text class="action-text">归档</text>
 					</view>
-					<view class="action-item danger" @click="deleteTodoBook">
+					<view class="action-item danger" @click="handleDeleteTodoBook">
 						<uni-icons color="#FF4757" size="20" type="trash" />
 						<text class="action-text">删除</text>
 					</view>
@@ -140,351 +140,315 @@
 	</view>
 </template>
 
-<script>
-	import {
-		store
-	} from '@/uni_modules/uni-id-pages/common/store.js'
-	import { currentUserId } from '@/store/storage.js'
-	import globalStore from '@/store/index.js'
+<script setup>
+import { ref, computed } from 'vue'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
+
+// 使用 todobook 操作组合式函数
+const { 
+	loadTodoBooks,
+	archiveTodoBook: archiveTodoBookInStore,
+	deleteTodoBook: deleteTodoBookInStore
+} = useBookData()
+
+// 页面响应式数据
+const loading = ref(false)
+const error = ref(null)
+const todoBooks = ref([])
+const searchKeyword = ref('')
+const searchTimer = ref(null)
+const loadMoreStatus = ref('more')
+const currentBook = ref(null)
+const actionPopupRef = ref(null)
+
+// 计算属性
+const hasLogin = computed(() => store.hasLogin)
+
+// 页面生命周期
+onLoad(() => {
+	// 只检查登录状态，不加载数据
+	if (!hasLogin.value) {
+		uni.showToast({
+			title: '请先登录',
+			icon: 'none'
+		})
+		setTimeout(() => {
+			uni.navigateTo({
+				url: '/pages/login/login-withpwd'
+			})
+		}, 1500)
+	}
 	
-	export default {
-		data() {
-			return {
-				loading: false,
-				error: null,
-				todoBooks: [],
-				searchTimer: null,
-				searchKeyword: '',
-				currentBook: null,
-				loadMoreStatus: 'more'
-			}
-		},
-		computed: {
-			hasLogin() {
-				return store.hasLogin
-			}
-		},
-		onShow() {
-			// 统一在onShow中处理数据加载，避免重复请求
-			if (this.hasLogin) {
-				this.loadTodoBooksOptimized()
-			}
-		},
-		onLoad() {
-			// 只检查登录状态，不加载数据
-			if (!this.hasLogin) {
-				uni.showToast({
-					title: '请先登录',
-					icon: 'none'
-				})
-				setTimeout(() => {
-					uni.navigateTo({
-						url: '/pages/login/login-withpwd'
-					})
-				}, 1500)
-			}
-			
-			// 监听缓存更新事件
-			uni.$on('todobooks-cache-updated', this.onCacheUpdated)
-			
-			// 监听用户切换事件
-			uni.$on('user-switched', this.onUserSwitched)
-		},
-		onPullDownRefresh() {
-			this.refreshTodoBooks()
-		},
-		onUnload() {
-			// 清理定时器
-			if (this.searchTimer) {
-				clearTimeout(this.searchTimer)
-			}
-			
-			// 移除事件监听
-			uni.$off('todobooks-cache-updated', this.onCacheUpdated)
-			uni.$off('user-switched', this.onUserSwitched)
-		},
-		methods: {
-			// 处理缓存更新事件
-			onCacheUpdated(updatedBooks) {
-				console.log('收到缓存更新通知，刷新页面数据，数据条数:', updatedBooks.length)
-				console.log('更新前页面数据条数:', this.todoBooks.length)
-				
-				this.todoBooks = updatedBooks
-				this.loadMoreStatus = 'noMore'
-				
-				console.log('更新后页面数据条数:', this.todoBooks.length)
-				
-				// 可选：显示更新提示
-				// uni.showToast({
-				//   title: '数据已更新',
-				//   icon: 'none',
-				//   duration: 1000
-				// })
-			},
+	// 监听缓存更新事件
+	uni.$on('todobooks-cache-updated', onCacheUpdated)
+	
+	// 监听用户切换事件
+	uni.$on('user-switched', onUserSwitched)
+})
 
-			// 处理用户切换事件
-			onUserSwitched(newUserId) {
-				console.log('收到用户切换通知，清空页面数据')
-				
-				// 清空当前显示的数据
-				this.todoBooks = []
-				this.loadMoreStatus = 'more'
-				this.loading = false
-				this.error = null
-				
-				// 如果新用户已登录，重新加载数据
-				if (newUserId && this.hasLogin) {
-					setTimeout(() => {
-						this.loadTodoBooksOptimized()
-					}, 500)
-				}
-			},
+onShow(() => {
+	// 统一在onShow中处理数据加载，避免重复请求
+	if (hasLogin.value) {
+		loadTodoBooksOptimized()
+	}
+})
 
-			// 优化的加载方法 - 缓存优先策略
-			async loadTodoBooksOptimized() {
-				// 如果正在加载，直接返回
-				if (this.loading) return
-				
+onUnload(() => {
+	// 清理定时器
+	if (searchTimer.value) {
+		clearTimeout(searchTimer.value)
+	}
+	
+	// 移除事件监听
+	uni.$off('todobooks-cache-updated', onCacheUpdated)
+	uni.$off('user-switched', onUserSwitched)
+})
+
+// 数据加载方法
+const loadTodoBooksOptimized = async () => {
+	if (loading.value) return
+	
+	try {
+		loading.value = true
+		error.value = null
+		
+		const books = await loadTodoBooks({
+			keyword: searchKeyword.value
+		})
+		
+		todoBooks.value = books
+		loadMoreStatus.value = 'noMore'
+		
+	} catch (err) {
+		console.error('加载项目册失败:', err)
+		error.value = '加载失败，请重试'
+		uni.showToast({
+			title: '加载失败，请重试',
+			icon: 'none'
+		})
+	} finally {
+		loading.value = false
+		uni.stopPullDownRefresh()
+	}
+}
+
+// 刷新数据
+const refreshTodoBooks = async () => {
+	try {
+		loading.value = true
+		error.value = null
+		
+		const books = await loadTodoBooks({ keyword: searchKeyword.value }, true)
+		todoBooks.value = books
+		loadMoreStatus.value = 'noMore'
+		
+	} catch (err) {
+		console.error('刷新项目册失败:', err)
+		error.value = '刷新失败，请重试'
+		uni.showToast({
+			title: '刷新失败，请重试',
+			icon: 'none'
+		})
+	} finally {
+		loading.value = false
+		uni.stopPullDownRefresh()
+	}
+}
+
+// 搜索相关方法
+const onSearchInput = (value) => {
+	searchKeyword.value = value
+	// 使用防抖处理
+	clearTimeout(searchTimer.value)
+	searchTimer.value = setTimeout(() => {
+		refreshTodoBooks()
+	}, 500)
+}
+
+const onSearchCancel = () => {
+	searchKeyword.value = ''
+	refreshTodoBooks()
+}
+
+const onSearchConfirm = () => {
+	refreshTodoBooks()
+}
+
+// 事件处理方法
+const onCacheUpdated = (updatedBooks) => {
+	console.log('收到缓存更新通知，刷新页面数据，数据条数:', updatedBooks.length)
+	console.log('更新前页面数据条数:', todoBooks.value.length)
+	
+	todoBooks.value = updatedBooks
+	loadMoreStatus.value = 'noMore'
+	
+	console.log('更新后页面数据条数:', todoBooks.value.length)
+}
+
+const onUserSwitched = (newUserId) => {
+	console.log('收到用户切换通知，清空页面数据')
+	
+	// 清空当前显示的数据
+	todoBooks.value = []
+	loadMoreStatus.value = 'more'
+	loading.value = false
+	error.value = null
+	
+	// 如果新用户已登录，重新加载数据
+	if (newUserId && hasLogin.value) {
+		setTimeout(() => {
+			loadTodoBooksOptimized()
+		}, 500)
+	}
+}
+
+// 下拉刷新
+const onPullDownRefresh = () => {
+	refreshTodoBooks()
+}
+
+// 导出下拉刷新方法供页面使用
+defineExpose({
+	onPullDownRefresh
+})
+
+// 页面导航方法
+const openTodoBook = (book) => {
+	uni.navigateTo({
+		url: `/pages/todobooks/detail?id=${book._id}`
+	})
+}
+
+const createTodoBook = () => {
+	uni.navigateTo({
+		url: '/pages/todobooks/create'
+	})
+}
+
+// 操作弹窗相关方法
+const showBookActions = (book) => {
+	currentBook.value = book
+	actionPopupRef.value?.open()
+}
+
+const hideActionSheet = () => {
+	actionPopupRef.value?.close()
+	currentBook.value = null
+}
+
+// 处理各种操作
+const handleEditTodoBook = () => {
+	const bookId = currentBook.value?._id
+	hideActionSheet()
+	if (bookId) {
+		uni.navigateTo({
+			url: `/pages/todobooks/edit?id=${bookId}`
+		})
+	}
+}
+
+const handleShareTodoBook = () => {
+	const bookId = currentBook.value?._id
+	hideActionSheet()
+	if (bookId) {
+		uni.navigateTo({
+			url: `/pages/todobooks/members?id=${bookId}`
+		})
+	}
+}
+
+const handleShowStatistics = () => {
+	const bookId = currentBook.value?._id
+	hideActionSheet()
+	if (bookId) {
+		uni.navigateTo({
+			url: `/pages/todobooks/statistics?id=${bookId}`
+		})
+	}
+}
+
+const handleExportTasks = () => {
+	hideActionSheet()
+	uni.showToast({
+		title: '功能开发中',
+		icon: 'none'
+	})
+}
+
+const handleArchiveTodoBook = async () => {
+	// 先保存要归档的项目册引用
+	const bookToArchive = currentBook.value
+	hideActionSheet()
+	
+	uni.showModal({
+		title: '确认归档',
+		content: '归档后的项目册将移动到归档列表中，确定要归档吗？',
+		success: async (res) => {
+			if (res.confirm) {
 				try {
-					this.loading = true
-					this.error = null
+					await archiveTodoBookInStore(bookToArchive._id)
 					
-					// 优先从缓存获取数据
-					const cached = globalStore.todoBook.getTodoBooksFromCache()
-					if (cached.success) {
-						console.log('使用缓存数据:', cached.source)
-						this.todoBooks = cached.data
-						this.loadMoreStatus = 'noMore'
-						return
-					}
-					
-					// 缓存无效，从云端加载
-					console.log('缓存无效，从云端加载')
-					const books = await globalStore.todoBook.loadTodoBooks({
-						include_archived: false,
-						keyword: this.searchKeyword
-					})
-					
-					this.todoBooks = books
-					this.loadMoreStatus = 'noMore'
-					
-				} catch (error) {
-					console.error('加载项目册失败:', error)
-					this.error = '加载失败，请重试'
 					uni.showToast({
-						title: '加载失败，请重试',
-						icon: 'none'
+						title: '归档成功',
+						icon: 'success'
 					})
-				} finally {
-					this.loading = false
-					uni.stopPullDownRefresh()
-				}
-			},
-
-			// 刷新数据（强制从云端获取）
-			async refreshTodoBooks() {
-				try {
-					this.loading = true
-					this.error = null
-					console.log('强制刷新项目册...')
 					
-					const books = await globalStore.todoBook.refreshTodoBooks()
-					
-					this.todoBooks = books
-					this.loadMoreStatus = 'noMore'
-					
-				} catch (error) {
-					console.error('刷新项目册失败:', error)
-					this.error = '刷新失败，请重试'
+					// 刷新列表
+					refreshTodoBooks()
+				} catch (err) {
+					console.error('归档失败:', err)
 					uni.showToast({
-						title: '刷新失败，请重试',
-						icon: 'none'
+						title: err.message || '归档失败',
+						icon: 'error'
 					})
-				} finally {
-					this.loading = false
-					uni.stopPullDownRefresh()
-				}
-			},
-
-			// 搜索输入处理（添加防抖）
-			onSearchInput(value) {
-				this.searchKeyword = value
-				// 使用防抖处理
-				clearTimeout(this.searchTimer)
-				this.searchTimer = setTimeout(() => {
-					this.refreshTodoBooks()
-				}, 500)
-			},
-
-			onSearchCancel() {
-				this.searchKeyword = ''
-				this.refreshTodoBooks()
-			},
-
-			onSearchConfirm() {
-				// 搜索确认，触发查询
-				this.refreshTodoBooks()
-			},
-
-			openTodoBook(book) {
-				uni.navigateTo({
-					url: `/pages/todobooks/detail?id=${book._id}`
-				})
-			},
-
-			createTodoBook() {
-				uni.navigateTo({
-					url: '/pages/todobooks/create'
-				})
-			},
-
-			showBookActions(book) {
-				this.currentBook = book
-				this.$refs.actionPopup.open()
-			},
-
-			hideActionSheet() {
-				this.$refs.actionPopup.close()
-				this.currentBook = null
-			},
-
-			editTodoBook() {
-				const bookId = this.currentBook?._id
-				this.hideActionSheet()
-				if (bookId) {
-					uni.navigateTo({
-						url: `/pages/todobooks/edit?id=${bookId}`
-					})
-				}
-			},
-
-			shareTodoBook() {
-				const bookId = this.currentBook?._id
-				this.hideActionSheet()
-				if (bookId) {
-					uni.navigateTo({
-						url: `/pages/todobooks/members?id=${bookId}`
-					})
-				}
-			},
-
-			async archiveTodoBook() {
-				// 先保存要归档的项目册引用
-				const bookToArchive = this.currentBook
-				this.hideActionSheet()
-				
-				uni.showModal({
-					title: '确认归档',
-					content: '归档后的项目册将移动到归档列表中，确定要归档吗？',
-					success: async (res) => {
-						if (res.confirm) {
-							try {
-								// 使用全局store更新（缓存更新后会自动通过事件通知页面刷新）
-								await globalStore.todoBook.updateTodoBook(bookToArchive._id, {
-									is_archived: true,
-									archived_at: new Date()
-								})
-
-								uni.showToast({
-									title: '归档成功',
-									icon: 'success'
-								})
-							} catch (error) {
-								console.error('归档失败:', error)
-								uni.showToast({
-									title: error.message || '归档失败',
-									icon: 'error'
-								})
-							}
-						}
-					}
-				})
-			},
-
-			async deleteTodoBook() {
-				// 先保存要删除的项目册引用
-				const bookToDelete = this.currentBook
-				this.hideActionSheet()
-				
-				uni.showModal({
-					title: '确认删除',
-					content: '删除后无法恢复，确定要删除这个项目册吗？',
-					confirmColor: '#FF4757',
-					success: async (res) => {
-						if (res.confirm) {
-							try {
-								uni.showLoading({
-									title: '删除中...'
-								})
-
-								// 使用全局store删除（缓存更新后会自动通过事件通知页面刷新）
-								await globalStore.todoBook.deleteTodoBook(bookToDelete._id)
-
-								uni.hideLoading()
-								
-								uni.showToast({
-									title: '删除成功',
-									icon: 'success'
-								})
-							} catch (error) {
-								uni.hideLoading()
-								console.error('删除失败:', error)
-								uni.showToast({
-									title: error.message || '删除失败',
-									icon: 'error'
-								})
-							}
-						}
-					}
-				})
-			},
-
-			showStatistics() {
-				const bookId = this.currentBook?._id
-				this.hideActionSheet()
-				if (bookId) {
-					uni.navigateTo({
-						url: `/pages/todobooks/statistics?id=${bookId}`
-					})
-				}
-			},
-
-			exportTasks() {
-				this.hideActionSheet()
-				uni.showToast({
-					title: '功能开发中',
-					icon: 'none'
-				})
-			},
-
-			calculateProgress(book) {
-				if (!book.item_count || book.item_count === 0) return 0
-				return Math.round((book.completed_count / book.item_count) * 100)
-			},
-
-			formatTime(timeStr) {
-				if (!timeStr) return ''
-				
-				const time = new Date(timeStr)
-				const now = new Date()
-				const diff = now.getTime() - time.getTime()
-				
-				const minutes = Math.floor(diff / (1000 * 60))
-				const hours = Math.floor(diff / (1000 * 60 * 60))
-				const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-				
-				if (minutes < 60) {
-					return minutes <= 1 ? '刚刚' : `${minutes}分钟前`
-				} else if (hours < 24) {
-					return `${hours}小时前`
-				} else if (days < 7) {
-					return `${days}天前`
-				} else {
-					return time.toLocaleDateString()
 				}
 			}
 		}
-	}
+	})
+}
+
+const handleDeleteTodoBook = async () => {
+	// 先保存要删除的项目册引用
+	const bookToDelete = currentBook.value
+	hideActionSheet()
+	
+	uni.showModal({
+		title: '确认删除',
+		content: '删除后无法恢复，确定要删除这个项目册吗？',
+		confirmColor: '#FF4757',
+		success: async (res) => {
+			if (res.confirm) {
+				try {
+					uni.showLoading({
+						title: '删除中...'
+					})
+					
+					await deleteTodoBookInStore(bookToDelete._id)
+					
+					uni.hideLoading()
+					
+					uni.showToast({
+						title: '删除成功',
+						icon: 'success'
+					})
+					
+					// 刷新列表
+					refreshTodoBooks()
+				} catch (err) {
+					uni.hideLoading()
+					console.error('删除失败:', err)
+					uni.showToast({
+						title: err.message || '删除失败',
+						icon: 'error'
+					})
+				}
+			}
+		}
+	})
+}
 </script>
 
 <style lang="scss" scoped>
