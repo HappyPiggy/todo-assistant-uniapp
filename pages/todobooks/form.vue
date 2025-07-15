@@ -32,12 +32,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
-import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { BOOK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 let bookId = null
@@ -58,12 +58,30 @@ const {
   updateTodoBook
 } = useBookData()
 
-const {
-  formData,
-  submitting,
-  errors,
-  fillForm
-} = useBookForm()
+// 表单数据管理（原 useBookForm 逻辑）
+const formData = reactive({
+  title: '',
+  description: '',
+  color: BOOK_CONSTANTS.DEFAULT_COLOR,
+  icon: BOOK_CONSTANTS.DEFAULT_ICON
+})
+
+const submitting = ref(false)
+const errors = ref({})
+
+/**
+ * 填充表单数据
+ * @param {Object} data - 填充数据
+ */
+const fillForm = (data) => {
+  if (data) {
+    formData.title = data.title || ''
+    formData.description = data.description || ''
+    formData.color = data.color || BOOK_CONSTANTS.DEFAULT_COLOR
+    formData.icon = data.icon || BOOK_CONSTANTS.DEFAULT_ICON
+  }
+  errors.value = {}
+}
 
 // 计算统计数据
 const statsData = computed(() => {
