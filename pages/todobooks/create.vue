@@ -21,14 +21,18 @@
 import { ref, computed } from 'vue'
 import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
 import { useBookForm } from '@/pages/todobooks/composables/useBookForm.js'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 
 // 使用组合函数
 const {
   formData,
   submitting,
-  errors,
-  saveBook
+  errors
 } = useBookForm()
+
+const {
+  createTodoBook
+} = useBookData()
 
 // 事件处理
 const handleSubmit = async (data) => {
@@ -37,8 +41,8 @@ const handleSubmit = async (data) => {
   try {
     submitting.value = true // 开始提交
     
-    const result = await saveBook(data)
-    if (result.success) {
+    const result = await createTodoBook(data)
+    if (result) {
       uni.showToast({
         title: '创建成功',
         icon: 'success'

@@ -37,46 +37,6 @@ export function useBookForm(initialData = null) {
     errors.value = {}
   }
   
-  /**
-   * 保存项目册（创建）
-   * @param {Object} data - 表单数据
-   * @returns {Promise} 创建结果
-   */
-  const saveBook = async (data) => {
-    try {
-      // 使用全局store创建项目册
-      const result = await globalStore.todoBook.createTodoBook(data)
-      
-      return {
-        success: true,
-        data: result
-      }
-    } catch (error) {
-      console.error('创建项目册失败:', error)
-      throw error
-    }
-  }
-  
-  /**
-   * 更新项目册
-   * @param {string} bookId - 项目册ID
-   * @param {Object} data - 表单数据
-   * @returns {Promise} 更新结果
-   */
-  const updateBook = async (bookId, data) => {
-    try {
-      // 使用全局store更新项目册
-      const result = await globalStore.todoBook.updateTodoBook(bookId, data)
-      
-      return {
-        success: true,
-        data: result
-      }
-    } catch (error) {
-      console.error('更新项目册失败:', error)
-      throw error
-    }
-  }
   
   
   return {
@@ -86,8 +46,6 @@ export function useBookForm(initialData = null) {
     errors,
     
     // 方法
-    fillForm,
-    saveBook,
-    updateBook
+    fillForm
   }
 }

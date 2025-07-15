@@ -60,9 +60,12 @@ const {
   formData,
   submitting,
   errors,
-  fillForm,
-  updateBook
+  fillForm
 } = useBookForm()
+
+const {
+  updateTodoBook
+} = useBookData()
 
 
 onLoad((options) => {
@@ -127,11 +130,11 @@ const handleSubmit = async (data) => {
       icon: data.icon
     }
     
-    const result = await updateBook(bookId, cleanData)
-    console.log('updateBook 返回结果:', JSON.stringify(result, null, 2))
+    const result = await updateTodoBook(bookId, cleanData)
+    console.log('updateTodoBook 返回结果:', JSON.stringify(result, null, 2))
     
-    // updateBook 返回的格式是 { success: true, data: {...} }
-    if (result && result.success) {
+    // updateTodoBook 返回的格式是项目册对象
+    if (result) {
       uni.showToast({
         title: '保存成功',
         icon: 'success'
@@ -143,7 +146,7 @@ const handleSubmit = async (data) => {
       }, 1000)
     } else {
       // 如果没有成功标志，抛出错误
-      throw new Error(result?.message || '保存失败')
+      throw new Error('保存失败')
     }
   } catch (error) {
     console.error('提交失败:', error)
