@@ -46,15 +46,9 @@
         }
     },
     {
-        "path": "pages/todobooks/create",
+        "path": "pages/todobooks/form",
         "style": {
-            "navigationBarTitleText": "创建项目册"
-        }
-    },
-    {
-        "path": "pages/todobooks/edit",
-        "style": {
-            "navigationBarTitleText": "编辑项目册"
+            "navigationBarTitleText": "项目册"
         }
     },
     {

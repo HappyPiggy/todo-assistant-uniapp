@@ -1,32 +1,28 @@
 <template>
-  <view class="edit-todobook">
+  <view class="todobook-form">
     <!-- 页面标题 -->
     <view class="page-header">
-      <text class="page-title">编辑项目册</text>
+      <text class="page-title">{{ pageTitle }}</text>
     </view>
 
     <!-- 加载状态 -->
-    <LoadingState v-if="bookLoading" />
+    <LoadingState v-if="isEditMode && bookLoading" />
     
     <!-- 错误状态 -->
     <ErrorState 
-      v-else-if="bookError" 
+      v-else-if="isEditMode && bookError" 
       :message="bookError"
       @retry="loadBookData" />
 
-    <!-- 编辑表单 -->
+    <!-- 表单 -->
     <BookForm
-      v-else-if="bookData && Object.keys(bookData).length > 0 && !bookLoading"
+      v-else-if="!isEditMode || (bookData && Object.keys(bookData).length > 0 && !bookLoading)"
       :form-data="formData"
-      :stats-data="{
-        item_count: bookData.item_count || 0,
-        completed_count: bookData.completed_count || 0,
-        member_count: memberCount || 1
-      }"
+      :stats-data="statsData"
       :loading="submitting"
       :errors="errors"
-      :show-preview="true"
-      mode="edit"
+      :show-preview="isEditMode"
+      :mode="isEditMode ? 'edit' : 'create'"
       @submit="handleSubmit"
       @cancel="handleCancel"
       @update:form-data="updateFormData"
@@ -45,7 +41,11 @@ import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 let bookId = null
-const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
+const hasInitialized = ref(false)
+
+// 计算属性
+const isEditMode = computed(() => !!bookId)
+const pageTitle = computed(() => isEditMode.value ? '编辑项目册' : '创建项目册')
 
 // 使用组合函数
 const {
@@ -53,7 +53,9 @@ const {
   loading: bookLoading,
   error: bookError,
   memberCount,
-  loadBookDetail
+  loadBookDetail,
+  createTodoBook,
+  updateTodoBook
 } = useBookData()
 
 const {
@@ -63,42 +65,42 @@ const {
   fillForm
 } = useBookForm()
 
-const {
-  updateTodoBook
-} = useBookData()
-
+// 计算统计数据
+const statsData = computed(() => {
+  if (!isEditMode.value || !bookData.value) return null
+  
+  return {
+    item_count: bookData.value.item_count || 0,
+    completed_count: bookData.value.completed_count || 0,
+    member_count: memberCount.value || 1
+  }
+})
 
 onLoad((options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
     bookId = options.id
     loadBookData()
-  } else {
-    console.error('错误：未能从路由参数中获取到 id')
-    uni.showToast({ title: '页面参数错误', icon: 'error' })
   }
 })
 
 onShow(() => {
-  // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
-  if (hasInitialized.value && bookId) {
-    Promise.all([
-      loadBookData()
-    ])
+  // 如果页面已经初始化过，并且是编辑模式，则刷新数据
+  if (hasInitialized.value && isEditMode.value) {
+    loadBookData()
   }
 })
 
-// 加载数据
+// 加载数据（仅编辑模式）
 const loadBookData = async () => {
+  if (!isEditMode.value) return
+  
   await loadBookDetail(bookId)
   console.log('loadBookDetail 完成，bookData.value:', bookId, JSON.stringify(bookData.value, null, 2))
   
   // 加载完成后初始化表单数据
   if (bookData.value && Object.keys(bookData.value).length > 0) {
-    //console.log('填充表单数据')
-    // 使用 fillForm 方法正确初始化表单数据
     fillForm(bookData.value)
-   // console.log('fillForm 完成，formData:', JSON.stringify(formData, null, 2))
   } else {
     console.log('bookData 为空，无法填充表单')
   }
@@ -115,28 +117,33 @@ const handleSubmit = async (data) => {
   
   if (submitting.value) {
     console.log('防止重复提交，直接返回')
-    return // 防止重复提交
+    return
   }
   
   try {
     console.log('设置 submitting 为 true')
-    submitting.value = true // 开始提交
+    submitting.value = true
     
-    // 清理数据，避免循环引用
-    const cleanData = {
-      title: data.title,
-      description: data.description,
-      color: data.color,
-      icon: data.icon
+    let result
+    if (isEditMode.value) {
+      // 编辑模式：清理数据，避免循环引用
+      const cleanData = {
+        title: data.title,
+        description: data.description,
+        color: data.color,
+        icon: data.icon
+      }
+      result = await updateTodoBook(bookId, cleanData)
+    } else {
+      // 创建模式
+      result = await createTodoBook(data)
     }
     
-    const result = await updateTodoBook(bookId, cleanData)
-    console.log('updateTodoBook 返回结果:', JSON.stringify(result, null, 2))
+    console.log('操作返回结果:', JSON.stringify(result, null, 2))
     
-    // updateTodoBook 返回的格式是项目册对象
     if (result) {
       uni.showToast({
-        title: '保存成功',
+        title: isEditMode.value ? '保存成功' : '创建成功',
         icon: 'success'
       })
       
@@ -145,43 +152,58 @@ const handleSubmit = async (data) => {
         uni.navigateBack()
       }, 1000)
     } else {
-      // 如果没有成功标志，抛出错误
-      throw new Error('保存失败')
+      throw new Error(isEditMode.value ? '保存失败' : '创建失败')
     }
   } catch (error) {
     console.error('提交失败:', error)
-    // 使用 none 而不是 error，因为 uni-app 中 error 图标可能不存在
     uni.showToast({
-      title: error.message || '保存失败',
+      title: error.message || (isEditMode.value ? '保存失败' : '创建失败'),
       icon: 'none'
     })
   } finally {
     console.log('设置 submitting 为 false')
-    submitting.value = false // 结束提交
+    submitting.value = false
   }
 }
 
 const handleCancel = () => {
-  // 检查是否有未保存的更改
-  const hasChanges = bookData.value && (
-    formData.title !== bookData.value.title ||
-    formData.description !== bookData.value.description ||
-    formData.color !== bookData.value.color ||
-    formData.icon !== bookData.value.icon
-  )
-  
-  if (hasChanges) {
-    uni.showModal({
-      title: '确认退出',
-      content: '退出后将丢失未保存的更改，确定要退出吗？',
-      success: (res) => {
-        if (res.confirm) {
-          uni.navigateBack()
+  if (isEditMode.value) {
+    // 编辑模式：检查是否有未保存的更改
+    const hasChanges = bookData.value && (
+      formData.title !== bookData.value.title ||
+      formData.description !== bookData.value.description ||
+      formData.color !== bookData.value.color ||
+      formData.icon !== bookData.value.icon
+    )
+    
+    if (hasChanges) {
+      uni.showModal({
+        title: '确认退出',
+        content: '退出后将丢失未保存的更改，确定要退出吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.navigateBack()
+          }
         }
-      }
-    })
+      })
+    } else {
+      uni.navigateBack()
+    }
   } else {
-    uni.navigateBack()
+    // 创建模式：检查是否有输入内容
+    if (formData.title || formData.description) {
+      uni.showModal({
+        title: '确认退出',
+        content: '退出后将丢失已编辑的内容，确定要退出吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.navigateBack()
+          }
+        }
+      })
+    } else {
+      uni.navigateBack()
+    }
   }
 }
 
@@ -195,7 +217,7 @@ onMounted(() => {
 @import '@/pages/todobooks/styles/variables.scss';
 @import '@/pages/todobooks/styles/mixins.scss';
 
-.edit-todobook {
+.todobook-form {
   min-height: 100vh;
   background-color: $bg-secondary;
   padding-bottom: $safe-area-bottom;

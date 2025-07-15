@@ -324,7 +324,7 @@ const openTodoBook = (book) => {
 
 const createTodoBook = () => {
 	uni.navigateTo({
-		url: '/pages/todobooks/create'
+		url: '/pages/todobooks/form'
 	})
 }
 
@@ -345,7 +345,7 @@ const handleEditTodoBook = () => {
 	hideActionSheet()
 	if (bookId) {
 		uni.navigateTo({
-			url: `/pages/todobooks/edit?id=${bookId}`
+			url: `/pages/todobooks/form?id=${bookId}`
 		})
 	}
 }
