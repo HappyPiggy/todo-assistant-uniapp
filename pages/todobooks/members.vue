@@ -83,8 +83,6 @@ const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入�
 // 使用组合函数
 const {
   bookData,
-  loading: bookLoading,
-  error: bookError,
   loadBookDetail
 } = useBookData()
 

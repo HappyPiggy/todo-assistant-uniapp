@@ -1,13 +1,11 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { API_CODES, ERROR_MESSAGES } from '@/pages/todobooks/utils/constants.js'
 
 /**
  * 项目册数据管理组合式函数
- * @param {string} bookId - 项目册ID（可选）
  * @returns {Object} 项目册数据和操作方法
  */
-export function useBookData(bookId = null) {
-  console.log('useBookData 初始化, bookId:', bookId)
+export function useBookData() {
   
   // 响应式数据
   const bookData = ref({})
@@ -20,7 +18,7 @@ export function useBookData(bookId = null) {
    * 加载项目册详情
    * @param {string} id - 项目册ID
    */
-  const loadBookDetail = async (id = bookId) => {
+  const loadBookDetail = async (id) => {
     
     if (!id) {
       console.log('loadBookDetail 错误: 项目册ID不能为空')
@@ -74,87 +72,6 @@ export function useBookData(bookId = null) {
   }
   
   
-  /**
-   * 删除项目册
-   * @param {string} id - 项目册ID
-   */
-  const deleteBook = async (id = bookId) => {
-    if (!id) {
-      throw new Error('项目册ID不能为空')
-    }
-    
-    try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.deleteTodoBook(id)
-      
-      if (result.code === API_CODES.SUCCESS) {
-        // 清空本地数据
-        bookData.value = {}
-        memberCount.value = 0
-        return result
-      } else {
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
-      }
-    } catch (err) {
-      console.error('删除项目册失败:', err)
-      throw err
-    }
-  }
-  
-  /**
-   * 创建项目册
-   * @param {Object} bookFormData - 项目册表单数据
-   */
-  const createBook = async (bookFormData) => {
-    try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.createTodoBook(bookFormData)
-      
-      if (result.code === API_CODES.SUCCESS) {
-        return result
-      } else {
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
-      }
-    } catch (err) {
-      console.error('创建项目册失败:', err)
-      throw err
-    }
-  }
-  
-  /**
-   * 更新本地统计数据
-   * @param {string} oldStatus - 旧状态
-   * @param {string} newStatus - 新状态
-   */
-  const updateLocalStats = (oldStatus, newStatus) => {
-    if (!bookData.value) return
-    
-    if (newStatus === 'completed' && oldStatus !== 'completed') {
-      bookData.value.completed_count = (bookData.value.completed_count || 0) + 1
-    } else if (newStatus !== 'completed' && oldStatus === 'completed') {
-      bookData.value.completed_count = Math.max(0, (bookData.value.completed_count || 0) - 1)
-    }
-  }
-  
-  /**
-   * 刷新数据
-   */
-  const refreshData = async () => {
-    if (bookId) {
-      await loadBookDetail(bookId)
-    }
-  }
-  
-  /**
-   * 重置状态
-   */
-  const resetState = () => {
-    bookData.value = {}
-    loading.value = false
-    error.value = null
-    memberCount.value = 0
-  }
-  
   return {
     // 响应式数据
     bookData,
@@ -163,11 +80,6 @@ export function useBookData(bookId = null) {
     memberCount,
     
     // 方法
-    loadBookDetail,
-    deleteBook,
-    createBook,
-    updateLocalStats,
-    refreshData,
-    resetState
+    loadBookDetail
   }
 }
