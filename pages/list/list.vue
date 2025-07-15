@@ -86,11 +86,6 @@
 						</view>
 					</view>
 				</view>
-				
-				<!-- 加载更多 -->
-				<view class="refresh-section" v-if="todoBooks.length > 0">
-					<uni-load-more :status="loadMoreStatus" @clickLoadMore="loadMore" />
-				</view>
 			</view>
 		</view>
 
@@ -155,23 +150,13 @@
 	export default {
 		data() {
 			return {
-				// 新增
 				loading: false,
 				error: null,
 				todoBooks: [],
-				totalCount: 0,
 				searchTimer: null,
-				isFirstLoad: true, // 添加首次加载标识
-				
-				// 保留原有
 				searchKeyword: '',
 				currentBook: null,
-				loadMoreStatus: 'more',
-				
-				// 修改分页相关
-				currentPage: 1,
-				pageSize: 10,
-				hasMore: true
+				loadMoreStatus: 'more'
 			}
 		},
 		computed: {
@@ -208,9 +193,6 @@
 		onPullDownRefresh() {
 			this.refreshTodoBooks()
 		},
-		onReachBottom() {
-			this.loadMore()
-		},
 		onUnload() {
 			// 清理定时器
 			if (this.searchTimer) {
@@ -228,7 +210,6 @@
 				console.log('更新前页面数据条数:', this.todoBooks.length)
 				
 				this.todoBooks = updatedBooks
-				this.totalCount = updatedBooks.length
 				this.loadMoreStatus = 'noMore'
 				
 				console.log('更新后页面数据条数:', this.todoBooks.length)
@@ -247,7 +228,6 @@
 				
 				// 清空当前显示的数据
 				this.todoBooks = []
-				this.totalCount = 0
 				this.loadMoreStatus = 'more'
 				this.loading = false
 				this.error = null
@@ -274,11 +254,7 @@
 					if (cached.success) {
 						console.log('使用缓存数据:', cached.source)
 						this.todoBooks = cached.data
-						this.totalCount = cached.data.length
 						this.loadMoreStatus = 'noMore'
-						
-						// 标记首次加载完成
-						this.isFirstLoad = false
 						return
 					}
 					
@@ -290,9 +266,7 @@
 					})
 					
 					this.todoBooks = books
-					this.totalCount = books.length
 					this.loadMoreStatus = 'noMore'
-					this.isFirstLoad = false
 					
 				} catch (error) {
 					console.error('加载项目册失败:', error)
@@ -307,58 +281,7 @@
 				}
 			},
 
-			// 新增：加载项目册数据
-			async loadTodoBooks(isLoadMore = false) {
-				if (this.loading) return
-				
-				this.loading = true
-				this.error = null
-				
-				try {
-					const todoBooksObj = uniCloud.importObject('todobook-co')
-					
-					const result = await todoBooksObj.getTodoBooks({
-						include_archived: false,
-						page: this.currentPage,
-						pageSize: this.pageSize,
-						keyword: this.searchKeyword
-					})
-					
-					if (result.code === 0) {
-						const { list, pagination } = result.data
-						
-						
-						if (isLoadMore) {
-							this.todoBooks = [...this.todoBooks, ...list]
-						} else {
-							this.todoBooks = list
-						}
-						
-						this.totalCount = pagination.total
-						this.hasMore = pagination.hasMore
-						this.loadMoreStatus = pagination.hasMore ? 'more' : 'noMore'
-					} else {
-						this.error = result.message || '获取数据失败'
-						uni.showToast({
-							title: this.error,
-							icon: 'none'
-						})
-					}
-				} catch (error) {
-					console.error('加载项目册失败:', error)
-					this.error = '网络错误，请重试'
-					uni.showToast({
-						title: '网络错误，请重试',
-						icon: 'none'
-					})
-				} finally {
-					this.loading = false
-					uni.stopPullDownRefresh()
-				}
-			},
-			
-
-			// 修改：刷新数据（强制从云端获取）
+			// 刷新数据（强制从云端获取）
 			async refreshTodoBooks() {
 				try {
 					this.loading = true
@@ -368,10 +291,7 @@
 					const books = await globalStore.todoBook.refreshTodoBooks()
 					
 					this.todoBooks = books
-					this.totalCount = books.length
 					this.loadMoreStatus = 'noMore'
-					this.currentPage = 1
-					this.hasMore = false
 					
 				} catch (error) {
 					console.error('刷新项目册失败:', error)
@@ -386,16 +306,7 @@
 				}
 			},
 
-			// 修改：加载更多
-			async loadMore() {
-				if (!this.hasMore || this.loadMoreStatus === 'loading') return
-				
-				this.loadMoreStatus = 'loading'
-				this.currentPage++
-				await this.loadTodoBooks(true)
-			},
-
-			// 修改：搜索输入处理（添加防抖）
+			// 搜索输入处理（添加防抖）
 			onSearchInput(value) {
 				this.searchKeyword = value
 				// 使用防抖处理
