@@ -140,6 +140,7 @@ onShow(() => {
   }
 })
 
+
 // 下拉刷新
 onPullDownRefresh(async () => {
   if (!bookId) {
@@ -222,6 +223,7 @@ const deleteTask = async (task) => {
       if (res.confirm) {
         try {
           await removeTask(task._id)
+          await loadTasks(bookId)
           uni.showToast({ title: '删除成功', icon: 'success' })
         } catch (error) {
           uni.showToast({ title: '删除失败', icon: 'error' })

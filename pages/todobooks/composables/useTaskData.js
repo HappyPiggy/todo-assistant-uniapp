@@ -62,10 +62,6 @@ export function useTaskData(bookId) {
    * @param {string} id - 项目册ID
    */
   const loadTasks = async (id = bookId) => {
-    console.log('=== useTaskData.loadTasks 开始 ===')
-    console.log('参数 id:', id)
-    console.log('当前 loading.value:', loading.value)
-    
     if (!id) {
       error.value = '项目册ID不能为空'
       return
@@ -76,7 +72,6 @@ export function useTaskData(bookId) {
       return
     }
     
-    console.log('设置 loading = true')
     loading.value = true
     error.value = null
     
@@ -114,10 +109,7 @@ export function useTaskData(bookId) {
         icon: 'none'
       })
     } finally {
-      console.log('=== useTaskData.loadTasks finally ===')
-      console.log('设置 loading = false')
       loading.value = false
-      console.log('loading.value 现在是:', loading.value)
     }
   }
   
@@ -264,8 +256,6 @@ export function useTaskData(bookId) {
       const result = await todoBooksObj.deleteTask(taskId)
       
       if (result.code === API_CODES.SUCCESS) {
-        // 重新加载任务列表
-        await loadTasks(bookId)
         return result
       } else {
         throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
