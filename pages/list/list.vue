@@ -142,7 +142,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
@@ -231,12 +231,11 @@ const loadTodoBooksOptimized = async () => {
 		})
 	} finally {
 		loading.value = false
-		uni.stopPullDownRefresh()
 	}
 }
 
-// 刷新数据
-const refreshTodoBooks = async () => {
+// 刷新数据（用于下拉刷新）
+const refreshTodoBooks = async (isFromPullDown = false) => {
 	try {
 		loading.value = true
 		error.value = null
@@ -254,7 +253,10 @@ const refreshTodoBooks = async () => {
 		})
 	} finally {
 		loading.value = false
-		uni.stopPullDownRefresh()
+		// 只有在下拉刷新时才停止刷新状态
+		if (isFromPullDown) {
+			uni.stopPullDownRefresh()
+		}
 	}
 }
 
@@ -264,17 +266,17 @@ const onSearchInput = (value) => {
 	// 使用防抖处理
 	clearTimeout(searchTimer.value)
 	searchTimer.value = setTimeout(() => {
-		refreshTodoBooks()
+		refreshTodoBooks(false)
 	}, 500)
 }
 
 const onSearchCancel = () => {
 	searchKeyword.value = ''
-	refreshTodoBooks()
+	refreshTodoBooks(false)
 }
 
 const onSearchConfirm = () => {
-	refreshTodoBooks()
+	refreshTodoBooks(false)
 }
 
 // 事件处理方法
@@ -305,14 +307,10 @@ const onUserSwitched = (newUserId) => {
 	}
 }
 
-// 下拉刷新
-const onPullDownRefresh = () => {
-	refreshTodoBooks()
-}
-
-// 导出下拉刷新方法供页面使用
-defineExpose({
-	onPullDownRefresh
+// 注册下拉刷新生命周期
+onPullDownRefresh(() => {
+	console.log('触发下拉刷新')
+	refreshTodoBooks(true)
 })
 
 // 页面导航方法
@@ -397,7 +395,7 @@ const handleArchiveTodoBook = async () => {
 					})
 					
 					// 刷新列表
-					refreshTodoBooks()
+					refreshTodoBooks(false)
 				} catch (err) {
 					console.error('归档失败:', err)
 					uni.showToast({
@@ -436,7 +434,7 @@ const handleDeleteTodoBook = async () => {
 					})
 					
 					// 刷新列表
-					refreshTodoBooks()
+					refreshTodoBooks(false)
 				} catch (err) {
 					uni.hideLoading()
 					console.error('删除失败:', err)
