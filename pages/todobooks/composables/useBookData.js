@@ -168,9 +168,7 @@ export function useBookData() {
     
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBookDetail({ 
-        bookId: todoBooksId 
-      })
+      const result = await todoBookCo.getTodoBookDetail(todoBooksId)
       
       if (result.code === 0) {
         bookData.value = result.data.book || result.data
@@ -210,9 +208,7 @@ export function useBookData() {
     chartLoading.value = true
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBookDetail({ 
-        bookId: todoBooksId
-      })
+      const result = await todoBookCo.getTodoBookDetail(todoBooksId)
       
       if (result.code === 0) {
         const tasks = result.data.tasks || []
