@@ -83,12 +83,6 @@
         }
     },
     {
-        "path": "pages/statistics/overview",
-        "style": {
-            "navigationBarTitleText": "数据统计"
-        }
-    },
-    {
         "path": "pages/debug/debug",
         "style": {
             "navigationBarTitleText": "数据库调试"

@@ -74,7 +74,12 @@
       "Bash(grep -n \"const todoBookActions\" /mnt/d/uni_project/todo-assistant-uniapp/store/index.js -A 30)",
       "Bash(grep -n \"updateTodoBook\" /mnt/d/uni_project/todo-assistant-uniapp/store/index.js -A 20)",
       "Bash(grep -n \"async updateTodoBook\" /mnt/d/uni_project/todo-assistant-uniapp/store/index.js -A 30)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nrefactor: 合并重复的TodoBook操作方法，统一使用useBookData\n\n- 移除useBookForm中重复的saveBook和updateBook方法\n- 统一使用useBookData中的createTodoBook和updateTodoBook\n- 优化edit.vue和create.vue的方法调用和返回值处理\n- 提升代码一致性和可维护性\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nrefactor: 合并重复的TodoBook操作方法，统一使用useBookData\n\n- 移除useBookForm中重复的saveBook和updateBook方法\n- 统一使用useBookData中的createTodoBook和updateTodoBook\n- 优化edit.vue和create.vue的方法调用和返回值处理\n- 提升代码一致性和可维护性\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "WebFetch(domain:github.com)",
+      "Bash(npx n8n-mcp:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp:*)",
+      "Bash(mcp:*)"
     ],
     "deny": []
   }

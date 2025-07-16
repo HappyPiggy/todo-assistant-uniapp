@@ -111,9 +111,7 @@
 				})
 			},
 			toStatistics() {
-				uni.navigateTo({
-					url: '/pages/statistics/overview'
-				})
+				//todo
 			},
 			toAbout() {
 				uni.navigateTo({
