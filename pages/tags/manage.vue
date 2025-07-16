@@ -64,14 +64,14 @@
 					v-for="tag in availableTags" 
 					:key="tag.id"
 					class="tag-item"
-					:class="{ selected: selectedTags.includes(tag.id) }"
+					:class="{ selected: selectedTags.includes(tag.id), 'tap-feedback': tapFeedbackId === tag.id }"
 					:style="{ backgroundColor: tag.color }"
-					@click="toggleTagSelection(tag)">
+					@click="handleTagTap(tag)">
 					<text class="tag-name">{{ tag.name }}</text>
+					<view v-if="selectedTags.includes(tag.id)" class="selected-icon">
+						<uni-icons color="#ffffff" size="16" type="checkmarkempty" />
+					</view>
 					<view class="tag-actions">
-						<view class="edit-btn" @click.stop="handleEditTag(tag)">
-							<uni-icons color="#ffffff" size="14" type="compose" />
-						</view>
 						<view class="delete-btn" @click.stop="deleteTag(tag)">
 							<uni-icons color="#ffffff" size="14" type="trash" />
 						</view>
@@ -91,17 +91,6 @@
 			</button>
 		</view>
 
-		<!-- 编辑标签弹窗 -->
-		<uni-popup ref="editPopup" type="dialog">
-			<uni-popup-dialog 
-				ref="editDialog"
-				title="编辑标签"
-				:placeholder="editingTag.name"
-				:value="editTagName"
-				@confirm="saveEditTag"
-				@close="handleCloseEditDialog">
-			</uni-popup-dialog>
-		</uni-popup>
 	</view>
 </template>
 
@@ -117,8 +106,6 @@ const {
   currentTags,
   selectedTags,
   availableTags,
-  editingTag,
-  editTagName,
   formData,
   colorOptions,
   rules,
@@ -131,17 +118,16 @@ const {
   selectColor,
   createTag,
   toggleTagSelection,
-  editTag,
-  saveEditTag,
   deleteTag,
-  closeEditDialog,
   confirmSelection,
   cancel
 } = useTagManage()
 
 // 模板引用
 const form = ref()
-const editPopup = ref()
+
+// 点击反馈状态
+const tapFeedbackId = ref(null)
 
 // 页面生命周期
 onLoad((options) => {
@@ -153,12 +139,18 @@ const handleCreateTag = () => {
   createTag(form.value)
 }
 
-const handleEditTag = (tag) => {
-  editTag(tag, editPopup.value)
-}
-
-const handleCloseEditDialog = () => {
-  closeEditDialog(editPopup.value)
+// 标签点击处理（带动画反馈）
+const handleTagTap = (tag) => {
+  // 显示点击反馈动画
+  tapFeedbackId.value = tag.id
+  
+  // 触发选择逻辑
+  toggleTagSelection(tag)
+  
+  // 清除动画状态
+  setTimeout(() => {
+    tapFeedbackId.value = null
+  }, 150)
 }
 
 </script>

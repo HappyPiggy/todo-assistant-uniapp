@@ -140,6 +140,17 @@ page {
   margin-bottom: 20rpx;
 }
 
+/* 点击提示动效 */
+@keyframes tapFeedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.tag-item.tap-feedback {
+  animation: tapFeedback 0.15s ease-in-out;
+}
+
 .tags-list {
   flex-direction: row;
   flex-wrap: wrap;
@@ -153,11 +164,31 @@ page {
   border-radius: 20rpx;
   position: relative;
   min-height: 56rpx;
-  border: 2rpx solid transparent;
+  border: 3rpx solid transparent;
+  transition: all 0.2s ease;
+  transform: scale(1);
+}
+
+.tag-item:active {
+  transform: scale(0.95);
 }
 
 .tag-item.selected {
-  border-color: #333333;
+  border-color: #007AFF;
+  box-shadow: 0 0 0 2rpx rgba(0, 122, 255, 0.2);
+  transform: scale(1.02);
+}
+
+.tag-item.selected::after {
+  content: '';
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  width: 24rpx;
+  height: 24rpx;
+  background-color: #007AFF;
+  border-radius: 12rpx;
+  border: 2rpx solid #ffffff;
 }
 
 .tag-name {
@@ -166,6 +197,25 @@ page {
   font-weight: 500;
   margin-right: 8rpx;
   flex: 1;
+  transition: all 0.2s ease;
+}
+
+.tag-item.selected .tag-name {
+  font-weight: 600;
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.3);
+}
+
+.selected-icon {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 20rpx;
+  height: 20rpx;
+  background-color: #007AFF;
+  border-radius: 10rpx;
+  justify-content: center;
+  align-items: center;
+  border: 1rpx solid #ffffff;
 }
 
 .tag-actions {
@@ -173,14 +223,19 @@ page {
   gap: 8rpx;
 }
 
-.edit-btn,
 .delete-btn {
   width: 28rpx;
   height: 28rpx;
   justify-content: center;
   align-items: center;
   border-radius: 14rpx;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 0, 0, 0.6);
+  transition: all 0.2s ease;
+}
+
+.delete-btn:active {
+  background-color: rgba(255, 0, 0, 0.8);
+  transform: scale(0.9);
 }
 
 .empty-tags {
