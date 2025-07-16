@@ -235,12 +235,8 @@ export const useTagManage = () => {
       }
     })
 
-    // 返回数据给上一页
-    const pages = getCurrentPages()
-    const prevPage = pages[pages.length - 2]
-    if (prevPage) {
-      prevPage.$vm.updateTaskTags(selectedTagData)
-    }
+    // 通过事件传递数据给上一页
+    uni.$emit('updateTags', selectedTagData)
 
     uni.navigateBack()
   }

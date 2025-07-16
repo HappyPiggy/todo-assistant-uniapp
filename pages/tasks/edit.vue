@@ -418,6 +418,9 @@ const closeTagDialog = () => {
 	tagPopup.value.close()
 	newTag.value = ''
 }
+
+// 监听标签更新事件
+uni.$on('updateTags', updateTaskTags)
 </script>
 
 <style lang="scss" scoped src="./edit.scss"></style>
