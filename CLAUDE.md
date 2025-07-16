@@ -189,4 +189,4 @@ Since this is a uni-app project, use HBuilderX IDE for development:
 
 ## Development Memories
 
-- 新增vue文件时，需要将scss/css、vue、js的逻辑分离到不同文件。vue文件遵守vue3的开发规范
+- 新增vue文件时，需要将css/scss分离到不同文件，如果template里的样式复杂，需要创建组件来实现。如果逻辑复杂，需要拆分出组合式函数，导出到vue使用。vue文件遵守vue3的开发规范

@@ -7,6 +7,7 @@
       :overall-progress="overallProgress"
       :task-stats="taskStats"
       :member-count="memberCount"
+      @more-actions="handleMoreActions"
     />
     
     <!-- 加载状态 -->
@@ -176,6 +177,34 @@ const getUnreadCommentCount = (task) => {
     console.error('获取未读评论数量失败:', error)
     return 0
   }
+}
+
+const handleMoreActions = () => {
+  uni.showActionSheet({
+    itemList: ['数据统计', '成员管理', '项目设置'],
+    success: function (res) {
+      switch (res.tapIndex) {
+        case 0:
+          // 数据统计
+          uni.navigateTo({
+            url: `/pages/todobooks/statistics?id=${bookId}`
+          })
+          break
+        case 1:
+          // 成员管理
+          uni.navigateTo({
+            url: `/pages/todobooks/members?id=${bookId}`
+          })
+          break
+        case 2:
+          // 项目设置
+          uni.navigateTo({
+            url: `/pages/todobooks/edit?id=${bookId}`
+          })
+          break
+      }
+    }
+  })
 }
 
 const addTask = () => {

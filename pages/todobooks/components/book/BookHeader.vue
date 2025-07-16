@@ -9,6 +9,10 @@
         <text class="book-title">{{ (bookData && bookData.title) || '项目册' }}</text>
         <text class="book-description" v-if="bookData && bookData.description">{{ bookData.description }}</text>
       </view>
+      <!-- 更多操作按钮 -->
+      <view class="actions-button" @click="handleMoreActions">
+        <uni-icons color="#666666" size="20" type="more-filled" />
+      </view>
     </view>
 
     <!-- 进度区域 -->
@@ -44,7 +48,7 @@
 </template>
 
 <script setup>
-import { defineProps, watchEffect } from 'vue'
+import { defineProps, defineEmits, watchEffect } from 'vue'
 
 const props = defineProps({
   bookData: {
@@ -64,6 +68,13 @@ const props = defineProps({
     default: 0
   }
 })
+
+const emit = defineEmits(['more-actions'])
+
+// 处理更多操作按钮点击
+const handleMoreActions = () => {
+  emit('more-actions')
+}
 
 // 监听 bookData 变化，添加调试日志
 watchEffect(() => {
@@ -165,5 +176,22 @@ watchEffect(() => {
 .stat-label {
   font-size: $font-size-sm;
   color: $text-tertiary;
+}
+
+.actions-button {
+  width: 40rpx;
+  height: 40rpx;
+  @include flex-center;
+  border-radius: $border-radius-small;
+  margin-left: $margin-sm;
+  transition: background-color $transition-base;
+  
+  &:hover {
+    background-color: $gray-100;
+  }
+  
+  &:active {
+    background-color: $gray-200;
+  }
 }
 </style>
