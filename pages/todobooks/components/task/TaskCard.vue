@@ -12,7 +12,17 @@
             :type="task.expanded ? 'arrowdown' : 'arrowright'" />
         </view>
         <view class="task-content">
-          <text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
+          <view class="title-row">
+            <text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text><view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0"><view 
+                v-for="(tag, index) in task.tags.slice(0, 2)" 
+                :key="getTagKey(tag, index)" 
+                class="tag-item"
+                :style="{ backgroundColor: getTagColor(tag) }">
+                <text class="tag-text">{{ getTagName(tag) }}</text>
+              </view>
+              <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+            </view>
+          </view>
           <text class="task-description" v-if="task.description">{{ task.description }}</text>
         </view>
       </view>
@@ -53,16 +63,6 @@
           <uni-icons color="#ff9800" size="14" type="chatbubble" />
           <text class="comment-count">{{ unreadCommentCount }}</text>
         </view>
-      </view>
-      <view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
-        <view 
-          v-for="(tag, index) in task.tags.slice(0, 2)" 
-          :key="getTagKey(tag, index)" 
-          class="tag-item"
-          :style="{ backgroundColor: getTagColor(tag) }">
-          <text class="tag-text">{{ getTagName(tag) }}</text>
-        </view>
-        <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
       </view>
     </view>
 
@@ -119,7 +119,6 @@ const emit = defineEmits([
 const hasMetaInfo = computed(() => {
   return props.task.due_date || 
          props.task.subtask_count > 0 || 
-         (props.task.tags && props.task.tags.length > 0) || 
          props.unreadCommentCount > 0
 })
 
@@ -267,13 +266,19 @@ const getTagColor = (tag) => {
   flex: 1;
 }
 
+.title-row {
+  @include flex-start;
+  align-items: flex-start;
+  gap: $margin-xs;
+  margin-bottom: $margin-xs;
+  flex-wrap: wrap;
+}
+
 .task-title {
   font-size: $font-size-lg;
   color: $text-primary;
   font-weight: $font-weight-medium;
   line-height: $line-height-base;
-  margin-bottom: $margin-xs;
-  display: block;
   
   &.completed {
     color: $text-tertiary;
@@ -281,6 +286,30 @@ const getTagColor = (tag) => {
     text-decoration: line-through;
     /* #endif */
   }
+}
+
+.task-tags {
+  @include flex-start;
+  gap: $margin-xs;
+  flex-shrink: 0;
+}
+
+.tag-item {
+  padding: 4rpx 8rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  @include flex-center;
+}
+
+.tag-text {
+  font-size: $font-size-xs;
+  color: #ffffff;
+  font-weight: $font-weight-medium;
+}
+
+.more-tags {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
 }
 
 .task-description {
@@ -344,28 +373,6 @@ const getTagColor = (tag) => {
   text-align: center;
 }
 
-.task-tags {
-  @include flex-start;
-  gap: $margin-xs;
-}
-
-.tag-item {
-  padding: 6rpx 12rpx;
-  border-radius: 12rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.3);
-  @include flex-center;
-}
-
-.tag-text {
-  font-size: $font-size-xs;
-  color: #ffffff;
-  font-weight: $font-weight-medium;
-}
-
-.more-tags {
-  font-size: $font-size-xs;
-  color: $text-tertiary;
-}
 
 .subtasks-container {
   margin-top: $margin-sm;

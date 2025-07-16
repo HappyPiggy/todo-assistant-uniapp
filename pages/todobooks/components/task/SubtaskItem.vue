@@ -11,7 +11,17 @@
         <text class="priority-text">{{ getPriorityText(subtask.priority) }}</text>
       </view>
       <view class="subtask-content">
-        <text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text>
+        <view class="subtask-title-row">
+          <text class="subtask-title" :class="{ completed: subtask.status === 'completed' }">{{ subtask.title }}</text><view class="subtask-tags" v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0"><view 
+              v-for="(tag, index) in subtask.tags.slice(0, 2)" 
+              :key="getTagKey(tag, index)" 
+              class="subtask-tag-item"
+              :style="{ backgroundColor: getTagColor(tag) }">
+              <text class="subtask-tag-text">{{ getTagName(tag) }}</text>
+            </view>
+            <text v-if="subtask.tags.length > 2" class="subtask-more-tags">+{{ subtask.tags.length - 2 }}</text>
+          </view>
+        </view>
         <text class="subtask-description" v-if="subtask.description">{{ subtask.description }}</text>
         <!-- 子任务未读评论提醒 -->
         <view v-if="unreadCommentCount > 0" class="subtask-comment-hint">
@@ -103,6 +113,28 @@ const handleTouchMove = (event) => {
 const handleTouchEnd = (event) => {
   emit('touchEnd', event)
 }
+
+// 标签相关方法
+const getTagKey = (tag, index) => {
+  if (typeof tag === 'object' && tag.id) {
+    return tag.id
+  }
+  return index
+}
+
+const getTagName = (tag) => {
+  if (typeof tag === 'object' && tag.name) {
+    return tag.name
+  }
+  return tag // 兼容旧格式的字符串标签
+}
+
+const getTagColor = (tag) => {
+  if (typeof tag === 'object' && tag.color) {
+    return tag.color
+  }
+  return '#E5E5E5' // 默认灰色，兼容旧格式
+}
 </script>
 
 <style lang="scss" scoped>
@@ -184,11 +216,17 @@ const handleTouchEnd = (event) => {
   flex: 1;
 }
 
+.subtask-title-row {
+  @include flex-start;
+  align-items: flex-start;
+  gap: $margin-xs;
+  margin-bottom: 4rpx;
+  flex-wrap: wrap;
+}
+
 .subtask-title {
   font-size: $font-size-base;
   color: $text-primary;
-  margin-bottom: 4rpx;
-  display: block;
   
   &.completed {
     color: $text-tertiary;
@@ -196,6 +234,30 @@ const handleTouchEnd = (event) => {
     text-decoration: line-through;
     /* #endif */
   }
+}
+
+.subtask-tags {
+  @include flex-start;
+  gap: $margin-xs;
+  flex-shrink: 0;
+}
+
+.subtask-tag-item {
+  padding: 2rpx 6rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  @include flex-center;
+}
+
+.subtask-tag-text {
+  font-size: $font-size-xs;
+  color: #ffffff;
+  font-weight: $font-weight-medium;
+}
+
+.subtask-more-tags {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
 }
 
 .subtask-description {
