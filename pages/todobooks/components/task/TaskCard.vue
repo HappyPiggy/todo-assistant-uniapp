@@ -55,8 +55,12 @@
         </view>
       </view>
       <view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
-        <view v-for="tag in task.tags.slice(0, 2)" :key="tag" class="tag-item">
-          <text class="tag-text">{{ tag }}</text>
+        <view 
+          v-for="(tag, index) in task.tags.slice(0, 2)" 
+          :key="getTagKey(tag, index)" 
+          class="tag-item"
+          :style="{ backgroundColor: getTagColor(tag) }">
+          <text class="tag-text">{{ getTagName(tag) }}</text>
         </view>
         <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
       </view>
@@ -153,6 +157,28 @@ const handleSubtaskTouchMove = (event) => {
 
 const handleSubtaskTouchEnd = (event) => {
   emit('subtaskTouchEnd', event)
+}
+
+// 标签相关方法
+const getTagKey = (tag, index) => {
+  if (typeof tag === 'object' && tag.id) {
+    return tag.id
+  }
+  return index
+}
+
+const getTagName = (tag) => {
+  if (typeof tag === 'object' && tag.name) {
+    return tag.name
+  }
+  return tag // 兼容旧格式的字符串标签
+}
+
+const getTagColor = (tag) => {
+  if (typeof tag === 'object' && tag.color) {
+    return tag.color
+  }
+  return '#E5E5E5' // 默认灰色，兼容旧格式
 }
 </script>
 
@@ -324,11 +350,16 @@ const handleSubtaskTouchEnd = (event) => {
 }
 
 .tag-item {
-  @include tag-style($gray-200, $text-secondary);
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  @include flex-center;
 }
 
 .tag-text {
   font-size: $font-size-xs;
+  color: #ffffff;
+  font-weight: $font-weight-medium;
 }
 
 .more-tags {

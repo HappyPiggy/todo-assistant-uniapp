@@ -79,10 +79,35 @@
 		"tags": {
 			"bsonType": "array",
 			"items": {
-				"bsonType": "string",
-				"maxLength": 20
+				"anyOf": [
+					{
+						"bsonType": "string",
+						"maxLength": 20
+					},
+					{
+						"bsonType": "object",
+						"properties": {
+							"id": {
+								"bsonType": "string",
+								"description": "标签唯一标识"
+							},
+							"name": {
+								"bsonType": "string",
+								"maxLength": 5,
+								"description": "标签名称"
+							},
+							"color": {
+								"bsonType": "string",
+								"pattern": "^#[0-9A-Fa-f]{6}$",
+								"description": "标签颜色，十六进制格式"
+							}
+						},
+						"required": ["id", "name", "color"],
+						"additionalProperties": false
+					}
+				]
 			},
-			"description": "标签列表"
+			"description": "标签列表，支持字符串格式（兼容）和对象格式（新版）"
 		},
 		"sort_order": {
 			"bsonType": "int",

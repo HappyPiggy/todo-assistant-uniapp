@@ -114,13 +114,17 @@
 			</view>
 
 			<!-- 标签 -->
-			<view class="tags-section" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
+			<view class="tags-section">
 				<view class="section-header">
 					<text class="section-title">标签</text>
 				</view>
-				<view class="tags-list">
-					<view v-for="tag in task.tags" :key="tag" class="tag-item">
-						<text class="tag-text">{{ tag }}</text>
+				<view v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" class="tags-list">
+					<view 
+						v-for="(tag, index) in task.tags" 
+						:key="getTagKey(tag, index)" 
+						class="tag-item"
+						:style="{ backgroundColor: getTagColor(tag) }">
+						<text class="tag-text">{{ getTagName(tag) }}</text>
 					</view>
 				</view>
 			</view>
@@ -401,6 +405,7 @@
 					const result = await todoBooksObj.getTaskDetail(this.taskId)
 					
 					if (result.code === 0) {
+						console.log('任务详情数据:', JSON.stringify(result.data.task, null, 2))
 						this.task = result.data.task
 						this.subtasks = result.data.subtasks || []
 						
@@ -925,6 +930,28 @@
 				} else {
 					return time.toLocaleDateString()
 				}
+			},
+
+			// 标签相关方法
+			getTagKey(tag, index) {
+				if (typeof tag === 'object' && tag.id) {
+					return tag.id
+				}
+				return index
+			},
+
+			getTagName(tag) {
+				if (typeof tag === 'object' && tag.name) {
+					return tag.name
+				}
+				return tag // 兼容旧格式的字符串标签
+			},
+
+			getTagColor(tag) {
+				if (typeof tag === 'object' && tag.color) {
+					return tag.color
+				}
+				return '#f0f6ff' // 默认颜色，兼容旧格式
 			}
 		}
 	}
@@ -965,6 +992,7 @@
 	.description-section,
 	.attributes-section,
 	.tags-section,
+	.debug-section,
 	.subtasks-section,
 	.comments-section {
 		background-color: #ffffff;
@@ -1175,12 +1203,13 @@
 		background-color: #f0f6ff;
 		padding: 12rpx 20rpx;
 		border-radius: 20rpx;
-		border: 1rpx solid #e6f3ff;
+		border: 1rpx solid rgba(255, 255, 255, 0.3);
 	}
 
 	.tag-text {
 		font-size: 26rpx;
-		color: #007AFF;
+		color: #ffffff;
+		font-weight: 500;
 	}
 
 	/* 子任务区域 */
@@ -1584,5 +1613,25 @@
 	.confirm-btn .btn-text {
 		color: #ffffff;
 		font-weight: 500;
+	}
+
+	/* 调试信息样式 */
+	.debug-text {
+		font-size: 24rpx;
+		color: #666666;
+		margin-bottom: 8rpx;
+		line-height: 1.4;
+		white-space: pre-wrap;
+	}
+
+	/* 空标签状态 */
+	.empty-tags {
+		padding: 20rpx;
+		text-align: center;
+	}
+
+	.empty-text {
+		font-size: 26rpx;
+		color: #999999;
 	}
 </style>

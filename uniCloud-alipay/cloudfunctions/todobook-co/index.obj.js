@@ -13,6 +13,7 @@ const {
 const {
   createTodoItem,
   getTaskDetail,
+  updateTodoItem,
   updateTodoItemStatus,
   updateTaskOrder,
   deleteTask
@@ -65,6 +66,8 @@ module.exports = {
   // 任务管理接口
   createTodoItem,
   getTaskDetail,
+  getTodoItemDetail: getTaskDetail, // 别名，保持兼容性
+  updateTodoItem,
   updateTodoItemStatus,
   updateTaskOrder,
   deleteTask,

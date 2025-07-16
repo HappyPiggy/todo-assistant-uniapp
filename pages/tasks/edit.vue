@@ -65,25 +65,26 @@
 			<view class="form-section">
 				<view class="section-header">
 					<text class="section-title">分类标签</text>
-					<view class="add-tag-btn" @click="showAddTag">
+					<view class="add-tag-btn" @click="openTagManager">
 						<uni-icons color="#007AFF" size="18" type="plus" />
-						<text class="add-tag-text">添加</text>
+						<text class="add-tag-text">管理</text>
 					</view>
 				</view>
 
 				<view class="tags-container" v-if="formData.tags.length > 0">
 					<view 
 						v-for="(tag, index) in formData.tags" 
-						:key="index"
-						class="tag-item">
-						<text class="tag-text">{{ tag }}</text>
+						:key="getTagKey(tag, index)"
+						class="tag-item"
+						:style="{ backgroundColor: getTagColor(tag) }">
+						<text class="tag-text">{{ getTagName(tag) }}</text>
 						<view class="remove-tag" @click="removeTag(index)">
-							<uni-icons color="#999999" size="14" type="clear" />
+							<uni-icons color="#ffffff" size="14" type="clear" />
 						</view>
 					</view>
 				</view>
 				<view v-else class="empty-tags">
-					<text class="empty-text">暂无标签，点击右上角添加</text>
+					<text class="empty-text">暂无标签，点击右上角管理</text>
 				</view>
 			</view>
 
@@ -353,6 +354,43 @@
 				return JSON.stringify(this.formData) !== JSON.stringify(this.originalData)
 			},
 
+			openTagManager() {
+				// 跳转到标签管理页面
+				const currentTagsStr = encodeURIComponent(JSON.stringify(this.formData.tags))
+				uni.navigateTo({
+					url: `/pages/tags/manage?taskId=${this.taskId}&bookId=${this.bookId}&currentTags=${currentTagsStr}`
+				})
+			},
+
+			// 从标签管理页面返回时调用
+			updateTaskTags(selectedTags) {
+				this.formData.tags = selectedTags
+			},
+
+			// 获取标签的唯一key
+			getTagKey(tag, index) {
+				if (typeof tag === 'object' && tag.id) {
+					return tag.id
+				}
+				return index
+			},
+
+			// 获取标签名称
+			getTagName(tag) {
+				if (typeof tag === 'object' && tag.name) {
+					return tag.name
+				}
+				return tag // 兼容旧格式的字符串标签
+			},
+
+			// 获取标签颜色
+			getTagColor(tag) {
+				if (typeof tag === 'object' && tag.color) {
+					return tag.color
+				}
+				return '#f0f6ff' // 默认颜色，兼容旧格式
+			},
+
 			showAddTag() {
 				this.newTag = ''
 				this.$refs.tagPopup.open()
@@ -504,13 +542,14 @@
 		background-color: #f0f6ff;
 		padding: 12rpx 16rpx;
 		border-radius: 20rpx;
-		border: 1rpx solid #e6f3ff;
+		border: 1rpx solid rgba(255, 255, 255, 0.3);
 	}
 
 	.tag-text {
 		font-size: 26rpx;
-		color: #007AFF;
+		color: #ffffff;
 		margin-right: 8rpx;
+		font-weight: 500;
 	}
 
 	.remove-tag {

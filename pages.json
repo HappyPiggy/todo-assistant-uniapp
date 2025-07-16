@@ -77,6 +77,12 @@
         }
     },
     {
+        "path": "pages/tags/manage",
+        "style": {
+            "navigationBarTitleText": "标签管理"
+        }
+    },
+    {
         "path": "pages/statistics/overview",
         "style": {
             "navigationBarTitleText": "数据统计"

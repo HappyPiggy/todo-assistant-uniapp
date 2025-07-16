@@ -15,7 +15,6 @@ const { getDatabase } = require('./auth')
 async function checkTodoBookPermission(context, userId, todoBookId, permission) {
   const db = getDatabase(context)
   
-  console.log("checkTodoBookPermission",todoBookId, userId)
   try {
     // 检查是否是项目册创建者
     const bookResult = await db.collection('todobooks')
