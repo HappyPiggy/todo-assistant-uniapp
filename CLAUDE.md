@@ -186,3 +186,7 @@ Since this is a uni-app project, use HBuilderX IDE for development:
 
 - 回答使用中文
 - 专属词、特定词不用翻译（如：uni-app, Vue, TodoBook, Cloud Functions 等技术术语保持英文）
+
+## Development Memories
+
+- 新增vue文件时，需要将scss/css、vue、js的逻辑分离到不同文件。vue文件遵守vue3的开发规范

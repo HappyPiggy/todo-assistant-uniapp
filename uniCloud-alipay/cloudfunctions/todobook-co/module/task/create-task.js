@@ -37,7 +37,9 @@ async function createTodoItem(itemData) {
     description = '', 
     parent_id = null,
     priority = TASK_PRIORITY.MEDIUM,
-    due_date = null
+    due_date = null,
+    tags = [],
+    estimated_hours = 0
   } = itemData
   
   // 验证任务标题
@@ -66,11 +68,11 @@ async function createTodoItem(itemData) {
       due_date: due_date ? new Date(due_date) : null,
       status: TASK_STATUS.TODO,
       priority,
-      tags: [],
+      tags: tags || [],
       sort_order: 0,
       level: parent_id ? 1 : 0,
       progress: 0,
-      estimated_hours: 0,
+      estimated_hours: typeof estimated_hours === 'number' ? estimated_hours : 0,
       actual_hours: 0,
       attachments: [],
       comments: [],

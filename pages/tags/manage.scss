@@ -1,0 +1,260 @@
+/* #ifndef APP-NVUE */
+view {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+
+page {
+  background-color: #f5f5f5;
+}
+/* #endif*/
+
+.tag-manage {
+  flex: 1;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  padding-bottom: 140rpx;
+}
+
+.header {
+  background-color: #ffffff;
+  padding: 40rpx 30rpx 30rpx;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  color: #333333;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.subtitle {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+/* 表单区域 */
+.form-section {
+  background-color: #ffffff;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  color: #333333;
+  font-weight: 500;
+  margin-bottom: 20rpx;
+}
+
+.section-subtitle {
+  font-size: 26rpx;
+  color: #666666;
+  margin-bottom: 20rpx;
+}
+
+/* 颜色选择器 */
+.color-picker {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  padding: 20rpx 0;
+}
+
+.color-item {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 30rpx;
+  justify-content: center;
+  align-items: center;
+  border: 3rpx solid transparent;
+  transition: all 0.3s ease;
+}
+
+.color-item.active {
+  border-color: #333333;
+  transform: scale(1.1);
+}
+
+/* 预览区域 */
+.preview-section {
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.preview-label {
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 16rpx;
+}
+
+.tag-preview {
+  align-self: flex-start;
+  padding: 12rpx 20rpx;
+  border-radius: 20rpx;
+}
+
+.tag-preview-text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* 按钮 */
+.form-buttons {
+  margin-top: 30rpx;
+}
+
+.create-btn {
+  width: 100%;
+  height: 88rpx;
+  background-color: #007AFF;
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  border: none;
+  /* #ifndef APP-NVUE */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* #endif */
+}
+
+.create-btn:disabled {
+  background-color: #cccccc;
+}
+
+.create-btn:active:not(:disabled) {
+  background-color: #0056CC;
+}
+
+/* 标签列表区域 */
+.tags-section {
+  background-color: #ffffff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.tags-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.tag-item {
+  flex-direction: row;
+  align-items: center;
+  padding: 12rpx 16rpx;
+  border-radius: 20rpx;
+  position: relative;
+  min-height: 56rpx;
+  border: 2rpx solid transparent;
+}
+
+.tag-item.selected {
+  border-color: #333333;
+}
+
+.tag-name {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: 500;
+  margin-right: 8rpx;
+  flex: 1;
+}
+
+.tag-actions {
+  flex-direction: row;
+  gap: 8rpx;
+}
+
+.edit-btn,
+.delete-btn {
+  width: 28rpx;
+  height: 28rpx;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14rpx;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.empty-tags {
+  padding: 60rpx 20rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+/* 底部按钮 */
+.bottom-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  padding: 30rpx;
+  flex-direction: row;
+  gap: 20rpx;
+  /* #ifndef APP-NVUE */
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  /* #endif */
+}
+
+.cancel-btn {
+  flex: 1;
+  height: 88rpx;
+  background-color: #f8f8f8;
+  color: #666666;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  border: none;
+  /* #ifndef APP-NVUE */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* #endif */
+}
+
+.cancel-btn:active {
+  background-color: #e8e8e8;
+}
+
+.confirm-btn {
+  flex: 2;
+  height: 88rpx;
+  background-color: #007AFF;
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  border: none;
+  /* #ifndef APP-NVUE */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* #endif */
+}
+
+.confirm-btn:disabled {
+  background-color: #cccccc;
+}
+
+.confirm-btn:active:not(:disabled) {
+  background-color: #0056CC;
+}
+
+/* 安全区域适配 */
+/* #ifndef APP-NVUE */
+.bottom-actions {
+  padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+}
+/* #endif */

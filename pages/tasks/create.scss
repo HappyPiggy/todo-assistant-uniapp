@@ -1,0 +1,217 @@
+/* #ifndef APP-NVUE */
+view {
+	display: flex;
+	box-sizing: border-box;
+	flex-direction: column;
+}
+
+page {
+	background-color: #f5f5f5;
+}
+/* #endif*/
+
+.create-task {
+	flex: 1;
+	background-color: #f5f5f5;
+	min-height: 100vh;
+	padding-bottom: 140rpx;
+}
+
+/* 表单区域 */
+.form-section {
+	background-color: #ffffff;
+	margin-bottom: 20rpx;
+	padding: 0 20rpx 20rpx;
+}
+
+.section-header {
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 30rpx 0 20rpx;
+	border-bottom: 1rpx solid #f0f0f0;
+	margin-bottom: 20rpx;
+}
+
+.section-title {
+	font-size: 32rpx;
+	color: #333333;
+	font-weight: 500;
+}
+
+.add-tag-btn {
+	flex-direction: row;
+	align-items: center;
+	background-color: #f0f6ff;
+	padding: 12rpx 20rpx;
+	border-radius: 20rpx;
+}
+
+.add-tag-btn:active {
+	background-color: #e6f3ff;
+}
+
+.add-tag-text {
+	font-size: 26rpx;
+	color: #007AFF;
+	margin-left: 6rpx;
+}
+
+/* 表单项样式 */
+/* #ifndef APP-NVUE */
+.form-section ::v-deep .uni-forms-item {
+	padding: 20rpx 0;
+	border-bottom: 1rpx solid #f0f0f0;
+}
+
+.form-section ::v-deep .uni-forms-item:last-child {
+	border-bottom: none;
+}
+
+.form-section ::v-deep .uni-forms-item__label {
+	font-size: 30rpx;
+	color: #333333;
+	font-weight: 500;
+	margin-bottom: 16rpx;
+}
+
+.form-section ::v-deep .uni-easyinput__content {
+	border: 1rpx solid #e5e5e5;
+	border-radius: 12rpx;
+	background-color: #fafafa;
+}
+
+.form-section ::v-deep .uni-easyinput__content-input {
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #333333;
+}
+
+.form-section ::v-deep .uni-easyinput__content-textarea {
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #333333;
+	min-height: 200rpx;
+}
+
+.form-section ::v-deep .uni-data-picker,
+.form-section ::v-deep .uni-datetime-picker {
+	border: 1rpx solid #e5e5e5;
+	border-radius: 12rpx;
+	background-color: #fafafa;
+}
+
+.form-section ::v-deep .uni-data-picker__input-text,
+.form-section ::v-deep .uni-datetime-picker__input-text {
+	padding: 20rpx 24rpx;
+	font-size: 28rpx;
+	color: #333333;
+}
+/* #endif */
+
+/* 标签容器 */
+.tags-container {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 16rpx;
+	padding: 20rpx 0;
+}
+
+.tag-item {
+	flex-direction: row;
+	align-items: center;
+	background-color: #f0f6ff;
+	padding: 12rpx 16rpx;
+	border-radius: 20rpx;
+	border: 1rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.tag-text {
+	font-size: 26rpx;
+	color: #ffffff;
+	margin-right: 8rpx;
+	font-weight: 500;
+}
+
+.remove-tag {
+	width: 24rpx;
+	height: 24rpx;
+	justify-content: center;
+	align-items: center;
+}
+
+.empty-tags {
+	padding: 40rpx 20rpx;
+	align-items: center;
+	justify-content: center;
+}
+
+.empty-text {
+	font-size: 26rpx;
+	color: #999999;
+}
+
+/* 底部按钮 */
+.button-section {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background-color: #ffffff;
+	padding: 30rpx;
+	flex-direction: row;
+	gap: 20rpx;
+	/* #ifndef APP-NVUE */
+	box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+	/* #endif */
+}
+
+.cancel-btn {
+	flex: 1;
+	height: 88rpx;
+	background-color: #f8f8f8;
+	color: #666666;
+	border-radius: 16rpx;
+	font-size: 32rpx;
+	border: none;
+	/* #ifndef APP-NVUE */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* #endif */
+}
+
+.cancel-btn:active {
+	background-color: #e8e8e8;
+}
+
+.create-btn {
+	flex: 2;
+	height: 88rpx;
+	background-color: #007AFF;
+	color: #ffffff;
+	border-radius: 16rpx;
+	font-size: 32rpx;
+	font-weight: 500;
+	border: none;
+	/* #ifndef APP-NVUE */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* #endif */
+}
+
+.create-btn:active {
+	background-color: #0056CC;
+}
+
+.create-btn[loading] {
+	background-color: #cccccc;
+}
+
+/* 安全区域适配 */
+/* #ifndef APP-NVUE */
+.button-section {
+	padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+}
+/* #endif */
