@@ -1,19 +1,47 @@
 <template>
-  <view class="task-card" :class="{ 'completed': task.status === 'completed' }" @click="handleTaskClick">
+  <view 
+    class="task-item"
+    :class="{ 
+      'task-item--card': variant === 'card',
+      'task-item--item': variant === 'item',
+      'task-item--completed': task.status === 'completed',
+      'task-item--dragging': isDragging
+    }"
+    :style="{ marginLeft: level > 0 ? (level * 40) + 'rpx' : '0' }"
+    @click="handleClick"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd">
+    
+    <!-- 主要内容区域 -->
     <view class="task-header">
       <view class="task-left">
+        <!-- 优先级标签 -->
         <view class="task-priority" :class="task.priority">
           <text class="priority-text">{{ getPriorityText(task.priority) }}</text>
         </view>
-        <view class="task-expand" v-if="task.subtask_count > 0">
+        
+        <!-- 展开/收起按钮（仅card模式且有子任务时显示） -->
+        <view 
+          v-if="variant === 'card' && task.subtask_count > 0" 
+          class="task-expand">
           <uni-icons 
             color="#666666" 
             size="16" 
             :type="task.expanded ? 'arrowdown' : 'arrowright'" />
         </view>
+        
+        <!-- 任务内容 -->
         <view class="task-content">
           <view class="title-row">
-            <text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text><view class="task-tags" v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0"><view 
+            <text class="task-title" :class="{ completed: task.status === 'completed' }">
+              {{ task.title }}
+            </text>
+            <!-- 标签 -->
+            <view 
+              v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
+              class="task-tags">
+              <view 
                 v-for="(tag, index) in task.tags.slice(0, 2)" 
                 :key="getTagKey(tag, index)" 
                 class="tag-item"
@@ -23,42 +51,65 @@
               <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
             </view>
           </view>
-          <text class="task-description" v-if="task.description">{{ task.description }}</text>
+          
+          <!-- 描述 -->
+          <text v-if="task.description" class="task-description">{{ task.description }}</text>
+          
+          <!-- 评论提醒（item模式） -->
+          <view 
+            v-if="variant === 'item' && unreadCommentCount > 0" 
+            class="comment-hint comment-hint--item">
+            <uni-icons color="#ff9800" size="12" type="chatbubble" />
+            <text class="comment-count">{{ unreadCommentCount }}</text>
+          </view>
         </view>
       </view>
+      
+      <!-- 右侧操作区 -->
       <view class="task-right">
-        <view class="task-status" v-if="task.subtask_count === 0" @click.stop="handleStatusToggle">
+        <!-- 状态切换（仅在没有子任务或item模式时显示） -->
+        <view 
+          v-if="task.subtask_count === 0 || variant === 'item'"
+          class="task-status" 
+          @click.stop="handleStatusToggle">
           <uni-icons 
             v-if="task.status === 'completed'"
             color="#28a745" 
-            size="28" 
+            :size="variant === 'card' ? 28 : 24" 
             type="checkmarkempty" />
           <uni-icons 
             v-else
             color="#cccccc" 
-            size="28" 
+            :size="variant === 'card' ? 28 : 24" 
             type="circle" />
         </view>
+        
+        <!-- 更多操作按钮 -->
         <view class="task-detail-btn" @click.stop="handleMenuClick">
           <uni-icons 
             color="#999999" 
-            size="20" 
+            :size="variant === 'card' ? 20 : 18" 
             type="more-filled" />
         </view>
       </view>
     </view>
 
-    <view class="task-meta" v-if="hasMetaInfo">
+    <!-- 元数据区域（仅card模式） -->
+    <view v-if="variant === 'card' && hasMetaInfo" class="task-meta">
       <view class="meta-left">
-        <view class="due-date" v-if="task.due_date" :class="{ overdue: isOverdue(task.due_date) }">
+        <!-- 到期日期 -->
+        <view v-if="task.due_date" class="due-date" :class="{ overdue: isOverdue(task.due_date) }">
           <uni-icons color="#999999" size="14" type="calendar" />
           <text class="due-text">{{ formatDueDate(task.due_date) }}</text>
         </view>
-        <view class="subtasks" v-if="task.subtask_count > 0">
+        
+        <!-- 子任务进度 -->
+        <view v-if="task.subtask_count > 0" class="subtasks">
           <uni-icons color="#999999" size="14" type="list" />
           <text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
         </view>
-        <!-- 未读评论提醒 -->
+        
+        <!-- 评论提醒 -->
         <view v-if="unreadCommentCount > 0" class="comment-hint">
           <uni-icons color="#ff9800" size="14" type="chatbubble" />
           <text class="comment-count">{{ unreadCommentCount }}</text>
@@ -66,18 +117,23 @@
       </view>
     </view>
 
-    <!-- 子任务列表 -->
-    <view v-if="task.expanded && task.subtasks && task.subtasks.length > 0" class="subtasks-container">
-      <SubtaskItem
+    <!-- 子任务列表（仅card模式） -->
+    <view 
+      v-if="variant === 'card' && task.expanded && task.subtasks && task.subtasks.length > 0" 
+      class="subtasks-container">
+      <TaskItem
         v-for="(subtask, index) in task.subtasks"
         :key="subtask._id"
-        :subtask="subtask"
+        :task="subtask"
+        :variant="'item'"
+        :level="level + 1"
         :index="index"
         :parentTask="task"
-        :currentUserId="currentUserId.value"
+        :isDragging="isDragging"
+        :unreadCommentCount="getSubtaskUnreadCount(subtask)"
+        @click="handleSubtaskClick"
         @statusToggle="handleSubtaskStatusToggle"
         @menuClick="handleSubtaskMenuClick"
-        @click="handleSubtaskClick"
         @touchStart="handleSubtaskTouchStart"
         @touchMove="handleSubtaskTouchMove"
         @touchEnd="handleSubtaskTouchEnd"
@@ -89,7 +145,6 @@
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
 import { currentUserId } from '@/store/storage.js'
-import SubtaskItem from './SubtaskItem.vue'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
 
@@ -98,22 +153,43 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  variant: {
+    type: String,
+    default: 'card',
+    validator: (value) => ['card', 'item'].includes(value)
+  },
+  level: {
+    type: Number,
+    default: 0
+  },
+  index: {
+    type: Number,
+    default: 0
+  },
+  parentTask: {
+    type: Object,
+    default: null
+  },
+  isDragging: {
+    type: Boolean,
+    default: false
+  },
   unreadCommentCount: {
     type: Number,
     default: 0
-  }
+  },
 })
 
 const emit = defineEmits([
-  'taskClick',
+  'click',
   'statusToggle', 
   'menuClick',
   'subtaskStatusToggle',
   'subtaskMenuClick',
   'subtaskClick',
-  'subtaskTouchStart',
-  'subtaskTouchMove',
-  'subtaskTouchEnd'
+  'touchStart',
+  'touchMove',
+  'touchEnd'
 ])
 
 const hasMetaInfo = computed(() => {
@@ -122,8 +198,8 @@ const hasMetaInfo = computed(() => {
          props.unreadCommentCount > 0
 })
 
-const handleTaskClick = () => {
-  emit('taskClick', props.task)
+const handleClick = () => {
+  emit('click', props.task)
 }
 
 const handleStatusToggle = () => {
@@ -146,16 +222,44 @@ const handleSubtaskClick = (subtask) => {
   emit('subtaskClick', subtask)
 }
 
+const handleTouchStart = (event) => {
+  if (!event) return
+  if (props.variant === 'item') {
+    emit('touchStart', props.task, props.index, props.parentTask, event)
+  } else {
+    emit('touchStart', props.task, 0, null, event)
+  }
+}
+
+const handleTouchMove = (event) => {
+  if (!event) return
+  emit('touchMove', event)
+}
+
+const handleTouchEnd = (event) => {
+  if (!event) return
+  emit('touchEnd', event)
+}
+
 const handleSubtaskTouchStart = (subtask, index, parentTask, event) => {
-  emit('subtaskTouchStart', subtask, index, parentTask, event)
+  if (!event) return
+  emit('touchStart', subtask, index, parentTask, event)
 }
 
 const handleSubtaskTouchMove = (event) => {
-  emit('subtaskTouchMove', event)
+  if (!event) return
+  emit('touchMove', event)
 }
 
 const handleSubtaskTouchEnd = (event) => {
-  emit('subtaskTouchEnd', event)
+  if (!event) return
+  emit('touchEnd', event)
+}
+
+// 获取子任务未读评论数
+const getSubtaskUnreadCount = (subtask) => {
+  // 这里可以根据实际需求实现子任务未读评论数的计算
+  return 0
 }
 
 // 标签相关方法
@@ -170,42 +274,119 @@ const getTagName = (tag) => {
   if (typeof tag === 'object' && tag.name) {
     return tag.name
   }
-  return tag // 兼容旧格式的字符串标签
+  return tag
 }
 
 const getTagColor = (tag) => {
   if (typeof tag === 'object' && tag.color) {
     return tag.color
   }
-  return '#E5E5E5' // 默认灰色，兼容旧格式
+  return '#E5E5E5'
 }
 </script>
 
 <style lang="scss" scoped>
 @import '@/pages/todobooks/styles/mixins.scss';
 
-.task-card {
-  @include card-style;
-  @include card-hover;
-  margin-bottom: $margin-sm;
+.task-item {
+  transition: all $transition-base;
   cursor: pointer;
   position: relative;
-  transition: all $transition-base;
   
-  &.completed {
-    background-color: #f0f9f4;
-    border: 1rpx solid #d4edda;
+  // Card模式样式
+  &--card {
+    @include card-style;
+    @include card-hover;
+    margin-bottom: $margin-sm;
     
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4rpx;
-      background-color: #28a745;
-      border-radius: $border-radius 0 0 $border-radius;
+    &.task-item--completed {
+      background-color: #f0f9f4;
+      border: 1rpx solid #d4edda;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4rpx;
+        background-color: #28a745;
+        border-radius: $border-radius 0 0 $border-radius;
+      }
     }
+  }
+  
+  // Item模式样式
+  &--item {
+    padding: $padding-sm;
+    background-color: $gray-100;
+    border-radius: $border-radius-small;
+    margin-bottom: $margin-xs;
+    
+    &:active {
+      background-color: $gray-200;
+    }
+    
+    &.task-item--completed {
+      background-color: #e8f5e9;
+      border: 1rpx solid #c3e6cb;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3rpx;
+        background-color: #28a745;
+        border-radius: $border-radius-small 0 0 $border-radius-small;
+      }
+    }
+    
+    .task-header {
+      align-items: center;
+      margin-bottom: 0;
+    }
+    
+    .task-content {
+      .title-row {
+        margin-bottom: 4rpx;
+      }
+    }
+    
+    .task-title {
+      font-size: $font-size-base;
+    }
+    
+    .tag-item {
+      padding: 2rpx 6rpx;
+      border-radius: 6rpx;
+    }
+    
+    .tag-text {
+      font-size: $font-size-xs;
+    }
+    
+    .task-description {
+      font-size: $font-size-sm;
+    }
+    
+    .task-detail-btn {
+      @include icon-button(32rpx);
+    }
+    
+    .task-status {
+      @include icon-button(44rpx);
+    }
+  }
+  
+  // 拖拽状态
+  &--dragging {
+    transform: scale(1.02);
+    box-shadow: $box-shadow-heavy;
+    background-color: $bg-white;
+    border: 2rpx solid $primary-color;
+    z-index: 1000;
   }
 }
 
@@ -213,6 +394,10 @@ const getTagColor = (tag) => {
   @include flex-between;
   align-items: flex-start;
   margin-bottom: $margin-sm;
+  
+  .task-item--item & {
+    margin-bottom: 0;
+  }
 }
 
 .task-left {
@@ -358,11 +543,15 @@ const getTagColor = (tag) => {
 .comment-hint {
   @include flex-start;
   gap: 4rpx;
-  background-color: $warning-color;
   background-color: rgba(255, 152, 0, 0.1);
   padding: 4rpx 8rpx;
   border-radius: 8rpx;
   border: 1rpx solid rgba(255, 152, 0, 0.3);
+  
+  &--item {
+    margin-top: $margin-xs;
+    align-self: flex-start;
+  }
 }
 
 .comment-count {
@@ -371,8 +560,11 @@ const getTagColor = (tag) => {
   font-weight: $font-weight-medium;
   min-width: 16rpx;
   text-align: center;
+  
+  .comment-hint--item & {
+    min-width: 12rpx;
+  }
 }
-
 
 .subtasks-container {
   margin-top: $margin-sm;

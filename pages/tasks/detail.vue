@@ -414,7 +414,6 @@ const loadTaskDetail = async () => {
 		const result = await todoBooksObj.getTaskDetail(taskId.value)
 		
 		if (result.code === 0) {
-			console.log('任务详情数据:', JSON.stringify(result.data.task, null, 2))
 			task.value = result.data.task
 			subtasks.value = result.data.subtasks || []
 			

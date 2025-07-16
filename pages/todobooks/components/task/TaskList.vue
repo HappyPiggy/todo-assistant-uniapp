@@ -19,21 +19,21 @@
     
     <!-- 任务卡片列表 -->
     <view v-else class="tasks-container">
-      <TaskCard
+      <TaskItem
         v-for="task in tasks"
         :key="task._id"
         :task="task"
-        :current-user-id="currentUserId.value"
-        :unread-comment-count="getUnreadCommentCount(task)"
-        @task-click="handleTaskClick"
-        @status-toggle="handleStatusToggle"
-        @menu-click="handleMenuClick"
-        @subtask-status-toggle="handleSubtaskStatusToggle"
-        @subtask-menu-click="handleSubtaskMenuClick"
-        @subtask-click="handleSubtaskClick"
-        @subtask-touch-start="handleSubtaskTouchStart"
-        @subtask-touch-move="handleSubtaskTouchMove"
-        @subtask-touch-end="handleSubtaskTouchEnd"
+        :variant="'card'"
+        :unreadCommentCount="getUnreadCommentCount(task)"
+        @click="handleTaskClick"
+        @statusToggle="handleStatusToggle"
+        @menuClick="handleMenuClick"
+        @subtaskStatusToggle="handleSubtaskStatusToggle"
+        @subtaskMenuClick="handleSubtaskMenuClick"
+        @subtaskClick="handleSubtaskClick"
+        @touchStart="handleSubtaskTouchStart"
+        @touchMove="handleSubtaskTouchMove"
+        @touchEnd="handleSubtaskTouchEnd"
       />
     </view>
     
@@ -55,7 +55,7 @@ import { currentUserId } from '@/store/storage.js'
 import LoadingState from '../common/LoadingState.vue'
 import ErrorState from '../common/ErrorState.vue'
 import EmptyState from '../common/EmptyState.vue'
-import TaskCard from './TaskCard.vue'
+import TaskItem from './TaskItem.vue'
 import TaskMenuPopup from './TaskMenuPopup.vue'
 
 const props = defineProps({

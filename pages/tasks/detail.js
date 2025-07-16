@@ -65,7 +65,6 @@ export default {
 				const result = await todoBooksObj.getTaskDetail(this.taskId)
 				
 				if (result.code === 0) {
-					console.log('任务详情数据:', JSON.stringify(result.data.task, null, 2))
 					this.task = result.data.task
 					this.subtasks = result.data.subtasks || []
 					
