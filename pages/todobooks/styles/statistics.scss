@@ -31,6 +31,29 @@
 
 .statistics-content {
   // 统计内容容器
+  
+  .tab-content {
+    position: relative;
+    overflow: hidden;
+    touch-action: pan-y; // 只允许垂直滑动，防止与水平滑动冲突
+    
+    .tab-content-wrapper {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); // 2个tab，每个占1fr
+      width: 200%; // 总宽度是200%
+      will-change: transform;
+      
+      .tab-panel {
+        width: 100%;
+        min-height: 200px;
+        overflow: visible; // 允许内容自然展开
+        
+        &.active {
+          // 当前激活的tab
+        }
+      }
+    }
+  }
 }
 
 .chart-section {
@@ -119,6 +142,15 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
