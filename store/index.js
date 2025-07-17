@@ -71,7 +71,7 @@ const todoBookActions = {
     // 优先返回内存缓存
     if (state.todoBooks.list.length > 0) {
       // 验证内存缓存是否属于当前用户
-      const cacheUserId = uni.getStorageSync(this.getUserCacheKey('cache_user_id'))
+      const cacheUserId = uni.getStorageSync('current_cache_user_id')
       if (cacheUserId === userId) {
         return {
           success: true,
@@ -100,7 +100,7 @@ const todoBookActions = {
         if (cacheAge < maxAge) {
           state.todoBooks.list = cachedBooks
           // 记录当前缓存的用户ID
-          uni.setStorageSync(this.getUserCacheKey('cache_user_id'), userId)
+          uni.setStorageSync('current_cache_user_id', userId)
           
           return {
             success: true,
@@ -137,11 +137,10 @@ const todoBookActions = {
       // 更新本地存储缓存（用户隔离）
       const cacheKey = this.getUserCacheKey('cached_todobooks')
       const timeKey = this.getUserCacheKey('todobooks_cache_time')
-      const userKey = this.getUserCacheKey('cache_user_id')
       
       uni.setStorageSync(cacheKey, books)
       uni.setStorageSync(timeKey, new Date().toISOString())
-      uni.setStorageSync(userKey, userId)
+      uni.setStorageSync('current_cache_user_id', userId)
       
       // 更新Map缓存
       state.cache.todoBooks.clear()
@@ -312,13 +311,12 @@ const todoBookActions = {
     // 清除当前用户的缓存
     const cacheKey = this.getUserCacheKey('cached_todobooks')
     const timeKey = this.getUserCacheKey('todobooks_cache_time')
-    const userKey = this.getUserCacheKey('cache_user_id')
     
     state.todoBooks.list = []
     state.cache.todoBooks.clear()
     uni.removeStorageSync(cacheKey)
     uni.removeStorageSync(timeKey)
-    uni.removeStorageSync(userKey)
+    uni.removeStorageSync('current_cache_user_id')
     
     console.log(`用户${userId}的项目册缓存已清除`)
   },
