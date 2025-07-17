@@ -79,7 +79,6 @@ const {
   loading: bookLoading,
   error: bookError,
   memberCount,
-  loadBookBasic,
   loadBookDetail,
 } = useBookData()
 
@@ -118,7 +117,7 @@ onLoad((options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
     bookId = options.id
-    loadBookBasic(bookId)
+    loadBookDetail(bookId, { includeBasic: true })
     loadTasks(bookId)
   } else {
     console.error('错误：未能从路由参数中获取到 id')
@@ -137,7 +136,7 @@ onShow(() => {
   if (hasInitialized.value && bookId) {
     Promise.all([
       loadTasks(bookId),
-      loadBookBasic(bookId)
+      loadBookDetail(bookId, { includeBasic: true })
     ])
   }
 })
@@ -151,7 +150,7 @@ onPullDownRefresh(async () => {
   }
   try {
     await Promise.all([
-      loadBookBasic(bookId),
+      loadBookDetail(bookId, { includeBasic: true }),
       loadTasks(bookId)
     ])
   } catch (error) {

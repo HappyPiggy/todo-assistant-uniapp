@@ -8,6 +8,10 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
 /**
  * 获取项目册详情
  * @param {string} bookId 项目册ID
+ * @param {Object} options 查询选项
+ * @param {boolean} options.includeMembers 是否包含成员信息（默认true）
+ * @param {boolean} options.includeTasks 是否包含任务信息（默认true）
+ * @param {boolean} options.includeBasic 是否包含基本信息（默认true）
  * @returns {Object} 响应结果
  * 
  * 成功响应格式：
@@ -90,7 +94,13 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  *   }
  * }
  */
-async function getTodoBookDetail(bookId) {
+async function getTodoBookDetail(bookId, options = {}) {
+  // 设置默认选项
+  const {
+    includeMembers = false,
+    includeTasks = false,
+    includeBasic = true
+  } = options
   // 认证验证
   const authResult = await validateAuth(this)
   if (!authResult.success) {
@@ -107,26 +117,56 @@ async function getTodoBookDetail(bookId) {
       return permissionResult.error
     }
     
-    // 并行获取项目册信息、成员列表和任务列表
-    const [bookDetailResult, membersResult, tasksResult] = await Promise.all([
-      // 获取项目册信息
-      db.collection('todobooks').doc(bookId).get(),
-      
-      // 获取成员列表
-      db.collection('todobook_members')
+    // 构建查询数组
+    const queries = []
+    
+    // 始终获取基本信息
+    if (includeBasic) {
+      queries.push(db.collection('todobooks').doc(bookId).get())
+    }
+    
+    // 根据选项获取成员信息
+    if (includeMembers) {
+      queries.push(db.collection('todobook_members')
         .where({ todobook_id: bookId, is_active: true })
-        .get(),
-      
-      // 获取任务列表
-      db.collection('todoitems')
+        .get())
+    }
+    
+    // 根据选项获取任务信息
+    if (includeTasks) {
+      queries.push(db.collection('todoitems')
         .where({ todobook_id: bookId })
         .orderBy('sort_order', 'asc')
         .orderBy('created_at', 'desc')
-        .get()
-    ])
+        .get())
+    }
     
-    if (!bookDetailResult.data.length) {
-      return createErrorResponse(ERROR_CODES.NOT_FOUND, '项目册不存在')
+    // 并行执行查询
+    const results = await Promise.all(queries)
+    
+    // 解析查询结果
+    let resultIndex = 0
+    const responseData = {}
+    
+    // 解析基本信息
+    if (includeBasic) {
+      const bookDetailResult = results[resultIndex++]
+      if (!bookDetailResult.data.length) {
+        return createErrorResponse(ERROR_CODES.NOT_FOUND, '项目册不存在')
+      }
+      responseData.book = bookDetailResult.data[0]
+    }
+    
+    // 解析成员信息
+    if (includeMembers) {
+      const membersResult = results[resultIndex++]
+      responseData.members = membersResult.data
+    }
+    
+    // 解析任务信息
+    if (includeTasks) {
+      const tasksResult = results[resultIndex++]
+      responseData.tasks = tasksResult.data
     }
     
     // 更新最后访问时间
@@ -134,11 +174,7 @@ async function getTodoBookDetail(bookId) {
       .where({ todobook_id: bookId, user_id: uid })
       .update({ last_access_at: new Date() })
     
-    return createSuccessResponse({
-      book: bookDetailResult.data[0],
-      members: membersResult.data,
-      tasks: tasksResult.data
-    })
+    return createSuccessResponse(responseData)
   } catch (error) {
     console.error('获取项目册详情失败:', error)
     return createErrorResponse(ERROR_CODES.INTERNAL_ERROR, '获取项目册详情失败')
