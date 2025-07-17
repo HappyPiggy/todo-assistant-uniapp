@@ -5,6 +5,75 @@ import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/uti
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 /**
+ * 搜索任务函数
+ * @param {Array} tasks - 任务数组
+ * @param {string} keyword - 搜索关键词
+ * @returns {Array} 搜索结果
+ */
+function searchTasks(tasks, keyword) {
+  if (!keyword || !keyword.trim()) {
+    return tasks
+  }
+  
+  const searchRegex = new RegExp(keyword.trim(), 'i')
+  
+  return tasks.filter(task => {
+    // 搜索任务标题
+    if (task.title && searchRegex.test(task.title)) {
+      return true
+    }
+    
+    // 搜索任务描述
+    if (task.description && searchRegex.test(task.description)) {
+      return true
+    }
+    
+    // 搜索任务标签
+    if (task.tags && Array.isArray(task.tags)) {
+      const hasMatchingTag = task.tags.some(tag => {
+        if (typeof tag === 'string') {
+          return searchRegex.test(tag)
+        } else if (tag && tag.name) {
+          return searchRegex.test(tag.name)
+        }
+        return false
+      })
+      if (hasMatchingTag) {
+        return true
+      }
+    }
+    
+    // 搜索子任务
+    if (task.subtasks && Array.isArray(task.subtasks)) {
+      const hasMatchingSubtask = task.subtasks.some(subtask => {
+        if (subtask.title && searchRegex.test(subtask.title)) {
+          return true
+        }
+        if (subtask.description && searchRegex.test(subtask.description)) {
+          return true
+        }
+        if (subtask.tags && Array.isArray(subtask.tags)) {
+          return subtask.tags.some(tag => {
+            if (typeof tag === 'string') {
+              return searchRegex.test(tag)
+            } else if (tag && tag.name) {
+              return searchRegex.test(tag.name)
+            }
+            return false
+          })
+        }
+        return false
+      })
+      if (hasMatchingSubtask) {
+        return true
+      }
+    }
+    
+    return false
+  })
+}
+
+/**
  * 任务数据管理组合式函数
  * @param {string} bookId - 项目册ID
  * @returns {Object} 任务数据和操作方法
@@ -15,10 +84,18 @@ export function useTaskData(bookId) {
   const loading = ref(false)
   const error = ref(null)
   const activeFilter = ref('all')
+  const searchKeyword = ref('')
   
   // 计算属性
   const filteredTasks = computed(() => {
-    return filterTasks(tasks.value, activeFilter.value)
+    let filtered = filterTasks(tasks.value, activeFilter.value)
+    
+    // 如果有搜索关键词，进一步过滤
+    if (searchKeyword.value.trim()) {
+      filtered = searchTasks(filtered, searchKeyword.value.trim())
+    }
+    
+    return filtered
   })
   
   const taskStats = computed(() => {
@@ -392,6 +469,14 @@ export function useTaskData(bookId) {
   }
   
   /**
+   * 设置搜索关键词
+   * @param {string} keyword - 搜索关键词
+   */
+  const setSearchKeyword = (keyword) => {
+    searchKeyword.value = keyword
+  }
+
+  /**
    * 重置状态
    */
   const resetState = () => {
@@ -399,6 +484,7 @@ export function useTaskData(bookId) {
     loading.value = false
     error.value = null
     activeFilter.value = 'all'
+    searchKeyword.value = ''
   }
 
   const overallProgress = computed(() => {
@@ -414,6 +500,7 @@ export function useTaskData(bookId) {
     loading,
     error,
     activeFilter,
+    searchKeyword,
     
     // 计算属性
     filteredTasks,
@@ -427,6 +514,7 @@ export function useTaskData(bookId) {
     toggleSubtaskStatus,
     deleteTask,
     setActiveFilter,
+    setSearchKeyword,
     resetState
   }
 }

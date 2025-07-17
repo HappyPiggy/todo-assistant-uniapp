@@ -19,7 +19,16 @@
       :message="bookError"
       @retry="loadBookDetail" />
 
-    <!-- 任务筛选标签 - 固定在头部下方 -->
+    <!-- 任务搜索框 - 固定在头部下方 -->
+    <view class="search-sticky" v-if="!bookLoading && !bookError">
+      <TaskSearch
+        v-model="searchKeyword"
+        @search="handleSearch"
+        @clear="handleClearSearch"
+      />
+    </view>
+
+    <!-- 任务筛选标签 - 固定在搜索框下方 -->
     <view class="filter-sticky" v-if="!bookLoading && !bookError">
       <TaskFilter
         :filter-tabs="filterTabs"
@@ -97,6 +106,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 
 import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
+import TaskSearch from '@/pages/todobooks/components/task/TaskSearch.vue'
 import TaskFilter from '@/pages/todobooks/components/task/TaskFilter.vue'
 import TaskList from '@/pages/todobooks/components/task/TaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -125,10 +135,12 @@ const {
   loading: tasksLoading,
   error: tasksError,
   activeFilter,
+  searchKeyword,
   filterTabs,
   filteredTasks,
   initializeTasks,
   setActiveFilter,
+  setSearchKeyword,
   taskStats,
   overallProgress,
   toggleTaskStatus,
@@ -206,6 +218,16 @@ const refreshTasks = async () => {
   
   await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
   await initializeTasks(allTasks.value)
+}
+
+// 搜索处理函数
+const handleSearch = (keyword) => {
+  setSearchKeyword(keyword)
+}
+
+// 清空搜索
+const handleClearSearch = () => {
+  setSearchKeyword('')
 }
 
 
@@ -363,15 +385,12 @@ const handleSubtaskTouchEnd = (event) => {
   padding-bottom: $safe-area-bottom;
 }
 
-/* 固定筛选器 */
-.filter-sticky {
+/* 固定搜索框 */
+.search-sticky {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 60;
   background-color: $bg-secondary;
-  padding-top: 8rpx;
-  padding-bottom: 8rpx;
-  margin-top: -8rpx;
   
   /* 确保在不同平台下都有足够的顶部空间 */
   /* #ifdef H5 */
@@ -384,6 +403,30 @@ const handleSubtaskTouchEnd = (event) => {
   
   /* #ifdef APP-PLUS */
   top: 0;
+  /* #endif */
+}
+
+/* 固定筛选器 */
+.filter-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: $bg-secondary;
+  padding-top: 8rpx;
+  padding-bottom: 8rpx;
+  margin-top: -8rpx;
+  
+  /* 确保在不同平台下都有足够的顶部空间，考虑搜索框的高度 */
+  /* #ifdef H5 */
+  top: calc(44px + 88rpx);
+  /* #endif */
+  
+  /* #ifdef MP-WEIXIN */
+  top: 88rpx;
+  /* #endif */
+  
+  /* #ifdef APP-PLUS */
+  top: 88rpx;
   /* #endif */
 }
 
