@@ -2,11 +2,19 @@
 	import globalStore from '@/store/index.js'
 	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 	import { currentUserId } from '@/store/storage.js'
+	import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 	
 	export default {
 		data() {
 			return {
 				currentUserIdLocal: null // 跟踪当前用户ID
+			}
+		},
+		setup() {
+			// 使用todoBook操作组合式函数
+			const { onUserSwitch } = useBookData()
+			return {
+				onUserSwitch
 			}
 		},
 		onLaunch: function() {
@@ -42,9 +50,9 @@
 				if (this.currentUserIdLocal !== newUserId) {
 					console.log(`检测到用户切换: ${this.currentUserIdLocal} -> ${newUserId}`)
 					
-					// 通知store用户已切换
+					// 通知用户已切换
 					if (newUserId) {
-						globalStore.todoBook.onUserSwitch(newUserId)
+						this.onUserSwitch(newUserId)
 					}
 					
 					// 更新当前用户ID
@@ -82,17 +90,7 @@
 					// 标记启动同步开始
 					globalStore.state.sync.hasStartupSynced = true
 					
-					// 步骤1：立即加载缓存数据（如果有的话）
-					const cached = globalStore.todoBook.getTodoBooksFromCache()
-					if (cached.success) {
-						console.log('缓存数据已准备好，页面可以立即显示')
-					}
-					
-					// 步骤2：延迟一段时间后开始静默后台同步
-					setTimeout(async () => {
-						console.log('开始静默后台同步最新数据...')
-						await globalStore.todoBook.silentSyncTodoBooks()
-					}, 2000) // 延迟2秒，让页面先渲染
+					// 应用启动时不做任何数据预加载，让页面自己按需加载最新数据
 					
 					console.log('应用启动同步策略完成')
 					

@@ -18,27 +18,32 @@ export function useBookData() {
   /**
    * 加载 TodoBook 列表
    * @param {Object} options - 加载选项
-   * @param {boolean} forceRefresh - 是否强制刷新（跳过缓存）
    * @returns {Promise<Array>} TodoBook 列表
    */
-  const loadTodoBooks = async (options = {}, forceRefresh = false) => {
-    if (!forceRefresh) {
-      // 优先从缓存获取数据
-      const cached = globalStore.todoBook.getTodoBooksFromCache()
-      if (cached.success) {
-        console.log('使用缓存数据:', cached.source)
-        return cached.data
+  const loadTodoBooks = async (options = {}) => {
+    // 直接从云端加载最新数据
+    console.log('从云端加载项目册...')
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.getTodoBooks({
+        include_archived: false,
+        ...options
+      })
+      
+      if (result.code === 0) {
+        const books = result.data.list || result.data
+        // 更新全局状态
+        globalStore.state.todoBooks.list = books
+        // 通知页面数据已更新
+        uni.$emit('todobooks-updated', books)
+        return books
+      } else {
+        throw new Error(result.message)
       }
+    } catch (error) {
+      console.error('加载项目册失败:', error)
+      throw error
     }
-
-    // 缓存无效或强制刷新，从云端加载
-    console.log(forceRefresh ? '强制刷新项目册...' : '缓存无效，从云端加载')
-    const books = await globalStore.todoBook.loadTodoBooks({
-      include_archived: false,
-      ...options
-    }, forceRefresh)
-
-    return books
   }
 
   /**
@@ -47,10 +52,25 @@ export function useBookData() {
    * @returns {Promise<void>}
    */
   const archiveTodoBook = async (bookId) => {
-    await globalStore.todoBook.updateTodoBook(bookId, {
-      is_archived: true,
-      archived_at: new Date()
-    })
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.updateTodoBook(bookId, {
+        is_archived: true,
+        archived_at: new Date()
+      })
+      
+      if (result.code === 0) {
+        // 从全局状态中移除归档的项目册
+        globalStore.state.todoBooks.list = globalStore.state.todoBooks.list.filter(book => book._id !== bookId)
+        // 通知页面数据已更新
+        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('归档项目册失败:', error)
+      throw error
+    }
   }
 
   /**
@@ -59,7 +79,22 @@ export function useBookData() {
    * @returns {Promise<void>}
    */
   const deleteTodoBook = async (bookId) => {
-    await globalStore.todoBook.deleteTodoBook(bookId)
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.deleteTodoBook(bookId)
+      
+      if (result.code === 0) {
+        // 从全局状态中移除删除的项目册
+        globalStore.state.todoBooks.list = globalStore.state.todoBooks.list.filter(book => book._id !== bookId)
+        // 通知页面数据已更新
+        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('删除项目册失败:', error)
+      throw error
+    }
   }
 
   /**
@@ -68,7 +103,23 @@ export function useBookData() {
    * @returns {Promise<Object>} 创建的项目册
    */
   const createTodoBook = async (bookData) => {
-    return await globalStore.todoBook.createTodoBook(bookData)
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.createTodoBook(bookData)
+      
+      if (result.code === 0) {
+        // 添加到全局状态列表开头
+        globalStore.state.todoBooks.list = [result.data, ...globalStore.state.todoBooks.list]
+        // 通知页面数据已更新
+        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+        return result.data
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('创建项目册失败:', error)
+      throw error
+    }
   }
 
   /**
@@ -78,7 +129,71 @@ export function useBookData() {
    * @returns {Promise<Object>} 更新后的项目册
    */
   const updateTodoBook = async (bookId, updates) => {
-    return await globalStore.todoBook.updateTodoBook(bookId, updates)
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.updateTodoBook(bookId, updates)
+      
+      if (result.code === 0) {
+        // 更新全局状态中的项目册
+        const index = globalStore.state.todoBooks.list.findIndex(book => book._id === bookId)
+        if (index >= 0) {
+          let updatedList = [...globalStore.state.todoBooks.list]
+          
+          // 如果云函数返回了完整数据，使用完整数据；否则合并更新数据
+          if (result.data && result.data._id) {
+            updatedList[index] = result.data
+          } else {
+            updatedList[index] = { ...updatedList[index], ...updates }
+          }
+          
+          // 如果项目册被归档，从列表中移除
+          if (updates.is_archived === true || updatedList[index].is_archived === true) {
+            updatedList = updatedList.filter(book => book._id !== bookId)
+          }
+          
+          globalStore.state.todoBooks.list = updatedList
+          // 通知页面数据已更新
+          uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+        }
+        
+        return result.data || updates
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('更新项目册失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 刷新项目册列表
+   * @returns {Promise<Array>} TodoBook 列表
+   */
+  const refreshTodoBooks = async () => {
+    return await loadTodoBooks({ include_archived: false })
+  }
+
+  /**
+   * 清除项目册数据
+   */
+  const clearTodoBooks = () => {
+    globalStore.state.todoBooks.list = []
+    console.log('项目册数据已清除')
+  }
+
+  /**
+   * 用户切换时清理数据
+   * @param {string} newUserId - 新用户ID
+   */
+  const onUserSwitch = (newUserId) => {
+    console.log('检测到用户切换，清理数据')
+    
+    // 清空内存数据
+    globalStore.state.todoBooks.list = []
+    
+    // 通知页面用户已切换，需要重新加载
+    uni.$emit('user-switched', newUserId)
   }
 
   /**
@@ -445,10 +560,13 @@ export function useBookData() {
     // 基础方法
     loadBookDetail,
     loadTodoBooks,
+    refreshTodoBooks,
     archiveTodoBook,
     deleteTodoBook,
     createTodoBook,
     updateTodoBook,
+    clearTodoBooks,
+    onUserSwitch,
     
     // 统计方法
     loadStatisticsData,

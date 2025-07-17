@@ -182,8 +182,8 @@ onLoad(() => {
 		}, 1500)
 	}
 	
-	// 监听缓存更新事件
-	uni.$on('todobooks-cache-updated', onCacheUpdated)
+	// 监听数据更新事件
+	uni.$on('todobooks-updated', onCacheUpdated)
 	
 	// 监听用户切换事件
 	uni.$on('user-switched', onUserSwitched)
@@ -203,7 +203,7 @@ onUnload(() => {
 	}
 	
 	// 移除事件监听
-	uni.$off('todobooks-cache-updated', onCacheUpdated)
+	uni.$off('todobooks-updated', onCacheUpdated)
 	uni.$off('user-switched', onUserSwitched)
 })
 
@@ -240,7 +240,7 @@ const refreshTodoBooks = async (isFromPullDown = false) => {
 		loading.value = true
 		error.value = null
 		
-		const books = await loadTodoBooks({ keyword: searchKeyword.value }, true)
+		const books = await loadTodoBooks({ keyword: searchKeyword.value })
 		todoBooks.value = books
 		loadMoreStatus.value = 'noMore'
 		

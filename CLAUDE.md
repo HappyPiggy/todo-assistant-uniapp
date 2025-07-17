@@ -138,30 +138,43 @@ Since this is a uni-app project, use HBuilderX IDE for development:
 - Use `store.mutations` for state updates
 - Local storage managed via `/store/storage.js`
 
-#### Cache Architecture
-- **Three-layer cache system**: Memory cache (`state.todoBooks.list`) → Local storage (with user ID isolation) → Cloud data, prioritizing the fastest available cache
-- **User isolation mechanism**: All cache keys include user ID suffix (e.g., `cached_todobooks_userId`) to ensure data isolation in multi-user environments
-- **Auto-update notification**: After updating cache via `updateTodoBooksCache()`, automatically emits `todobooks-cache-updated` event to notify all pages to refresh
-- **Cache validity period**: Local storage cache has a default 10-minute validity period, automatically fetches from cloud after expiration
-- **Graceful degradation**: Returns expired cache data on network failure to ensure offline usability
+#### Data Management
+- **Direct cloud data access**: All data operations directly request the latest data from the cloud, no local caching
+- **Composable function pattern**: TodoBook operations are handled by `useBookData` composable function in `/pages/todobooks/composables/useBookData.js`
+- **Auto-update notification**: After data operations, automatically emits `todobooks-updated` event to notify all pages to refresh
+- **Real-time synchronization**: Every access and modification requests the latest data from the cloud to ensure data freshness
 
-#### Cache Operation APIs
-**Reading Cache:**
-- `getTodoBooksFromCache()` - Read cache by priority (memory → local storage → return empty)
-- `getCacheStatus()` - Get current cache status (count, update time, validity)
+#### Data Operation APIs (via useBookData composable)
+**Import and Usage:**
+```javascript
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 
-**Updating Cache:**
-- `updateTodoBooksCache(books)` - Update all three cache layers and emit update event
-- `loadTodoBooks(options, forceRefresh)` - Load data (supports cache-first or force refresh)
-- `refreshTodoBooks()` - Force refresh from cloud and update cache
+// In component setup
+const { 
+  loadTodoBooks, 
+  createTodoBook, 
+  updateTodoBook, 
+  deleteTodoBook,
+  refreshTodoBooks,
+  clearTodoBooks,
+  onUserSwitch
+} = useBookData()
+```
 
-**Clearing Cache:**
-- `clearTodoBooksCache()` - Clear all cache for current user
-- `onUserSwitch(newUserId)` - Clear cache on user switch and emit switch event
+**Available Methods:**
+- `loadTodoBooks(options)` - Load data directly from cloud
+- `refreshTodoBooks()` - Refresh data from cloud
+- `createTodoBook(data)` / `updateTodoBook(id, data)` / `deleteTodoBook(id)` - CRUD operations with real-time cloud sync
+- `archiveTodoBook(id)` - Archive a TodoBook
+- `clearTodoBooks()` - Clear local memory data
+- `onUserSwitch(newUserId)` - Clear data on user switch and emit switch event
+- `loadBookDetail(id, loadTasks)` - Load detailed TodoBook data
+- `loadStatisticsData(id)` / `refreshStatistics(id)` - Load and refresh statistics data
 
-**Cache Sync:**
-- `silentSyncTodoBooks()` - Background silent sync without affecting current display
-- `createTodoBook()` / `updateTodoBook()` / `deleteTodoBook()` - CRUD operations auto-update cache
+**Store Role:**
+- The global store (`/store/index.js`) now only manages basic state (loading status, data list)
+- All business logic has been moved to the `useBookData` composable function
+- The store provides minimal state management: `getList()`, `getLoading()`, `setLoading()`, `clearTodoBooks()`, `onUserSwitch()`
 
 ### Component Development
 - Check existing components in `/pages/todobooks/components/` for patterns
