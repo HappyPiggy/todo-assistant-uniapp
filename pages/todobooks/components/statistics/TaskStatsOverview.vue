@@ -254,6 +254,7 @@ const formatDate = (dateStr) => {
 
 .stats-overview {
   @include card-style;
+  min-height: auto; // 确保高度自适应内容
 }
 
 .metrics-grid {

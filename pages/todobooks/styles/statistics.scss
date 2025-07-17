@@ -38,18 +38,23 @@
     touch-action: pan-y; // 只允许垂直滑动，防止与水平滑动冲突
     
     .tab-content-wrapper {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr); // 2个tab，每个占1fr
-      width: 200%; // 总宽度是200%
-      will-change: transform;
+      position: relative;
+      width: 100%;
+      transition: all 0.3s ease-out;
       
       .tab-panel {
         width: 100%;
-        min-height: 200px;
+        min-height: auto; // 改为auto，让内容决定高度
         overflow: visible; // 允许内容自然展开
         
+        // 隐藏非激活tab的内容，避免影响高度计算
+        &:not(.active) {
+          display: none; // 完全隐藏，不参与布局
+        }
+        
         &.active {
-          // 当前激活的tab
+          display: block;
+          animation: fadeInContent 0.3s ease-out;
         }
       }
     }
@@ -151,6 +156,17 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fadeInContent {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

@@ -9,6 +9,7 @@
       <TaskTimelineChart 
         :timeline-data="timelineData"
         :loading="chartLoading"
+        :container-height="getTimelineHeight()"
       />
     </view>
 
@@ -43,6 +44,26 @@ const props = defineProps({
     default: false
   }
 })
+
+// 动态计算时序图高度
+const getTimelineHeight = () => {
+  if (props.chartLoading) {
+    return '200rpx' // 加载状态的最小高度
+  }
+  
+  if (!props.timelineData || props.timelineData.length === 0) {
+    return '200rpx' // 空状态的最小高度
+  }
+  
+  // 根据数据量动态计算高度
+  // 每个时序项大约占用 120rpx 高度，最小 300rpx，最大 600rpx
+  const itemHeight = 120
+  const minHeight = 300
+  const maxHeight = 600
+  const calculatedHeight = Math.min(maxHeight, Math.max(minHeight, props.timelineData.length * itemHeight))
+  
+  return `${calculatedHeight}rpx`
+}
 </script>
 
 <style lang="scss" scoped>

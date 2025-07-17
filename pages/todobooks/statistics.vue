@@ -78,8 +78,6 @@ const tabs = ['overview', 'time']
 // 滑动状态管理
 const touchStartX = ref(0)
 const touchStartY = ref(0)
-const currentTranslateX = ref(0)
-const isTransitioning = ref(false)
 const isSwipeStarted = ref(false)
 
 // 使用统计数据处理组合式函数
@@ -104,15 +102,10 @@ const completedTasks = computed(() => {
   return statsOverview.value.completed || 0
 })
 
-// 内容包装器样式
+// 内容包装器样式（简化，因为现在使用display切换）
 const contentWrapperStyle = computed(() => {
-  const currentIndex = tabs.indexOf(activeTab.value)
-  // 每个tab占50%wrapper宽度，所以移动距离是 currentIndex * 50%
-  const translateX = -currentIndex * 50 + currentTranslateX.value
-  
   return {
-    transform: `translateX(${translateX}%)`,
-    transition: isTransitioning.value ? 'transform 0.3s ease-out' : 'none'
+    // 不再需要transform动画，使用CSS的display切换
   }
 })
 
@@ -120,29 +113,18 @@ const contentWrapperStyle = computed(() => {
 const handleTabChange = (tabKey) => {
   if (tabKey !== activeTab.value) {
     activeTab.value = tabKey
-    currentTranslateX.value = 0
-    isTransitioning.value = true
-    
-    setTimeout(() => {
-      isTransitioning.value = false
-    }, 300)
-    
     console.log('切换到Tab:', tabKey)
   }
 }
 
-// 滑动处理函数
+// 简化的滑动处理函数
 const handleTouchStart = (e) => {
   touchStartX.value = e.touches[0].clientX
   touchStartY.value = e.touches[0].clientY
-  isTransitioning.value = false
   isSwipeStarted.value = false
-  currentTranslateX.value = 0
 }
 
 const handleTouchMove = (e) => {
-  if (isTransitioning.value) return
-  
   const touchCurrentX = e.touches[0].clientX
   const touchCurrentY = e.touches[0].clientY
   const deltaX = touchCurrentX - touchStartX.value
@@ -163,44 +145,28 @@ const handleTouchMove = (e) => {
   // 只处理已确定的水平滑动
   if (isSwipeStarted.value) {
     e.preventDefault()
-    
-    // 计算滑动距离（限制在合理范围内）
-    const maxTranslate = 25 // 最大滑动距离百分比
-    const screenWidth = uni.getSystemInfoSync().screenWidth
-    const translatePercent = (deltaX / screenWidth) * 100
-    currentTranslateX.value = Math.max(-maxTranslate, Math.min(maxTranslate, translatePercent))
   }
 }
 
-const handleTouchEnd = () => {
-  if (isTransitioning.value) return
-  
+const handleTouchEnd = (e) => {
   // 只有在实际进行了滑动时才判断切换
   if (!isSwipeStarted.value) {
     return
   }
   
-  // 基于实际滑动距离的阈值（像素）
-  const screenWidth = uni.getSystemInfoSync().screenWidth
-  const minSwipeDistance = screenWidth * 0.15 // 需要滑动屏幕宽度的15%
-  const actualSwipeDistance = (currentTranslateX.value / 100) * screenWidth
+  const touchCurrentX = e.changedTouches[0].clientX
+  const deltaX = touchCurrentX - touchStartX.value
   
+  // 基于滑动距离的阈值
+  const minSwipeDistance = 50 // 最小滑动距离（像素）
   const currentIndex = tabs.indexOf(activeTab.value)
   
-  if (actualSwipeDistance > minSwipeDistance && currentIndex > 0) {
+  if (deltaX > minSwipeDistance && currentIndex > 0) {
     // 向右滑动，切换到上一个tab
     handleTabChange(tabs[currentIndex - 1])
-  } else if (actualSwipeDistance < -minSwipeDistance && currentIndex < tabs.length - 1) {
+  } else if (deltaX < -minSwipeDistance && currentIndex < tabs.length - 1) {
     // 向左滑动，切换到下一个tab
     handleTabChange(tabs[currentIndex + 1])
-  } else {
-    // 未达到切换阈值，恢复原位
-    currentTranslateX.value = 0
-    isTransitioning.value = true
-    
-    setTimeout(() => {
-      isTransitioning.value = false
-    }, 300)
   }
   
   // 重置滑动状态
