@@ -349,7 +349,7 @@ const handleShareTodoBook = () => {
 	hideActionSheet()
 	if (bookId) {
 		uni.navigateTo({
-			url: `/pages/todobooks/members?id=${bookId}`
+			url: `/pages/todobooks/members?id=${bookId}&bookData=${encodeURIComponent(JSON.stringify(currentBook.value))}`
 		})
 	}
 }

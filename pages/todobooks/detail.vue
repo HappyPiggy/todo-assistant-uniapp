@@ -197,7 +197,7 @@ const handleMoreActions = () => {
         case 1:
           // 成员管理
           uni.navigateTo({
-            url: `/pages/todobooks/members?id=${bookId}`
+            url: `/pages/todobooks/members?id=${bookId}&bookData=${encodeURIComponent(JSON.stringify(bookData.value))}`
           })
           break
         case 2:
