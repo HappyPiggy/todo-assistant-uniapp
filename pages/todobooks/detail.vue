@@ -19,14 +19,14 @@
       :message="bookError"
       @retry="loadBookDetail" />
 
-    <!-- 任务筛选标签 -->
-<TaskFilter
-      v-if="!bookLoading && !bookError"
-      :filter-tabs="filterTabs"
-      :active-filter="activeFilter"
-      @filter-change="setActiveFilter"
-      @add-task="addTask"
-    />
+    <!-- 任务筛选标签 - 固定在头部下方 -->
+    <view class="filter-sticky" v-if="!bookLoading && !bookError">
+      <TaskFilter
+        :filter-tabs="filterTabs"
+        :active-filter="activeFilter"
+        @filter-change="setActiveFilter"
+      />
+    </view>
 
     <!-- 任务列表 -->
     <TaskList
@@ -52,6 +52,13 @@
       @subtask-touch-move="handleSubtaskTouchMove"
       @subtask-touch-end="handleSubtaskTouchEnd"
     />
+
+    <!-- 浮动创建任务按钮 -->
+    <view class="fab-container">
+      <view class="fab-button" @click="addTask">
+        <uni-icons color="#ffffff" size="28" type="plus" />
+      </view>
+    </view>
 
     <!-- 操作弹窗 -->
     <uni-popup ref="actionPopupRef" type="bottom" background-color="#ffffff" :safe-area="true">
@@ -356,6 +363,30 @@ const handleSubtaskTouchEnd = (event) => {
   padding-bottom: $safe-area-bottom;
 }
 
+/* 固定筛选器 */
+.filter-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: $bg-secondary;
+  padding-top: 8rpx;
+  padding-bottom: 8rpx;
+  margin-top: -8rpx;
+  
+  /* 确保在不同平台下都有足够的顶部空间 */
+  /* #ifdef H5 */
+  top: 44px;
+  /* #endif */
+  
+  /* #ifdef MP-WEIXIN */
+  top: 0;
+  /* #endif */
+  
+  /* #ifdef APP-PLUS */
+  top: 0;
+  /* #endif */
+}
+
 /* 操作弹窗 */
 .action-sheet {
   background-color: #ffffff;
@@ -433,5 +464,33 @@ const handleSubtaskTouchEnd = (event) => {
   /* #ifndef APP-NVUE */
   height: calc(120rpx + env(safe-area-inset-bottom));
   /* #endif */
+}
+
+/* 浮动添加按钮 */
+.fab-container {
+  position: fixed;
+  bottom: 40rpx;
+  right: 40rpx;
+  z-index: 999;
+  /* #ifndef APP-NVUE */
+  bottom: calc(40rpx + env(safe-area-inset-bottom));
+  /* #endif */
+}
+
+.fab-button {
+  width: 120rpx;
+  height: 120rpx;
+  background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
+  border-radius: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 32rpx rgba(0, 122, 255, 0.3);
+  transition: all 0.3s ease;
+  
+  &:active {
+    transform: scale(0.95);
+    box-shadow: 0 4rpx 16rpx rgba(0, 122, 255, 0.4);
+  }
 }
 </style>

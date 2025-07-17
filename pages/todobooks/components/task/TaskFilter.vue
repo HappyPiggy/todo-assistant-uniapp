@@ -13,9 +13,6 @@
         </view>
       </view>
     </scroll-view>
-    <view class="add-task-btn" @click="handleAddTask">
-      <uni-icons color="#007AFF" size="20" type="plus" />
-    </view>
   </view>
 </template>
 
@@ -33,14 +30,10 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['filterChange', 'addTask'])
+const emit = defineEmits(['filterChange'])
 
 const setActiveFilter = (filter) => {
   emit('filterChange', filter)
-}
-
-const handleAddTask = () => {
-  emit('addTask')
 }
 </script>
 
@@ -56,6 +49,7 @@ const handleAddTask = () => {
 
 .tab-scroll {
   flex: 1;
+  width: 100%;
 }
 
 .tab-list {
@@ -98,20 +92,5 @@ const handleAddTask = () => {
   font-size: $font-size-sm;
   color: $text-tertiary;
   margin-left: $margin-xs;
-}
-
-.add-task-btn {
-  width: 60rpx;
-  height: 60rpx;
-  background-color: rgba(0, 122, 255, 0.1);
-  border-radius: 30rpx;
-  @include flex-center;
-  margin-left: $margin-sm;
-  transition: $transition-fast;
-  
-  &:active {
-    background-color: rgba(0, 122, 255, 0.2);
-    transform: scale(0.95);
-  }
 }
 </style>

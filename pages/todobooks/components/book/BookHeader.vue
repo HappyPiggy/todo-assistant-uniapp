@@ -16,7 +16,7 @@
     </view>
 
     <!-- 进度区域 -->
-    <view class="progress-section">
+    <!-- <view class="progress-section">
       <view class="progress-info">
         <text class="progress-text">完成进度</text>
         <text class="progress-percent">{{ overallProgress }}%</text>
@@ -27,10 +27,10 @@
           :style="{ width: overallProgress + '%', backgroundColor: (bookData && bookData.color) || '#007AFF' }">
         </view>
       </view>
-    </view>
+    </view> -->
 
     <!-- 统计区域 -->
-    <view class="stats-section">
+    <!-- <view class="stats-section">
       <view class="stat-item">
         <text class="stat-number">{{ taskStats.total }}</text>
         <text class="stat-label">总任务</text>
@@ -43,7 +43,7 @@
         <text class="stat-number">{{ memberCount }}</text>
         <text class="stat-label">成员</text>
       </view>
-    </view>
+    </view> -->
   </view>
 </template>
 
