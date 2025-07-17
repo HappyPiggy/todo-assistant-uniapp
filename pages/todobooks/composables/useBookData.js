@@ -1,6 +1,5 @@
 import { ref, computed } from 'vue'
 import { API_CODES, ERROR_MESSAGES } from '@/pages/todobooks/utils/constants.js'
-import globalStore from '@/store/index.js'
 
 /**
  * TodoBook 数据操作组合式函数
@@ -32,8 +31,6 @@ export function useBookData() {
       
       if (result.code === 0) {
         const books = result.data.list || result.data
-        // 更新全局状态
-        globalStore.state.todoBooks.list = books
         // 通知页面数据已更新
         uni.$emit('todobooks-updated', books)
         return books
@@ -60,10 +57,8 @@ export function useBookData() {
       })
       
       if (result.code === 0) {
-        // 从全局状态中移除归档的项目册
-        globalStore.state.todoBooks.list = globalStore.state.todoBooks.list.filter(book => book._id !== bookId)
-        // 通知页面数据已更新
-        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+        // 重新加载最新数据并通知页面
+        await refreshTodoBooks()
       } else {
         throw new Error(result.message)
       }
@@ -84,10 +79,8 @@ export function useBookData() {
       const result = await todoBookCo.deleteTodoBook(bookId)
       
       if (result.code === 0) {
-        // 从全局状态中移除删除的项目册
-        globalStore.state.todoBooks.list = globalStore.state.todoBooks.list.filter(book => book._id !== bookId)
-        // 通知页面数据已更新
-        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+        // 重新加载最新数据并通知页面
+        await refreshTodoBooks()
       } else {
         throw new Error(result.message)
       }
@@ -108,10 +101,8 @@ export function useBookData() {
       const result = await todoBookCo.createTodoBook(bookData)
       
       if (result.code === 0) {
-        // 添加到全局状态列表开头
-        globalStore.state.todoBooks.list = [result.data, ...globalStore.state.todoBooks.list]
-        // 通知页面数据已更新
-        uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
+        // 重新加载最新数据并通知页面
+        await refreshTodoBooks()
         return result.data
       } else {
         throw new Error(result.message)
@@ -134,28 +125,8 @@ export function useBookData() {
       const result = await todoBookCo.updateTodoBook(bookId, updates)
       
       if (result.code === 0) {
-        // 更新全局状态中的项目册
-        const index = globalStore.state.todoBooks.list.findIndex(book => book._id === bookId)
-        if (index >= 0) {
-          let updatedList = [...globalStore.state.todoBooks.list]
-          
-          // 如果云函数返回了完整数据，使用完整数据；否则合并更新数据
-          if (result.data && result.data._id) {
-            updatedList[index] = result.data
-          } else {
-            updatedList[index] = { ...updatedList[index], ...updates }
-          }
-          
-          // 如果项目册被归档，从列表中移除
-          if (updates.is_archived === true || updatedList[index].is_archived === true) {
-            updatedList = updatedList.filter(book => book._id !== bookId)
-          }
-          
-          globalStore.state.todoBooks.list = updatedList
-          // 通知页面数据已更新
-          uni.$emit('todobooks-updated', globalStore.state.todoBooks.list)
-        }
-        
+        // 重新加载最新数据并通知页面
+        await refreshTodoBooks()
         return result.data || updates
       } else {
         throw new Error(result.message)
@@ -178,7 +149,8 @@ export function useBookData() {
    * 清除项目册数据
    */
   const clearTodoBooks = () => {
-    globalStore.state.todoBooks.list = []
+    // 通知页面清除数据
+    uni.$emit('todobooks-updated', [])
     console.log('项目册数据已清除')
   }
 
@@ -189,8 +161,8 @@ export function useBookData() {
   const onUserSwitch = (newUserId) => {
     console.log('检测到用户切换，清理数据')
     
-    // 清空内存数据
-    globalStore.state.todoBooks.list = []
+    // 清除数据并通知页面
+    uni.$emit('todobooks-updated', [])
     
     // 通知页面用户已切换，需要重新加载
     uni.$emit('user-switched', newUserId)

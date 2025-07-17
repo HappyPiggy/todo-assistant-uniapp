@@ -150,8 +150,8 @@ import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/b
 // 使用 todobook 操作组合式函数
 const { 
 	loadTodoBooks,
-	archiveTodoBook: archiveTodoBookInStore,
-	deleteTodoBook: deleteTodoBookInStore
+	archiveTodoBook,
+	deleteTodoBook
 } = useBookData()
 
 // 页面响应式数据
@@ -387,7 +387,7 @@ const handleArchiveTodoBook = async () => {
 		success: async (res) => {
 			if (res.confirm) {
 				try {
-					await archiveTodoBookInStore(bookToArchive._id)
+					await archiveTodoBook(bookToArchive._id)
 					
 					uni.showToast({
 						title: '归档成功',
@@ -424,7 +424,7 @@ const handleDeleteTodoBook = async () => {
 						title: '删除中...'
 					})
 					
-					await deleteTodoBookInStore(bookToDelete._id)
+					await deleteTodoBook(bookToDelete._id)
 					
 					uni.hideLoading()
 					

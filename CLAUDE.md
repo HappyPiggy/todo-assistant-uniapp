@@ -172,9 +172,9 @@ const {
 - `loadStatisticsData(id)` / `refreshStatistics(id)` - Load and refresh statistics data
 
 **Store Role:**
-- The global store (`/store/index.js`) now only manages basic state (loading status, data list)
-- All business logic has been moved to the `useBookData` composable function
-- The store provides minimal state management: `getList()`, `getLoading()`, `setLoading()`, `clearTodoBooks()`, `onUserSwitch()`
+- The global store (`/store/index.js`) now only manages sync-related state and app settings
+- All TodoBook business logic has been moved to the `useBookData` composable function
+- TodoBook data is managed entirely through the `useBookData` composable and event system
 
 ### Component Development
 - Check existing components in `/pages/todobooks/components/` for patterns

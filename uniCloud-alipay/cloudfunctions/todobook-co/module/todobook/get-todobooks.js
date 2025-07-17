@@ -21,6 +21,50 @@ const { ERROR_CODES } = require('../../common/constants')
  * @param {number} options.pageSize 每页大小
  * @param {string} options.keyword 搜索关键词
  * @returns {Object} 响应结果
+ * 
+ * 成功响应格式：
+ * {
+ *   success: true,
+ *   data: {
+ *     list: [
+ *       {
+ *         _id: "项目册ID",
+ *         title: "项目册标题",
+ *         description: "项目册描述",
+ *         creator_id: "创建者ID",
+ *         created_at: "创建时间",
+ *         updated_at: "更新时间",
+ *         sort_order: "排序序号",
+ *         is_archived: false,
+ *         member_count: 0,        // 成员数量
+ *         item_count: 0,          // 任务总数
+ *         completed_count: 0,     // 已完成任务数
+ *         task_stats: {           // 详细任务统计
+ *           total: 0,             // 总任务数
+ *           todo: 0,              // 待办任务数
+ *           in_progress: 0,       // 进行中任务数
+ *           completed: 0          // 已完成任务数
+ *         }
+ *       }
+ *     ],
+ *     pagination: {
+ *       page: 1,                  // 当前页码
+ *       pageSize: 20,            // 每页大小
+ *       total: 0,                // 总记录数
+ *       totalPages: 0,           // 总页数
+ *       hasMore: false           // 是否有更多数据
+ *     }
+ *   }
+ * }
+ * 
+ * 失败响应格式：
+ * {
+ *   success: false,
+ *   error: {
+ *     code: "错误代码",
+ *     message: "错误信息"
+ *   }
+ * }
  */
 async function getTodoBooks(options = {}) {
   // 认证验证
