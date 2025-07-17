@@ -116,10 +116,10 @@
 						<uni-icons color="#17a2b8" size="20" type="bars" />
 						<text class="action-text">数据统计</text>
 					</view>
-					<!-- <view class="action-item" @click="handleExportTasks">
+					<view class="action-item" @click="handleExportTasks">
 						<uni-icons color="#6c757d" size="20" type="download" />
 						<text class="action-text">导出任务</text>
-					</view> -->
+					</view>
 					<view class="action-item" @click="handleArchiveTodoBook">
 						<uni-icons color="#ffc107" size="20" type="folder-add" />
 						<text class="action-text">归档</text>
