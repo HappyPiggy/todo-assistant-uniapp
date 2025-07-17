@@ -198,6 +198,7 @@ const todoBookActions = {
         source: 'no_user'
       }
     }
+    console.warn('到用户ID，尝试获取缓存', userId)
     
     // 优先返回内存缓存
     if (state.todoBooks.list.length > 0) {
