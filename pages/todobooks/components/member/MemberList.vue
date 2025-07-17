@@ -32,7 +32,6 @@
           v-for="member in members"
           :key="member._id"
           :member="member"
-          :current-user-id="currentUserId"
           :show-actions="shouldShowMemberActions(member)"
           @menu-click="handleMemberMenu"
         />
@@ -43,7 +42,6 @@
     <MemberActions
       ref="memberActions"
       :current-member="currentMember"
-      :current-user-id="currentUserId"
       :current-user-role="currentUserRole"
       :can-remove="canRemoveMember"
       :can-change-role="canChangeRole"
@@ -62,6 +60,7 @@ import ErrorState from '../common/ErrorState.vue'
 import EmptyState from '../common/EmptyState.vue'
 import MemberItem from './MemberItem.vue'
 import MemberActions from './MemberActions.vue'
+import { currentUserId } from '@/store/storage.js'
 
 const props = defineProps({
   members: {
@@ -73,10 +72,6 @@ const props = defineProps({
     default: false
   },
   error: {
-    type: String,
-    default: null
-  },
-  currentUserId: {
     type: String,
     default: null
   },
@@ -113,7 +108,7 @@ const canRemoveMember = computed(() => {
   if (!currentMember.value) return false
   
   // 不能移除自己
-  if (currentMember.value.user_id === props.currentUserId) return false
+  if (currentMember.value.user_id === currentUserId.value) return false
   
   // 只有所有者能移除管理员
   if (currentMember.value.role === 'admin' && props.currentUserRole !== 'owner') return false
@@ -126,20 +121,30 @@ const canChangeRole = computed(() => {
   if (!currentMember.value) return false
   
   // 不能修改自己的角色
-  if (currentMember.value.user_id === props.currentUserId) return false
+  if (currentMember.value.user_id === currentUserId.value) return false
   
   // 只有所有者能修改角色
   return props.currentUserRole === 'owner'
 })
 
 const shouldShowMemberActions = (member) => {
-  // owner可以对除自己外的所有成员显示菜单
+  // owner对自己不显示菜单
+  if (props.currentUserRole === 'owner' && member.user_id === currentUserId.value) {
+    return false
+  }
+  
+  // owner可以对其他成员显示菜单
   if (props.currentUserRole === 'owner') {
-    return member.user_id !== props.currentUserId
+    return true
+  }
+  
+  // admin可以对所有成员显示菜单（包括自己）
+  if (props.currentUserRole === 'admin') {
+    return true
   }
   
   // 普通成员只能对自己显示菜单
-  return member.user_id === props.currentUserId
+  return member.user_id === currentUserId.value
 }
 
 const handleRetry = () => {

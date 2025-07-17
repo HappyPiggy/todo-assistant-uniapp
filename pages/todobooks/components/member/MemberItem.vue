@@ -34,6 +34,7 @@
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
 import { currentUserId } from '@/store/storage.js'
+import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 
 const emit = defineEmits(['menuClick'])
 
@@ -47,6 +48,11 @@ const props = defineProps({
     default: true
   },
 })
+
+onShow(() => {
+   //console.log("props.member.user_id", props.member.user_id, props.member['user_info.nickname'], currentUserId.value)
+})
+
 
 const isCurrentUser = computed(() => {
   return props.member.user_id === currentUserId.value

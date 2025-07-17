@@ -108,7 +108,7 @@
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="action-text">编辑</text>
 					</view>
-					<view class="action-item" @click="handleShareTodoBook">
+					<view class="action-item" @click="handleMembers">
 						<uni-icons color="#28a745" size="20" type="staff" />
 						<text class="action-text">成员管理</text>
 					</view>
@@ -116,10 +116,10 @@
 						<uni-icons color="#17a2b8" size="20" type="bars" />
 						<text class="action-text">数据统计</text>
 					</view>
-					<view class="action-item" @click="handleExportTasks">
+					<!-- <view class="action-item" @click="handleExportTasks">
 						<uni-icons color="#6c757d" size="20" type="download" />
 						<text class="action-text">导出任务</text>
-					</view>
+					</view> -->
 					<view class="action-item" @click="handleArchiveTodoBook">
 						<uni-icons color="#ffc107" size="20" type="folder-add" />
 						<text class="action-text">归档</text>
@@ -344,24 +344,24 @@ const handleEditTodoBook = () => {
 	}
 }
 
-const handleShareTodoBook = () => {
+const handleMembers = () => {
 	const bookId = currentBook.value?._id
-	hideActionSheet()
 	if (bookId) {
 		uni.navigateTo({
 			url: `/pages/todobooks/members?id=${bookId}&bookData=${encodeURIComponent(JSON.stringify(currentBook.value))}`
 		})
 	}
+	hideActionSheet()
 }
 
 const handleShowStatistics = () => {
 	const bookId = currentBook.value?._id
-	hideActionSheet()
 	if (bookId) {
 		uni.navigateTo({
 			url: `/pages/todobooks/statistics?id=${bookId}`
 		})
 	}
+	hideActionSheet()
 }
 
 const handleExportTasks = () => {

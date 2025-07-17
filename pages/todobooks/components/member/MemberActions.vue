@@ -17,8 +17,8 @@
           <text class="action-text">移除</text>
         </view>
         
-        <!-- 退出项目册 (普通成员对自己) -->
-        <view class="action-item danger" @click="handleLeaveTodobook" v-if="isSelf && props.currentUserRole !== 'owner'">
+        <!-- 退出项目册 (对自己) -->
+        <view class="action-item danger" @click="handleLeaveTodobook" v-if="isSelf">
           <uni-icons color="#FF4757" size="20" type="logout" />
           <text class="action-text">退出</text>
         </view>

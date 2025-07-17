@@ -1,5 +1,6 @@
 // 本地存储管理模块
 import { reactive, computed } from 'vue'
+import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 // 存储键名常量
 const STORAGE_KEYS = {
@@ -594,42 +595,10 @@ export const storageManager = new LocalStorageManager()
 
 // 获取当前用户ID的计算属性
 export const currentUserId = computed(() => {
-  // 优先从 uni-id-pages 的 store 获取
-  try {
-    const uniIdPagesStore = require('@/uni_modules/uni-id-pages/common/store.js').store
-    if (uniIdPagesStore && uniIdPagesStore.userInfo && uniIdPagesStore.userInfo._id) {
-      return uniIdPagesStore.userInfo._id
-    }
-  } catch (e) {
-    // 如果获取失败，继续尝试其他方法
-  }
-  
-  // 方法1：从本地存储获取用户信息
-  const userInfo = uni.getStorageSync('uni-id-pages-userInfo')
+  const userInfo = store.userInfo
   if (userInfo && userInfo._id) {
     return userInfo._id
   }
-  
-  // 方法2：尝试从uni存储获取
-  const uniUserInfo = uni.getStorageSync('uniIdToken')
-  if (uniUserInfo) {
-    // 解析token获取用户信息（如果可能）
-    try {
-      const payload = JSON.parse(atob(uniUserInfo.split('.')[1]))
-      if (payload.uid) {
-        return payload.uid
-      }
-    } catch (e) {
-      // token解析失败，忽略
-    }
-  }
-  
-  // 方法3：从其他可能的存储位置获取
-  const storedUser = uni.getStorageSync('user') || uni.getStorageSync('userInfo')
-  if (storedUser && storedUser._id) {
-    return storedUser._id
-  }
-  
   return null
 })
 

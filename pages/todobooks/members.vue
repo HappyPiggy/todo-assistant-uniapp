@@ -28,7 +28,6 @@
       :members="members"
       :loading="membersLoading"
       :error="membersError"
-      :current-user-id="currentUserId.value"
       :current-user-role="currentUserRole"
       @invite="openInviteModal"
       @change-role="handleChangeRole"
@@ -72,19 +71,13 @@ import InviteModal from '@/pages/todobooks/components/member/InviteModal.vue'
 import RoleChangeModal from '@/pages/todobooks/components/member/RoleChangeModal.vue'
 import ConfirmDialog from '@/pages/todobooks/components/common/ConfirmDialog.vue'
 import { useMemberData } from '@/pages/todobooks/composables/useMemberData.js'
-import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
-import { currentUserId } from '@/store/storage.js'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 const bookId = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 
 
-// 使用组合函数
-const {
-  bookData,
-  loadBookDetail
-} = useBookData()
+const bookData = ref(null)
 
 const {
   members,
@@ -131,13 +124,8 @@ onLoad((options) => {
         console.log('使用传递的bookData:', JSON.stringify(bookData.value, null, 2))
       } catch (error) {
         console.error('解析传递的bookData失败:', error)
-        // 解析失败时从云端获取
-        loadBookDetail(bookId.value)
       }
-    } else {
-      // 没有传递bookData时从云端获取
-      loadBookDetail(bookId.value)
-    }
+    } 
     
     loadMembers(bookId.value)
   } else {
@@ -150,7 +138,6 @@ onShow(() => {
   // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
   if (hasInitialized.value && bookId.value) {
     Promise.all([
-      loadBookDetail(bookId.value),
       loadMembers(bookId.value)
     ])
   }
