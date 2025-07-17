@@ -66,3 +66,6 @@ uniCloud-tcb/cloudfunctions/*/node_modules/
 test/
 *.test.js
 coverage/
+
+# Claude配置文件
+.claude/settings.local.json
