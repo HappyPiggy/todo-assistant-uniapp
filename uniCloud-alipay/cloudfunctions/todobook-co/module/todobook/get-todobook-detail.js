@@ -9,6 +9,59 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  * 获取项目册详情
  * @param {string} bookId 项目册ID
  * @returns {Object} 响应结果
+ * 
+ * 成功响应格式：
+ * {
+ *   success: true,
+ *   data: {
+ *     book: {
+ *       id: "项目册ID",
+ *       name: "项目册名称",
+ *       description: "项目册描述",
+ *       created_at: "创建时间",
+ *       updated_at: "更新时间",
+ *       creator_id: "创建者ID",
+ *       is_archived: "是否归档",
+ *       sort_order: "排序号"
+ *     },
+ *     members: [
+ *       {
+ *         user_id: "用户ID",
+ *         todobook_id: "项目册ID",
+ *         role: "角色 (owner/admin/member)",
+ *         is_active: "是否活跃",
+ *         joined_at: "加入时间",
+ *         last_access_at: "最后访问时间"
+ *       }
+ *     ],
+ *     tasks: [
+ *       {
+ *         id: "任务ID",
+ *         todobook_id: "项目册ID",
+ *         title: "任务标题",
+ *         description: "任务描述",
+ *         status: "任务状态 (todo/in_progress/completed)",
+ *         priority: "优先级 (low/medium/high/urgent)",
+ *         sort_order: "排序号",
+ *         created_at: "创建时间",
+ *         updated_at: "更新时间",
+ *         creator_id: "创建者ID",
+ *         assignee_id: "指派人ID",
+ *         due_date: "截止日期",
+ *         completed_at: "完成时间"
+ *       }
+ *     ]
+ *   }
+ * }
+ * 
+ * 错误响应格式：
+ * {
+ *   success: false,
+ *   error: {
+ *     code: "错误码",
+ *     message: "错误信息"
+ *   }
+ * }
  */
 async function getTodoBookDetail(bookId) {
   // 认证验证

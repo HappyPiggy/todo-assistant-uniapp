@@ -281,13 +281,9 @@ const onSearchConfirm = () => {
 
 // 事件处理方法
 const onCacheUpdated = (updatedBooks) => {
-	console.log('收到缓存更新通知，刷新页面数据，数据条数:', updatedBooks.length)
 	console.log('更新前页面数据条数:', todoBooks.value.length)
-	
 	todoBooks.value = updatedBooks
 	loadMoreStatus.value = 'noMore'
-	
-	console.log('更新后页面数据条数:', todoBooks.value.length)
 }
 
 const onUserSwitched = (newUserId) => {
