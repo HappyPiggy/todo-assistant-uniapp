@@ -13,6 +13,10 @@ export function useBookData() {
   const memberCount = ref(0)
   const allTasks = ref([])
   const chartLoading = ref(false)
+  const membersData = ref([])
+  const membersLoading = ref(false)
+  const tasksData = ref([])
+  const tasksLoading = ref(false)
 
   /**
    * 加载 TodoBook 列表
@@ -169,6 +173,60 @@ export function useBookData() {
   }
 
   /**
+   * 加载项目册基本信息
+   * @param {string} id - 项目册ID
+   */
+  const loadBookBasic = async (id) => {
+    if (!id) {
+      console.log('loadBookBasic 错误: 项目册ID不能为空')
+      error.value = '项目册ID不能为空'
+      return
+    }
+    
+    if (loading.value) {
+      console.log('loadBookBasic 跳过: 正在加载中')
+      return
+    }
+    
+    console.log('设置 loading = true')
+    loading.value = true
+    error.value = null
+    
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      
+      const result = await todoBooksObj.getTodoBookBasic(id)
+      
+      if (result.code === API_CODES.SUCCESS) {
+        bookData.value = result.data
+        
+        // 设置页面标题
+        if (bookData.value && bookData.value.title) {
+          uni.setNavigationBarTitle({
+            title: bookData.value.title
+          })
+        }
+      } else {
+        console.log('loadBookBasic 失败, 错误信息:', result.message)
+        error.value = result.message || ERROR_MESSAGES.DATA_NOT_FOUND
+        uni.showToast({
+          title: error.value,
+          icon: 'none'
+        })
+      }
+    } catch (err) {
+      console.error('加载项目册基本信息失败:', err)
+      error.value = ERROR_MESSAGES.NETWORK_ERROR
+      uni.showToast({
+        title: error.value,
+        icon: 'none'
+      })
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * 加载项目册详情
    * @param {string} id - 项目册ID
    * @param {boolean} loadTasks - 是否同时加载任务数据用于统计
@@ -237,6 +295,103 @@ export function useBookData() {
       })
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * 加载项目册成员信息
+   * @param {string} id - 项目册ID
+   */
+  const loadBookMembers = async (id) => {
+    if (!id) {
+      console.log('loadBookMembers 错误: 项目册ID不能为空')
+      return
+    }
+    
+    if (membersLoading.value) {
+      console.log('loadBookMembers 跳过: 正在加载中')
+      return
+    }
+    
+    console.log('设置 membersLoading = true')
+    membersLoading.value = true
+    
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      
+      const result = await todoBooksObj.getTodoBookMembers(id)
+      
+      if (result.code === API_CODES.SUCCESS) {
+        membersData.value = result.data || []
+        memberCount.value = membersData.value.length
+      } else {
+        console.log('loadBookMembers 失败, 错误信息:', result.message)
+        uni.showToast({
+          title: result.message || '加载成员信息失败',
+          icon: 'none'
+        })
+      }
+    } catch (err) {
+      console.error('加载项目册成员信息失败:', err)
+      uni.showToast({
+        title: '加载成员信息失败',
+        icon: 'none'
+      })
+    } finally {
+      membersLoading.value = false
+    }
+  }
+
+  /**
+   * 加载项目册任务信息
+   * @param {string} id - 项目册ID
+   */
+  const loadBookTasks = async (id) => {
+    if (!id) {
+      console.log('loadBookTasks 错误: 项目册ID不能为空')
+      return
+    }
+    
+    if (tasksLoading.value) {
+      console.log('loadBookTasks 跳过: 正在加载中')
+      return
+    }
+    
+    console.log('设置 tasksLoading = true')
+    tasksLoading.value = true
+    
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      
+      const result = await todoBooksObj.getTodoBookTasks(id)
+      
+      if (result.code === API_CODES.SUCCESS) {
+        tasksData.value = result.data || []
+        
+        // 更新扁平化任务数据供统计使用
+        const flatTasks = []
+        tasksData.value.forEach(task => {
+          flatTasks.push(task)
+          if (task.subtasks && task.subtasks.length > 0) {
+            flatTasks.push(...task.subtasks)
+          }
+        })
+        allTasks.value = flatTasks
+      } else {
+        console.log('loadBookTasks 失败, 错误信息:', result.message)
+        uni.showToast({
+          title: result.message || '加载任务信息失败',
+          icon: 'none'
+        })
+      }
+    } catch (err) {
+      console.error('加载项目册任务信息失败:', err)
+      uni.showToast({
+        title: '加载任务信息失败',
+        icon: 'none'
+      })
+    } finally {
+      tasksLoading.value = false
     }
   }
 
@@ -522,6 +677,10 @@ export function useBookData() {
     memberCount,
     allTasks,
     chartLoading,
+    membersData,
+    membersLoading,
+    tasksData,
+    tasksLoading,
     
     // 统计计算属性
     timelineData,
@@ -530,7 +689,10 @@ export function useBookData() {
     timeAnalysisData,
     
     // 基础方法
+    loadBookBasic,
     loadBookDetail,
+    loadBookMembers,
+    loadBookTasks,
     loadTodoBooks,
     refreshTodoBooks,
     archiveTodoBook,

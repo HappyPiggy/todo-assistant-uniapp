@@ -15,40 +15,67 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  *   success: true,
  *   data: {
  *     book: {
- *       id: "项目册ID",
- *       name: "项目册名称",
+ *       _id: "项目册ID",
+ *       title: "项目册标题",
  *       description: "项目册描述",
+ *       creator_id: "创建者用户ID",
  *       created_at: "创建时间",
  *       updated_at: "更新时间",
- *       creator_id: "创建者ID",
- *       is_archived: "是否归档",
- *       sort_order: "排序号"
+ *       color: "项目册颜色",
+ *       icon: "项目册图标",
+ *       is_shared: "是否共享",
+ *       share_type: "共享类型(private/public/member)",
+ *       member_count: "成员数量",
+ *       item_count: "任务项数量",
+ *       completed_count: "已完成任务数量",
+ *       sort_order: "排序顺序",
+ *       is_archived: "是否已归档",
+ *       archived_at: "归档时间",
+ *       last_activity_at: "最后活动时间"
  *     },
  *     members: [
  *       {
- *         user_id: "用户ID",
+ *         _id: "成员记录ID",
  *         todobook_id: "项目册ID",
- *         role: "角色 (owner/admin/member)",
- *         is_active: "是否活跃",
+ *         user_id: "用户ID",
+ *         role: "角色(owner/admin/member)",
+ *         permissions: "权限列表",
  *         joined_at: "加入时间",
- *         last_access_at: "最后访问时间"
+ *         invited_by: "邀请人用户ID",
+ *         last_access_at: "最后访问时间",
+ *         is_active: "是否活跃成员",
+ *         nickname: "在此项目册中的昵称",
+ *         notification_settings: "通知设置"
  *       }
  *     ],
  *     tasks: [
  *       {
- *         id: "任务ID",
- *         todobook_id: "项目册ID",
+ *         _id: "任务ID",
+ *         todobook_id: "所属项目册ID",
+ *         parent_id: "父任务ID",
  *         title: "任务标题",
  *         description: "任务描述",
- *         status: "任务状态 (todo/in_progress/completed)",
- *         priority: "优先级 (low/medium/high/urgent)",
- *         sort_order: "排序号",
+ *         creator_id: "创建者用户ID",
+ *         assignee_id: "指派给的用户ID",
  *         created_at: "创建时间",
  *         updated_at: "更新时间",
- *         creator_id: "创建者ID",
- *         assignee_id: "指派人ID",
  *         due_date: "截止日期",
- *         completed_at: "完成时间"
+ *         completed_at: "完成时间",
+ *         status: "状态(todo/in_progress/completed/cancelled)",
+ *         priority: "优先级(low/medium/high/urgent)",
+ *         tags: "标签列表",
+ *         sort_order: "排序顺序",
+ *         level: "层级(0-2)",
+ *         progress: "进度百分比",
+ *         estimated_hours: "预估工时",
+ *         actual_hours: "实际工时",
+ *         attachments: "附件列表",
+ *         comments: "评论列表",
+ *         subtask_count: "子任务数量",
+ *         completed_subtask_count: "已完成子任务数量",
+ *         is_recurring: "是否循环任务",
+ *         recurrence_rule: "循环规则",
+ *         last_activity_at: "最后活动时间"
  *       }
  *     ]
  *   }

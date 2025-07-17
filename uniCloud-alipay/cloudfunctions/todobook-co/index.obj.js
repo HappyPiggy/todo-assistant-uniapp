@@ -6,6 +6,9 @@ const {
   getTodoBooks,
   createTodoBook,
   getTodoBookDetail,
+  getTodoBookBasic,
+  getTodoBookMembers,
+  getTodoBookTasks,
   updateTodoBook,
   deleteTodoBook
 } = require('./module/todobook/index')
@@ -60,9 +63,12 @@ module.exports = {
   getTodoBooks,
   createTodoBook,
   getTodoBookDetail,
+  getTodoBookBasic,
+  getTodoBookMembers,
+  getTodoBookTasks,
   updateTodoBook,
   deleteTodoBook,
-
+  
   // 任务管理接口
   createTodoItem,
   getTaskDetail,
