@@ -58,17 +58,12 @@ export function useTaskData(bookId) {
   })
   
   /**
-   * 加载任务列表
-   * @param {string} id - 项目册ID
+   * 初始化任务数据
+   * @param {Array} tasksData - 任务数据数组
    */
-  const loadTasks = async (id = bookId) => {
-    if (!id) {
-      error.value = '项目册ID不能为空'
-      return
-    }
-    
+  const initializeTasks = async (tasksData) => {
     if (loading.value) {
-      console.log('loadTasks 跳过: 正在加载中')
+      console.log('initializeTasks 跳过: 正在加载中')
       return
     }
     
@@ -76,31 +71,30 @@ export function useTaskData(bookId) {
     error.value = null
     
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.getTodoBookDetail(id)
-      
-      if (result.code === API_CODES.SUCCESS) {
-        // 处理任务数据，确保格式正确
-        const allTasks = (result.data.tasks || []).map(task => ({
-          ...task,
-          tags: Array.isArray(task.tags) ? task.tags : [],
-          attachments: Array.isArray(task.attachments) ? task.attachments : [],
-          expanded: false,
-          subtasks: []
-        }))
-        
-        // 组织父子关系：只显示父任务，子任务作为父任务的属性
-        tasks.value = organizeParentChildTasks(allTasks)
-        
-        // 加载任务评论数据（用于显示未读提示）
-        await loadTasksCommentCounts(allTasks)
+      // 如果提供了任务数据，直接使用
+      if (tasksData && Array.isArray(tasksData)) {
+        console.log('initializeTasks 使用提供的任务数据')
+        tasks.value = tasksData
       } else {
-        error.value = result.message || ERROR_MESSAGES.DATA_NOT_FOUND
-        uni.showToast({
-          title: error.value,
-          icon: 'none'
-        })
+        error.value = '任务数据不能为空'
+        return
       }
+      
+      // 处理任务数据，确保格式正确
+      const processedTasks = tasks.value.map(task => ({
+        ...task,
+        tags: Array.isArray(task.tags) ? task.tags : [],
+        attachments: Array.isArray(task.attachments) ? task.attachments : [],
+        expanded: false,
+        subtasks: []
+      }))
+      
+      // 组织父子关系：只显示父任务，子任务作为父任务的属性
+      tasks.value = organizeParentChildTasks(processedTasks)
+      
+      // 加载任务评论数据（用于显示未读提示）
+      await loadTasksCommentCounts(processedTasks)
+      
     } catch (err) {
       console.error('加载任务列表失败:', err)
       error.value = ERROR_MESSAGES.NETWORK_ERROR
@@ -112,6 +106,7 @@ export function useTaskData(bookId) {
       loading.value = false
     }
   }
+  
   
   /**
    * 切换任务状态
@@ -427,7 +422,7 @@ export function useTaskData(bookId) {
     filterTabs,
     
     // 方法
-    loadTasks,
+    initializeTasks,
     toggleTaskStatus,
     toggleSubtaskStatus,
     deleteTask,

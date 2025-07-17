@@ -37,7 +37,7 @@
       :active-filter="activeFilter"
       :current-user-id="currentUserId"
       :get-unread-comment-count="getUnreadCommentCount"
-      @retry="loadTasks"
+      @retry="refreshTasks"
       @add-task="addTask"
       @task-click="handleTaskClick"
       @status-toggle="toggleTaskStatus"
@@ -76,6 +76,7 @@ let bookId = null
 // 初始化组合式函数，此时不传入 bookId
 const {
   bookData,
+  allTasks,
   loading: bookLoading,
   error: bookError,
   memberCount,
@@ -89,7 +90,7 @@ const {
   activeFilter,
   filterTabs,
   filteredTasks,
-  loadTasks,
+  initializeTasks,
   setActiveFilter,
   taskStats,
   overallProgress,
@@ -113,12 +114,13 @@ const dragState = ref({
 })
 
 // 使用 onLoad 安全地获取页面参数
-onLoad((options) => {
+onLoad(async (options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
     bookId = options.id
-    loadBookDetail(bookId, { includeBasic: true })
-    loadTasks(bookId)
+    // 先加载项目册详情（包含任务数据）
+    await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
+    initializeTasks(allTasks.value)
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })
@@ -134,10 +136,7 @@ onMounted(() => {
 onShow(() => {
   // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
   if (hasInitialized.value && bookId) {
-    Promise.all([
-      loadTasks(bookId),
-      loadBookDetail(bookId, { includeBasic: true })
-    ])
+    refreshTasks()
   }
 })
 
@@ -149,10 +148,7 @@ onPullDownRefresh(async () => {
     return
   }
   try {
-    await Promise.all([
-      loadBookDetail(bookId, { includeBasic: true }),
-      loadTasks(bookId)
-    ])
+    await refreshTasks()
   } catch (error) {
     console.error('下拉刷新失败:', error)
   } finally {
@@ -166,6 +162,14 @@ onUnmounted(() => {
     clearTimeout(dragState.value.longPressTimer)
   }
 })
+
+// 刷新任务数据
+const refreshTasks = async () => {
+  if (!bookId) return
+  
+  await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
+  await initializeTasks(allTasks.value)
+}
 
 
 
@@ -252,7 +256,7 @@ const deleteTask = async (task) => {
       if (res.confirm) {
         try {
           await removeTask(task._id)
-          await loadTasks(bookId)
+          await refreshTasks()
           uni.showToast({ title: '删除成功', icon: 'success' })
         } catch (error) {
           uni.showToast({ title: '删除失败', icon: 'error' })
