@@ -127,10 +127,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
-const taskId = ref('')
-const bookId = ref('')
+// 用于存储从路由获取的参数，初始为 null
+let taskId = null
+let bookId = null
+
+// 组件本地状态
 const saving = ref(false)
 const loading = ref(true)
 const newTag = ref('')
@@ -138,6 +142,7 @@ const availableParents = ref([])
 const originalData = ref(null)
 const form = ref(null)
 const tagPopup = ref(null)
+const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 
 const formData = reactive({
 	title: '',
@@ -165,32 +170,47 @@ const priorityOptions = [
 	{ value: 'urgent', text: '紧急' }
 ]
 
-// 生命周期
-onMounted(() => {
-	const pages = getCurrentPages()
-	const currentPage = pages[pages.length - 1]
-	const options = currentPage.options
-	
-	if (!options.id || !options.bookId) {
-		uni.showToast({
-			title: '缺少必要参数',
-			icon: 'error'
-		})
+// 使用 onLoad 安全地获取页面参数
+onLoad(async (options) => {
+	console.log("onLoad options", JSON.stringify(options, null, 2))
+	if (options && options.id && options.bookId) {
+		taskId = options.id
+		bookId = options.bookId
+		
+		// 加载任务数据和父任务数据
+		await loadTaskData()
+		await loadParentTasks()
+	} else {
+		console.error('错误：未能从路由参数中获取到必要参数')
+		uni.showToast({ title: '页面参数错误', icon: 'error' })
 		uni.navigateBack()
-		return
 	}
-	taskId.value = options.id
-	bookId.value = options.bookId
-	
-	loadTaskData()
-	loadParentTasks()
+})
+
+// onMounted 在 onLoad 之后执行，适合用来标记页面已完成首次渲染
+onMounted(() => {
+	hasInitialized.value = true
+})
+
+// 页面再次显示时触发（例如从下一页返回）
+onShow(() => {
+	// 如果页面已经初始化过，并且 taskId 存在，可以在这里处理一些逻辑
+	if (hasInitialized.value && taskId) {
+		// 可以在这里处理从其他页面返回时的逻辑
+	}
+})
+
+// 页面卸载时清理资源
+onUnmounted(() => {
+	// 清理事件监听
+	uni.$off('updateTags', updateTaskTags)
 })
 
 // 加载任务数据
 const loadTaskData = async () => {
 	try {
 		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.getTodoItemDetail(taskId.value)
+		const result = await todoBooksObj.getTodoItemDetail(taskId)
 		
 		if (result.code === 0 && result.data) {
 			const task = result.data
@@ -225,15 +245,15 @@ const loadTaskData = async () => {
 
 // 加载父任务数据
 const loadParentTasks = async () => {
-	if (!bookId.value || typeof bookId.value !== 'string') {
-		console.warn('bookId is empty, undefined or not string:', bookId.value)
+	if (!bookId || typeof bookId !== 'string') {
+		console.warn('bookId is empty, undefined or not string:', bookId)
 		return
 	}
 	
 	try {
 		// 使用云对象获取可用的父任务
 		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.getTodoBookDetail(bookId.value)
+		const result = await todoBooksObj.getTodoBookDetail(bookId)
 		
 		if (result.code === 0 && result.data.tasks) {
 			// 筛选出可作为父任务的任务
@@ -243,13 +263,13 @@ const loadParentTasks = async () => {
 			// 4. 不能选择当前任务的子任务
 			const availableTasks = result.data.tasks.filter(task => {
 				// 过滤当前任务
-				if (task._id === taskId.value) return false
+				if (task._id === taskId) return false
 				// 过滤已完成的任务
 				if (task.status === 'completed') return false
 				// 过滤已经有父任务的任务（只允许一层父子关系）
 				if (task.parent_id) return false
 				// 过滤当前任务的子任务
-				if (task.parent_id === taskId.value) return false
+				if (task.parent_id === taskId) return false
 				return true
 			})
 			
@@ -308,7 +328,7 @@ const updateTaskAsync = async (updateData) => {
 	try {
 		// 使用云对象更新任务
 		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.updateTodoItem(taskId.value, updateData)
+		const result = await todoBooksObj.updateTodoItem(taskId, updateData)
 		
 		// 隐藏loading提示
 		uni.hideToast()
@@ -364,7 +384,7 @@ const openTagManager = () => {
 	// 跳转到标签管理页面
 	const currentTagsStr = encodeURIComponent(JSON.stringify(formData.tags))
 	uni.navigateTo({
-		url: `/pages/tags/manage?taskId=${taskId.value}&bookId=${bookId.value}&currentTags=${currentTagsStr}`
+		url: `/pages/tags/manage?taskId=${taskId}&bookId=${bookId}&currentTags=${currentTagsStr}`
 	})
 }
 
