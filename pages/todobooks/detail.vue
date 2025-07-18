@@ -37,30 +37,31 @@
       />
     </view>
 
-    <!-- 任务列表 -->
-    <TaskList
-      v-if="!bookLoading && !bookError"
-      :tasks="filteredTasks"
-      :loading="tasksLoading"
-      :error="tasksError"
-      :active-filter="activeFilter"
-      :current-user-id="currentUserId"
-      :get-unread-comment-count="getUnreadCommentCount"
-      @retry="refreshTasks"
-      @add-task="addTask"
-      @task-click="handleTaskClick"
-      @status-toggle="toggleTaskStatus"
-      @menu-click="showTaskMenu"
-      @view-detail="viewTaskDetail"
-      @edit="editTask"
-      @delete="deleteTask"
-      @subtask-status-toggle="toggleSubtaskStatus"
-      @subtask-menu-click="showSubtaskMenu"
-      @subtask-click="handleSubtaskClick"
-      @subtask-touch-start="handleSubtaskTouchStart"
-      @subtask-touch-move="handleSubtaskTouchMove"
-      @subtask-touch-end="handleSubtaskTouchEnd"
-    />
+    <!-- 虚拟滚动任务列表 -->
+    <view class="task-list-container" v-if="!bookLoading && !bookError">
+      <VirtualTaskList
+        :tasks="filteredTasks"
+        :loading="tasksLoading"
+        :error="tasksError"
+        :active-filter="activeFilter"
+        :get-unread-comment-count="getUnreadCommentCount"
+        :container-height="virtualListHeight"
+        @retry="refreshTasks"
+        @add-task="addTask"
+        @task-click="handleTaskClick"
+        @status-toggle="toggleTaskStatus"
+        @menu-click="showTaskMenu"
+        @view-detail="viewTaskDetail"
+        @edit="editTask"
+        @delete="deleteTask"
+        @subtask-status-toggle="toggleSubtaskStatus"
+        @subtask-menu-click="showSubtaskMenu"
+        @subtask-click="handleSubtaskClick"
+        @subtask-touch-start="handleSubtaskTouchStart"
+        @subtask-touch-move="handleSubtaskTouchMove"
+        @subtask-touch-end="handleSubtaskTouchEnd"
+      />
+    </view>
 
     <!-- 浮动创建任务按钮 -->
     <view class="fab-container">
@@ -108,7 +109,7 @@ import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
 import TaskSearch from '@/pages/todobooks/components/task/TaskSearch.vue'
 import TaskFilter from '@/pages/todobooks/components/task/TaskFilter.vue'
-import TaskList from '@/pages/todobooks/components/task/TaskList.vue'
+import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 
@@ -151,6 +152,7 @@ const {
 // 组件本地状态
 const currentTask = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
+const virtualListHeight = ref(600) // 虚拟滚动容器高度
 const dragState = ref({
   isDragging: false,
   dragItem: null,
@@ -179,7 +181,20 @@ onLoad(async (options) => {
 // onMounted 在 onLoad 之后执行，适合用来标记页面已完成首次渲染
 onMounted(() => {
   hasInitialized.value = true
+  calculateVirtualListHeight()
 })
+
+// 计算虚拟滚动容器高度
+const calculateVirtualListHeight = () => {
+  uni.getSystemInfo({
+    success: (res) => {
+      const screenHeight = res.windowHeight
+      // 减去固定元素的高度：导航栏、搜索框、筛选器、底部安全区域等
+      const fixedHeight = 200 // 预估固定元素高度
+      virtualListHeight.value = screenHeight - fixedHeight
+    }
+  })
+}
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
@@ -535,5 +550,14 @@ const handleSubtaskTouchEnd = (event) => {
     transform: scale(0.95);
     box-shadow: 0 4rpx 16rpx rgba(0, 122, 255, 0.4);
   }
+}
+
+/* 虚拟滚动任务列表容器 */
+.task-list-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* 确保容器占用剩余空间 */
+  min-height: 0;
 }
 </style>
