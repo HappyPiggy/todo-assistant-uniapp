@@ -338,15 +338,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useTaskDetail } from '@/composables/useTaskDetail.js'
 import { useTaskComments } from '@/composables/useTaskComments.js'
 import { useTaskUtils } from '@/composables/useTaskUtils.js'
 
-// 使用组合式函数
+// 用于存储从路由获取的参数，初始为 null
+let taskId = null
+let bookId = null
+
+// 初始化组合式函数，此时不传入具体参数
 const {
-	taskId,
-	bookId,
 	task,
 	subtasks,
 	parentTask,
@@ -393,54 +396,72 @@ const {
 	addSubtask
 } = useTaskUtils()
 
-// 弹窗 refs
+// 组件本地状态
 const taskMenuPopup = ref(null)
 const commentPopup = ref(null)
+const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 
-// 生命周期
-onMounted(() => {
-	const pages = getCurrentPages()
-	const currentPage = pages[pages.length - 1]
-	const options = currentPage.options
-	
-	if (!options.id) {
-		uni.showToast({
-			title: '缺少任务ID',
-			icon: 'error'
-		})
+// 使用 onLoad 安全地获取页面参数
+onLoad(async (options) => {
+	console.log("onLoad options", JSON.stringify(options, null, 2))
+	if (options && options.id) {
+		taskId = options.id
+		bookId = options.bookId
+		
+		// 获取当前用户信息
+		getCurrentUser()
+		
+		// 加载任务详情和评论
+		await loadTaskDetail(taskId)
+		await loadComments(taskId)
+	} else {
+		console.error('错误：未能从路由参数中获取到任务ID')
+		uni.showToast({ title: '页面参数错误', icon: 'error' })
 		uni.navigateBack()
-		return
 	}
-	taskId.value = options.id
-	bookId.value = options.bookId
-	
-	// 获取当前用户信息
-	getCurrentUser()
-	
-	// 加载任务详情和评论
-	loadTaskDetail()
-	loadComments(taskId.value)
 })
 
-// 页面显示时的处理
-const onShow = () => {
-	// 页面显示时标记评论为已读
-	if (taskId.value && comments.value && comments.value.length > 0) {
-		markTaskAsRead(taskId.value)
+// onMounted 在 onLoad 之后执行，适合用来标记页面已完成首次渲染
+onMounted(() => {
+	hasInitialized.value = true
+})
+
+// 页面再次显示时触发（例如从下一页返回）
+onShow(() => {
+	// 如果页面已经初始化过，并且 taskId 存在，则刷新数据
+	if (hasInitialized.value && taskId) {
+		refreshTaskDetail()
+		// 页面显示时标记评论为已读
+		if (comments.value && comments.value.length > 0) {
+			markTaskAsRead(taskId)
+		}
 	}
+})
+
+// 页面卸载时清理资源
+onUnmounted(() => {
+	// 可以在这里清理一些资源，如定时器等
+})
+
+// 刷新任务详情
+const refreshTaskDetail = async () => {
+	if (!taskId) return
+	
+	await loadTaskDetail(taskId)
+	await loadComments(taskId)
 }
 
 // 导航和操作方法
 const handleOpenParentTask = () => {
-	openParentTask(parentTask.value, bookId.value)
+	openParentTask(parentTask.value, bookId)
 }
 
 const handleOpenSubtask = (subtask) => {
-	openSubtask(subtask, bookId.value)
+	openSubtask(subtask, bookId)
 }
 
 const handleAddSubtask = () => {
-	addSubtask(bookId.value, taskId.value)
+	addSubtask(bookId, taskId)
 }
 
 // 菜单操作
@@ -455,7 +476,7 @@ const hideTaskMenu = () => {
 const editTask = () => {
 	hideTaskMenu()
 	uni.navigateTo({
-		url: `/pages/tasks/edit?id=${taskId.value}&bookId=${bookId.value}`
+		url: `/pages/tasks/edit?id=${taskId}&bookId=${bookId}`
 	})
 }
 
@@ -466,7 +487,7 @@ const deleteTask = async () => {
 
 // 评论操作包装方法
 const handleLoadMoreComments = () => {
-	loadMoreComments(taskId.value)
+	loadMoreComments(taskId)
 }
 
 // 评论弹窗操作
@@ -487,7 +508,7 @@ const editComment = (comment) => {
 
 // 提交评论包装方法
 const handleSubmitComment = async (content) => {
-	const success = await submitComment(taskId.value, content)
+	const success = await submitComment(taskId, content)
 	if (success) {
 		closeCommentDialog()
 	}
@@ -495,7 +516,7 @@ const handleSubmitComment = async (content) => {
 
 // 删除评论包装方法
 const handleDeleteComment = (comment) => {
-	deleteComment(taskId.value, comment)
+	deleteComment(taskId, comment)
 }
 
 // 关闭评论对话框
@@ -509,10 +530,7 @@ const handleCanDeleteComment = (comment) => {
 	return canDeleteComment(comment, task.value)
 }
 
-// 导出需要的方法（供模板使用）
-defineExpose({
-	onShow
-})
+// 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return 或 defineExpose。
 </script>
 
 <style lang="scss" scoped src="./detail.scss"></style>
