@@ -130,7 +130,11 @@
     "uniIdRouter": {
 		"loginPage": "pages/login/login-withpwd",
 		"needLogin": [
-			"/pages/ucenter/ucenter"
+			"/pages/list/list",
+			"/pages/ucenter/.*",
+			"/pages/todobooks/.*",
+			"/pages/tasks/.*",
+			"/pages/tags/.*"
 		],
 		"resToLogin": true
 	}
