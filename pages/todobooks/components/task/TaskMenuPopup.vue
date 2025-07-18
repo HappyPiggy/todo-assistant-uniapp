@@ -14,10 +14,10 @@
           <uni-icons color="#007AFF" size="20" type="eye" />
           <text class="menu-text">查看详情</text>
         </view>
-        <!-- <view class="menu-item" @click="handleEdit">
+        <view class="menu-item" @click="handleEdit">
           <uni-icons color="#28a745" size="20" type="compose" />
           <text class="menu-text">编辑任务</text>
-        </view> -->
+        </view>
         <view class="menu-item danger" @click="handleDelete">
           <uni-icons color="#FF4757" size="20" type="trash" />
           <text class="menu-text">删除任务</text>
