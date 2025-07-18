@@ -87,7 +87,7 @@ export function useTaskUtils() {
 
 	const addSubtask = (bookId, parentId) => {
 		uni.navigateTo({
-			url: `/pages/tasks/create?bookId=${bookId}&parentId=${parentId}`
+			url: `/pages/tasks/form?bookId=${bookId}&parentId=${parentId}`
 		})
 	}
 

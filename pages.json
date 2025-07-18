@@ -71,15 +71,9 @@
         }
     },
     {
-        "path": "pages/tasks/create",
+        "path": "pages/tasks/form",
         "style": {
-            "navigationBarTitleText": "创建任务"
-        }
-    },
-    {
-        "path": "pages/tasks/edit",
-        "style": {
-            "navigationBarTitleText": "编辑任务"
+            "navigationBarTitleText": "任务"
         }
     },
     {

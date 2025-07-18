@@ -277,7 +277,7 @@ const handleShowStatistics = () => {
 
 const addTask = () => {
   uni.navigateTo({
-    url: `/pages/tasks/create?bookId=${bookId}`
+    url: `/pages/tasks/form?bookId=${bookId}`
   })
 }
 
@@ -303,7 +303,7 @@ const viewTaskDetail = (task) => {
 
 const editTask = (task) => {
   uni.navigateTo({
-    url: `/pages/tasks/edit?id=${task._id}&bookId=${bookId}`
+    url: `/pages/tasks/form?id=${task._id}&bookId=${bookId}`
   })
 }
 
