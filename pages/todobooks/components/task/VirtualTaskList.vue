@@ -9,13 +9,6 @@
       :message="error"
       @retry="handleRetry" />
     
-    <!-- 空状态 -->
-    <EmptyState 
-      v-else-if="tasks.length === 0"
-      :title="emptyText"
-      :show-action="activeFilter === 'all'"
-      action-text="创建第一个任务"
-      @action="handleAddTask" />
     
     <!-- 虚拟滚动容器 -->
     <scroll-view
@@ -51,31 +44,41 @@
         @tag-filter-change="handleTagFilterChange"
       />
       
-      <!-- 上边距占位 -->
-      <view :style="{ height: offsetTop + 'px' }"></view>
-      
-      <!-- 可见任务列表 -->
-      <view class="visible-tasks">
-        <TaskItem
-          v-for="(task, index) in visibleTasks"
-          :key="task._id"
-          :task="task"
-          :variant="'card'"
-          :unreadCommentCount="getUnreadCommentCount(task)"
-          @click="handleTaskClick"
-          @statusToggle="handleStatusToggle"
-          @menuClick="handleMenuClick"
-          @subtaskStatusToggle="handleSubtaskStatusToggle"
-          @subtaskMenuClick="handleSubtaskMenuClick"
-          @subtaskClick="handleSubtaskClick"
-          @touchStart="handleSubtaskTouchStart"
-          @touchMove="handleSubtaskTouchMove"
-          @touchEnd="handleSubtaskTouchEnd"
-        />
+      <!-- 任务列表内容区域 -->
+      <view v-if="tasks.length === 0" class="empty-content">
+        <EmptyState 
+          :title="emptyText"
+          :show-action="activeFilter === 'all'"
+          action-text="创建第一个任务"
+          @action="handleAddTask" />
       </view>
-      
-      <!-- 下边距占位 -->
-      <view :style="{ height: offsetBottom + 'px' }"></view>
+      <view v-else class="tasks-content">
+        <!-- 上边距占位 -->
+        <view :style="{ height: offsetTop + 'px' }"></view>
+        
+        <!-- 可见任务列表 -->
+        <view class="visible-tasks">
+          <TaskItem
+            v-for="(task, index) in visibleTasks"
+            :key="task._id"
+            :task="task"
+            :variant="'card'"
+            :unreadCommentCount="getUnreadCommentCount(task)"
+            @click="handleTaskClick"
+            @statusToggle="handleStatusToggle"
+            @menuClick="handleMenuClick"
+            @subtaskStatusToggle="handleSubtaskStatusToggle"
+            @subtaskMenuClick="handleSubtaskMenuClick"
+            @subtaskClick="handleSubtaskClick"
+            @touchStart="handleSubtaskTouchStart"
+            @touchMove="handleSubtaskTouchMove"
+            @touchEnd="handleSubtaskTouchEnd"
+          />
+        </view>
+        
+        <!-- 下边距占位 -->
+        <view :style="{ height: offsetBottom + 'px' }"></view>
+      </view>
     </scroll-view>
     
     <!-- 任务菜单弹窗 -->
@@ -362,6 +365,15 @@ defineExpose({
   height: 100%;
 }
 
+
+.empty-content {
+  padding: $padding-lg $padding-base;
+  min-height: 300rpx;
+}
+
+.tasks-content {
+  flex: 1;
+}
 
 .visible-tasks {
   padding: 0 $padding-base;
