@@ -10,7 +10,23 @@ export function useTaskDetail() {
 	const loading = ref(true)
 	const error = ref(null)
 
-	const loadTaskDetail = async () => {
+	const loadTaskDetail = async (id) => {
+		// 如果传入了 id，更新 taskId
+		if (id) {
+			taskId.value = id
+		}
+		
+		// 确保 taskId 存在
+		if (!taskId.value) {
+			error.value = '任务ID不能为空'
+			uni.showToast({
+				title: '任务ID不能为空',
+				icon: 'none'
+			})
+			loading.value = false
+			return
+		}
+		
 		loading.value = true
 		error.value = null
 		
