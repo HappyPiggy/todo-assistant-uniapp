@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, computed } from 'vue'
+import { defineProps, defineEmits, defineExpose, ref, computed } from 'vue'
 import { useVirtualList } from '../composables/useVirtualList.js'
 import LoadingState from '../common/LoadingState.vue'
 import ErrorState from '../common/ErrorState.vue'
@@ -164,7 +164,9 @@ const emit = defineEmits([
   'moreActions',
   'searchClick',
   // TaskFilter 相关事件
-  'filterChange'
+  'filterChange',
+  // 滚动事件
+  'scroll'
 ])
 
 const taskMenuPopup = ref(null)
@@ -186,7 +188,9 @@ const {
   offsetBottom,
   handleScroll: onScroll,
   updateItemHeight,
-  scrollToIndex
+  scrollToIndex,
+  scrollToTop,
+  scrollToBottom
 } = useVirtualList(computed(() => props.tasks), {
   containerHeight: computed(() => props.containerHeight - fixedHeaderHeight.value),
   estimatedItemHeight: 120, // 预估任务卡片高度
@@ -208,6 +212,12 @@ const handleScroll = (event) => {
   const { scrollTop: newScrollTop } = event.detail
   scrollTop.value = newScrollTop
   onScroll(event)
+  
+  // 向外暴露滚动事件
+  emit('scroll', {
+    scrollTop: newScrollTop,
+    detail: event.detail
+  })
 }
 
 // 简化版本不需要动态高度测量
@@ -288,6 +298,13 @@ const handleSearchClick = () => {
 const handleFilterChange = (filter) => {
   emit('filterChange', filter)
 }
+
+// 暴露滚动控制方法
+defineExpose({
+  scrollToTop,
+  scrollToBottom,
+  scrollToIndex
+})
 </script>
 
 <style lang="scss" scoped>

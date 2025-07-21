@@ -15,6 +15,7 @@
       class="task-list-wrapper"
     >
       <VirtualTaskList
+        ref="virtualTaskListRef"
         :tasks="filteredTasks"
         :loading="tasksLoading"
         :error="tasksError"
@@ -43,8 +44,15 @@
         @more-actions="handleMoreActions"
         @search-click="handleSearchClick"
         @filter-change="setActiveFilter"
+        @scroll="handleScroll"
       />
     </view>
+
+    <!-- 返回顶部按钮 -->
+    <BackToTopButton 
+      :visible="showBackToTop" 
+      @scroll-to-top="scrollToTop" 
+    />
 
     <!-- 浮动创建任务按钮 -->
     <view class="fab-container">
@@ -102,6 +110,7 @@ import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.v
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
+import BackToTopButton from '@/pages/todobooks/components/common/BackToTopButton.vue'
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
@@ -145,6 +154,8 @@ const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入�
 const virtualListHeight = ref(600) // 虚拟滚动容器高度
 const mainScrollHeight = ref(600) // 主滚动区域高度
 const showSearchOverlay = ref(false) // 搜索弹窗显示状态
+const showBackToTop = ref(false) // 返回顶部按钮显示状态
+const virtualTaskListRef = ref(null) // VirtualTaskList 组件引用
 const dragState = ref({
   isDragging: false,
   dragItem: null,
@@ -246,7 +257,19 @@ const handleSearchOverlayClose = () => {
   showSearchOverlay.value = false
 }
 
+// 滚动处理函数
+const handleScroll = (event) => {
+  const { scrollTop } = event.detail
+  // 当滚动超过200px时显示返回顶部按钮（大约滚动过BookHeader后）
+  showBackToTop.value = scrollTop > 200
+}
 
+// 返回顶部函数
+const scrollToTop = () => {
+  if (virtualTaskListRef.value) {
+    virtualTaskListRef.value.scrollToTop()
+  }
+}
 
 const getUnreadCommentCount = (task) => {
   try {

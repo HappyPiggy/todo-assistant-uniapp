@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 
 /**
  * 简化版虚拟滚动组合函数
@@ -135,10 +135,25 @@ export function useVirtualList(items, options = {}) {
   }
 
   /**
-   * 滚动到顶部
+   * 滚动到顶部（滚动到页面最顶部，包含 BookHeader）
    */
   const scrollToTop = () => {
-    scrollTop.value = 0
+    // 需要先设置一个不同的值来触发响应式更新
+    const currentTop = scrollTop.value
+    if (currentTop === 0) {
+      // 如果当前已经在顶部，先移动一点再回到顶部
+      scrollTop.value = 1
+      nextTick(() => {
+        scrollTop.value = 0
+      })
+    } else {
+      scrollTop.value = 0
+    }
+    
+    // 返回 Promise 等待滚动动画完成
+    return new Promise((resolve) => {
+      setTimeout(resolve, 300)
+    })
   }
 
   /**
