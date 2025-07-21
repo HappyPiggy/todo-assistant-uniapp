@@ -46,6 +46,7 @@
         :active-filter="activeFilter"
         :available-tags="availableTags"
         :selected-tags="selectedTags"
+        :todorbook-id="todorbookId"
         @filter-change="handleFilterChange"
         @tag-filter-change="handleTagFilterChange"
       />
@@ -154,6 +155,10 @@ const props = defineProps({
   selectedTags: {
     type: Array,
     default: () => []
+  },
+  todorbookId: {
+    type: String,
+    required: true
   }
 })
 
@@ -219,13 +224,6 @@ const scrollTop = virtualScrollTop
 // 监听任务变化，输出调试信息
 watch(() => props.tasks.length, (newLength) => {
   if (newLength > 0) {
-    console.log('Virtual scroll info:', {
-      totalTasks: newLength,
-      visibleTasks: visibleTasks.value.length,
-      containerHeight: props.containerHeight,
-      effectiveHeight: props.containerHeight - fixedHeaderHeight.value,
-      estimatedItemsPerPage: Math.floor((props.containerHeight - fixedHeaderHeight.value) / 150)
-    })
   }
 })
 
@@ -341,8 +339,6 @@ const customScrollToTop = () => {
 
 // 监听availableTags props变化
 watch(() => props.availableTags, (newTags) => {
-  console.log('VirtualTaskList接收到availableTags:', JSON.stringify(newTags, null, 2))
-  console.log('VirtualTaskList availableTags数量:', newTags.length)
 }, { deep: true, immediate: true })
 
 // 暴露滚动控制方法

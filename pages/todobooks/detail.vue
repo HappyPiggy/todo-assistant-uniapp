@@ -29,6 +29,7 @@
         :filter-tabs="filterTabs"
         :available-tags="availableTags"
         :selected-tags="selectedTags"
+        :todorbook-id="bookId"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"
@@ -157,8 +158,6 @@ const {
 
 // 监听availableTags变化
 watch(availableTags, (newTags) => {
-  console.log('detail.vue availableTags变化:', JSON.stringify(newTags, null, 2))
-  console.log('detail.vue availableTags数量:', newTags.length)
 }, { deep: true, immediate: true })
 
 // 组件本地状态
@@ -187,8 +186,6 @@ onLoad(async (options) => {
     bookId = options.id
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
-    console.log('detail.vue onLoad - allTasks数据:', JSON.stringify(allTasks.value?.slice(0, 3), null, 2))
-    console.log('detail.vue onLoad - allTasks长度:', allTasks.value?.length)
     initializeTasks(allTasks.value)
     
     // 如果从列表页跳转过来，设置默认筛选为待办
@@ -256,8 +253,6 @@ const refreshTasks = async () => {
   if (!bookId) return
   
   await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
-  console.log('detail.vue refreshTasks - allTasks数据:', JSON.stringify(allTasks.value?.slice(0, 3), null, 2))
-  console.log('detail.vue refreshTasks - allTasks长度:', allTasks.value?.length)
   await initializeTasks(allTasks.value)
 }
 

@@ -25,6 +25,7 @@
       :show="tagFilterShow"
       :available-tags="availableTags"
       :selected-tags="selectedTags"
+      :todorbook-id="todorbookId"
       @close="hideTagFilter"
       @confirm="handleTagConfirm"
     />
@@ -51,6 +52,10 @@ const props = defineProps({
   selectedTags: {
     type: Array,
     default: () => []
+  },
+  todorbookId: {
+    type: String,
+    required: true
   }
 })
 

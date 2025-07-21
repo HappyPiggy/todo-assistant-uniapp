@@ -24,11 +24,11 @@
           </view>
         </view>
         
-        <view v-if="selectedTags.length > 0" class="tag-section">
+        <view v-if="tempSelectedTags.length > 0" class="tag-section">
           <text class="section-title">已选标签</text>
           <view class="selected-tags">
             <view 
-              v-for="tag in selectedTags"
+              v-for="tag in tempSelectedTags"
               :key="tag.id || tag"
               class="selected-tag"
               @click="toggleTag(tag)"
@@ -49,7 +49,8 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, computed, watch } from 'vue'
+import { defineProps, defineEmits, ref, computed, watch, onMounted } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 
 const props = defineProps({
   show: {
@@ -63,6 +64,10 @@ const props = defineProps({
   selectedTags: {
     type: Array,
     default: () => []
+  },
+  todorbookId: {
+    type: String,
+    required: true
   }
 })
 
@@ -81,7 +86,6 @@ const getTagId = (tag) => {
 
 const getTagName = (tag) => {
   const name = typeof tag === 'object' ? tag.name : tag
-  console.log('getTagName - tag:', tag, 'name:', name)
   return name
 }
 
@@ -106,29 +110,107 @@ const cancel = () => {
 }
 
 const confirm = () => {
+  // 保存到本地存储
+  saveTagFilterToLocal(tempSelectedTags.value)
   emit('confirm', tempSelectedTags.value)
   emit('close')
 }
 
+// 本地存储相关方法
+const getStorageKey = () => {
+  const userId = currentUserId.value
+  if (!userId || !props.todorbookId) return null
+  return `tag_filter_${userId}_${props.todorbookId}`
+}
+
+const saveTagFilterToLocal = (selectedTags) => {
+  try {
+    const storageKey = getStorageKey()
+    if (storageKey) {
+      const filterData = {
+        selectedTags: selectedTags,
+        timestamp: Date.now()
+      }
+      uni.setStorageSync(storageKey, JSON.stringify(filterData))
+      console.log('标签筛选已保存到本地:', storageKey, filterData)
+    }
+  } catch (error) {
+    console.error('保存标签筛选失败:', error)
+  }
+}
+
+const loadTagFilterFromLocal = () => {
+  try {
+    const storageKey = getStorageKey()
+    if (storageKey) {
+      const filterDataStr = uni.getStorageSync(storageKey)
+      if (filterDataStr) {
+        const filterData = JSON.parse(filterDataStr)
+        console.log('从本地加载标签筛选:', storageKey, filterData)
+        return filterData.selectedTags || []
+      }
+    }
+  } catch (error) {
+    console.error('加载标签筛选失败:', error)
+  }
+  return []
+}
+
+// 清除本地保存的筛选数据
+const clearTagFilterFromLocal = () => {
+  try {
+    const storageKey = getStorageKey()
+    if (storageKey) {
+      uni.removeStorageSync(storageKey)
+      console.log('已清除本地标签筛选:', storageKey)
+    }
+  } catch (error) {
+    console.error('清除标签筛选失败:', error)
+  }
+}
+
 // 重置临时选择状态
 const resetTempSelection = () => {
-  tempSelectedTags.value = [...props.selectedTags]
+  // 首先尝试从本地加载
+  const localSelectedTags = loadTagFilterFromLocal()
+  if (localSelectedTags.length > 0) {
+    tempSelectedTags.value = [...localSelectedTags]
+    // 通知父组件应用本地保存的筛选
+    emit('confirm', localSelectedTags)
+  } else {
+    tempSelectedTags.value = [...props.selectedTags]
+  }
 }
+
+// 组件挂载时加载本地筛选
+onMounted(() => {
+  const localSelectedTags = loadTagFilterFromLocal()
+  if (localSelectedTags.length > 0) {
+    tempSelectedTags.value = [...localSelectedTags]
+    // 通知父组件应用本地保存的筛选
+    emit('confirm', localSelectedTags)
+  }
+})
 
 // 监听显示状态变化，重置临时选择
 watch(() => props.show, (newVal) => {
   if (newVal) {
-    console.log('TagFilter弹窗打开，可用标签数据:', JSON.stringify(props.availableTags, null, 2))
-    console.log('TagFilter弹窗打开，可用标签数量:', props.availableTags.length)
     resetTempSelection()
   }
 })
 
 // 监听availableTags变化
 watch(() => props.availableTags, (newTags) => {
-  console.log('TagFilter availableTags变化:', JSON.stringify(newTags, null, 2))
-  console.log('TagFilter availableTags数量:', newTags.length)
 }, { deep: true, immediate: true })
+
+// 监听用户切换，清除本地筛选
+watch(currentUserId, (newUserId, oldUserId) => {
+  if (oldUserId && newUserId !== oldUserId) {
+    // 用户切换时清除旧的筛选数据
+    tempSelectedTags.value = []
+    emit('confirm', [])
+  }
+}, { immediate: false })
 </script>
 
 <style lang="scss" scoped>
