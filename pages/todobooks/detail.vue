@@ -192,10 +192,8 @@ const calculateVirtualListHeight = () => {
   uni.getSystemInfo({
     success: (res) => {
       const screenHeight = res.windowHeight
-      // 考虑到 BookHeader（~140px）和 TaskFilter（~80px）的高度
-      const headerHeight = 220 // 预估的固定头部高度
-      // 主滚动区域高度减去头部高度
-      mainScrollHeight.value = Math.max(400, screenHeight - headerHeight)
+      // 直接使用窗口高度，VirtualTaskList 组件内部会处理固定头部的高度
+      mainScrollHeight.value = screenHeight
       // 虚拟列表高度与主滚动区域保持一致
       virtualListHeight.value = mainScrollHeight.value
     }

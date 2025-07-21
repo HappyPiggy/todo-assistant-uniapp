@@ -176,8 +176,8 @@ const scrollTop = ref(0)
 // 计算固定头部高度
 const fixedHeaderHeight = computed(() => {
   let height = 0
-  if (props.bookData) height += 140 // BookHeader 预估高度
-  if (props.filterTabs) height += 80 // TaskFilter 预估高度
+  if (props.bookData) height += 200 // BookHeader 实际高度更大
+  if (props.filterTabs) height += 60 // TaskFilter 实际高度
   return height
 })
 
@@ -193,14 +193,25 @@ const {
   scrollToBottom,
   getDebugInfo
 } = useVirtualList(computed(() => props.tasks), {
-  containerHeight: computed(() => props.containerHeight - fixedHeaderHeight.value),
-  estimatedItemHeight: 90, // 预估任务卡片高度，调整为更合理的数值
-  overscan: 8, // 预渲染数量，增加缓冲区
+  containerHeight: computed(() => props.containerHeight),
+  estimatedItemHeight: 150, // 预估任务卡片高度，包含间距和内边距
+  overscan: 3, // 预渲染数量，上下各3个缓冲
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 调试信息（可选在控制台查看）
-// console.log('Virtual scroll debug:', JSON.stringify(getDebugInfo(), null, 2))
+// 监听任务变化，输出调试信息
+import { watch } from 'vue'
+watch(() => props.tasks.length, (newLength) => {
+  if (newLength > 0) {
+    console.log('Virtual scroll info:', {
+      totalTasks: newLength,
+      visibleTasks: visibleTasks.value.length,
+      containerHeight: props.containerHeight,
+      effectiveHeight: props.containerHeight - fixedHeaderHeight.value,
+      estimatedItemsPerPage: Math.floor((props.containerHeight - fixedHeaderHeight.value) / 150)
+    })
+  }
+})
 
 const emptyText = computed(() => {
   const map = {

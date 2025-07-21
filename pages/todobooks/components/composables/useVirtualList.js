@@ -10,7 +10,7 @@ export function useVirtualList(items, options = {}) {
   const {
     containerHeight = 600,
     estimatedItemHeight = 90, // 默认预估高度调整为90
-    overscan = 8, // 预渲染数量，增加缓冲区避免空白
+    overscan = 3, // 预渲染数量，上下各3个作为缓冲
     fixedHeaderHeight = ref(0) // 固定头部高度
   } = options
 
@@ -64,10 +64,10 @@ export function useVirtualList(items, options = {}) {
     
     // 计算起始索引，确保不会超出范围
     const start = Math.max(0, Math.floor(adjustedScrollTop / estimatedItemHeight))
-    // 计算基础可见数量
+    // 计算基础可见数量，精确计算可视区域能显示的任务数
     const baseVisibleCount = Math.ceil(effectiveContainerHeight.value / estimatedItemHeight)
-    // 加上额外的缓冲区，确保有足够的任务显示
-    const visibleCount = Math.max(baseVisibleCount + overscan * 2, 10) // 至少显示10个任务
+    // 加上缓冲区，避免快速滚动时出现空白
+    const visibleCount = baseVisibleCount + overscan * 2
     // 计算结束索引
     const end = Math.min(itemList.value.length, start + visibleCount)
 
