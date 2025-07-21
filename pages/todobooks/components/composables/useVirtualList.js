@@ -142,17 +142,26 @@ export function useVirtualList(items, options = {}) {
    * 滚动到顶部（滚动到页面最顶部，包含 BookHeader）
    */
   const scrollToTop = () => {
-    // 需要先设置一个不同的值来触发响应式更新
-    const currentTop = scrollTop.value
-    if (currentTop === 0) {
-      // 如果当前已经在顶部，先移动一点再回到顶部
-      scrollTop.value = 1
-      nextTick(() => {
-        scrollTop.value = 0
-      })
-    } else {
-      scrollTop.value = 0
+    // H5 平台特殊处理
+    // #ifdef H5
+    // 尝试直接操作 DOM
+    const scrollViewDom = document.querySelector('.virtual-scroll-container')
+    if (scrollViewDom) {
+      scrollViewDom.scrollTop = 0
     }
+    // #endif
+    
+    // uni-app 的 scroll-view 需要强制触发滚动
+    const currentTop = scrollTop.value
+    
+    // 先设置一个临时值再回到0，确保触发滚动
+    const tempValue = currentTop === 0 ? -1 : currentTop + 1
+    scrollTop.value = tempValue
+    
+    // 使用 nextTick 确保 DOM 更新后再设置最终值
+    nextTick(() => {
+      scrollTop.value = 0
+    })
     
     // 返回 Promise 等待滚动动画完成
     return new Promise((resolve) => {

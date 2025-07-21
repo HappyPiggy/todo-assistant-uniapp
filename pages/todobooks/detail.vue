@@ -175,6 +175,11 @@ onLoad(async (options) => {
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
     initializeTasks(allTasks.value)
+    
+    // 如果从列表页跳转过来，设置默认筛选为待办
+    if (options.filter === 'todo') {
+      setActiveFilter('todo')
+    }
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })

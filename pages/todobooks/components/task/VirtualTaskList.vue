@@ -20,6 +20,7 @@
     <!-- 虚拟滚动容器 -->
     <scroll-view
       v-else
+      ref="scrollViewRef"
       class="virtual-scroll-container"
       :scroll-y="true"
       :scroll-with-animation="true"
@@ -171,7 +172,7 @@ const emit = defineEmits([
 
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
-const scrollTop = ref(0)
+const scrollViewRef = ref(null)
 
 // 计算固定头部高度
 const fixedHeaderHeight = computed(() => {
@@ -189,15 +190,19 @@ const {
   handleScroll: onScroll,
   updateItemHeight,
   scrollToIndex,
-  scrollToTop,
+  scrollToTop: virtualScrollToTop,
   scrollToBottom,
-  getDebugInfo
+  getDebugInfo,
+  scrollTop: virtualScrollTop
 } = useVirtualList(computed(() => props.tasks), {
   containerHeight: computed(() => props.containerHeight),
   estimatedItemHeight: 150, // 预估任务卡片高度，包含间距和内边距
   overscan: 3, // 预渲染数量，上下各3个缓冲
   fixedHeaderHeight: fixedHeaderHeight
 })
+
+// 直接使用虚拟滚动的 scrollTop
+const scrollTop = virtualScrollTop
 
 // 监听任务变化，输出调试信息
 import { watch } from 'vue'
@@ -314,9 +319,14 @@ const handleFilterChange = (filter) => {
   emit('filterChange', filter)
 }
 
+// 自定义滚动到顶部方法
+const customScrollToTop = () => {
+  return virtualScrollToTop()
+}
+
 // 暴露滚动控制方法
 defineExpose({
-  scrollToTop,
+  scrollToTop: customScrollToTop,
   scrollToBottom,
   scrollToIndex
 })

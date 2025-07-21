@@ -43,8 +43,8 @@ const setActiveFilter = (filter) => {
 .task-filter {
   @include card-style(0);
   @include flex-start;
-  padding: $padding-base;
-  margin-bottom: $margin-base;
+  padding: $padding-sm $padding-base;
+  margin-bottom: $margin-sm;
 }
 
 .tab-scroll {
@@ -61,10 +61,10 @@ const setActiveFilter = (filter) => {
 
 .tab-item {
   @include flex-start;
-  padding: $padding-sm $padding-base;
+  padding: $padding-xs $padding-sm;
   background-color: $gray-100;
-  border-radius: 20rpx;
-  margin-right: $margin-sm;
+  border-radius: 16rpx;
+  margin-right: $margin-xs;
   transition: $transition-fast;
   cursor: pointer;
   
@@ -83,14 +83,14 @@ const setActiveFilter = (filter) => {
 }
 
 .tab-text {
-  font-size: $font-size-base;
+  font-size: $font-size-sm;
   color: $text-secondary;
   font-weight: $font-weight-medium;
 }
 
 .tab-count {
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
   color: $text-tertiary;
-  margin-left: $margin-xs;
+  margin-left: 4rpx;
 }
 </style>
