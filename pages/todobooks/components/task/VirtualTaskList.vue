@@ -44,7 +44,10 @@
         v-if="filterTabs"
         :filter-tabs="filterTabs"
         :active-filter="activeFilter"
+        :available-tags="availableTags"
+        :selected-tags="selectedTags"
         @filter-change="handleFilterChange"
+        @tag-filter-change="handleTagFilterChange"
       />
       
       <!-- 上边距占位 -->
@@ -143,6 +146,14 @@ const props = defineProps({
   filterTabs: {
     type: Array,
     default: null
+  },
+  availableTags: {
+    type: Array,
+    default: () => []
+  },
+  selectedTags: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -166,6 +177,7 @@ const emit = defineEmits([
   'searchClick',
   // TaskFilter 相关事件
   'filterChange',
+  'tagFilterChange',
   // 滚动事件
   'scroll'
 ])
@@ -317,6 +329,10 @@ const handleSearchClick = () => {
 // TaskFilter 事件处理
 const handleFilterChange = (filter) => {
   emit('filterChange', filter)
+}
+
+const handleTagFilterChange = (tags) => {
+  emit('tagFilterChange', tags)
 }
 
 // 自定义滚动到顶部方法

@@ -5,6 +5,37 @@ import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/uti
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 
 /**
+ * 按标签筛选任务
+ * @param {Array} tasks - 任务数组
+ * @param {Array} selectedTags - 选中的标签数组
+ * @returns {Array} 筛选结果
+ */
+function filterTasksByTags(tasks, selectedTags) {
+  if (!selectedTags || selectedTags.length === 0) {
+    return tasks
+  }
+  
+  return tasks.filter(task => {
+    if (!task.tags || !Array.isArray(task.tags)) {
+      return false
+    }
+    
+    return selectedTags.some(selectedTag => {
+      return task.tags.some(taskTag => {
+        const selectedTagId = typeof selectedTag === 'object' ? selectedTag.id : selectedTag
+        const selectedTagName = typeof selectedTag === 'object' ? selectedTag.name : selectedTag
+        
+        if (typeof taskTag === 'object') {
+          return taskTag.id === selectedTagId || taskTag.name === selectedTagName
+        } else {
+          return taskTag === selectedTagId || taskTag === selectedTagName
+        }
+      })
+    })
+  })
+}
+
+/**
  * 搜索任务函数
  * @param {Array} tasks - 任务数组
  * @param {string} keyword - 搜索关键词
@@ -85,10 +116,16 @@ export function useTaskData(bookId) {
   const error = ref(null)
   const activeFilter = ref('all')
   const searchKeyword = ref('')
+  const selectedTags = ref([])
   
   // 计算属性
   const filteredTasks = computed(() => {
     let filtered = filterTasks(tasks.value, activeFilter.value)
+    
+    // 按标签筛选
+    if (selectedTags.value.length > 0) {
+      filtered = filterTasksByTags(filtered, selectedTags.value)
+    }
     
     // 如果有搜索关键词，进一步过滤
     if (searchKeyword.value.trim()) {
@@ -132,6 +169,25 @@ export function useTaskData(bookId) {
       { key: 'todo', label: '待办', count: stats.todo },
       { key: 'completed', label: '已完成', count: stats.completed }
     ]
+  })
+  
+  // 获取所有可用标签
+  const availableTags = computed(() => {
+    const allTags = new Set()
+    
+    tasks.value.forEach(task => {
+      if (task.tags && Array.isArray(task.tags)) {
+        task.tags.forEach(tag => {
+          if (typeof tag === 'object' && tag.id) {
+            allTags.add(JSON.stringify(tag))
+          } else if (typeof tag === 'string') {
+            allTags.add(JSON.stringify({ id: tag, name: tag }))
+          }
+        })
+      }
+    })
+    
+    return Array.from(allTags).map(tagStr => JSON.parse(tagStr))
   })
   
   /**
@@ -475,6 +531,14 @@ export function useTaskData(bookId) {
   const setSearchKeyword = (keyword) => {
     searchKeyword.value = keyword
   }
+  
+  /**
+   * 设置选中的标签
+   * @param {Array} tags - 选中的标签数组
+   */
+  const setSelectedTags = (tags) => {
+    selectedTags.value = tags || []
+  }
 
   /**
    * 重置状态
@@ -501,12 +565,14 @@ export function useTaskData(bookId) {
     error,
     activeFilter,
     searchKeyword,
+    selectedTags,
     
     // 计算属性
     filteredTasks,
     taskStats,
     overallProgress,
     filterTabs,
+    availableTags,
     
     // 方法
     initializeTasks,
@@ -515,6 +581,7 @@ export function useTaskData(bookId) {
     deleteTask,
     setActiveFilter,
     setSearchKeyword,
+    setSelectedTags,
     resetState
   }
 }

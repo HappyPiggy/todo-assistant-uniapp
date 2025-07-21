@@ -55,7 +55,42 @@ export const useTagManage = () => {
     try {
       // 从本地存储加载标签
       const storedTags = uni.getStorageSync(`user_tags_${getCurrentUserId()}`) || []
-      availableTags.value = storedTags
+      availableTags.value = [...storedTags]
+      
+      // 确保当前任务的标签都在可用标签列表中
+      currentTags.value.forEach(tag => {
+        if (typeof tag === 'object' && tag.name && tag.color) {
+          // 先尝试通过 id 匹配
+          let existingTag = null
+          if (tag.id) {
+            existingTag = availableTags.value.find(t => t.id === tag.id)
+          }
+          
+          // 如果通过 id 找不到，尝试通过名称和颜色匹配
+          if (!existingTag) {
+            existingTag = availableTags.value.find(t => t.name === tag.name && t.color === tag.color)
+          }
+          
+          // 如果还是找不到，尝试只通过名称匹配
+          if (!existingTag) {
+            existingTag = availableTags.value.find(t => t.name === tag.name)
+          }
+          
+          if (!existingTag) {
+            // 如果完全不存在，创建一个新的标签并添加到列表中
+            const newTag = {
+              id: tag.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              name: tag.name,
+              color: tag.color,
+              createdAt: tag.createdAt || new Date().toISOString()
+            }
+            availableTags.value.push(newTag)
+          } else if (!tag.id && existingTag.id) {
+            // 如果当前标签没有 id 但找到了匹配的标签，更新当前标签的 id
+            tag.id = existingTag.id
+          }
+        }
+      })
       
       // 初始化选中状态（当前任务已有的标签）
       selectedTags.value = currentTags.value.map(tag => {
@@ -63,15 +98,46 @@ export const useTagManage = () => {
           // 处理旧格式的字符串标签
           const existingTag = availableTags.value.find(t => t.name === tag)
           return existingTag ? existingTag.id : null
-        } else {
+        } else if (typeof tag === 'object' && tag.name) {
           // 新格式的标签对象
-          return tag.id
+          let existingTag = null
+          
+          // 优先通过 id 匹配
+          if (tag.id) {
+            existingTag = availableTags.value.find(t => t.id === tag.id)
+          }
+          
+          // 如果没有 id 或通过 id 找不到，尝试通过名称和颜色匹配
+          if (!existingTag && tag.color) {
+            existingTag = availableTags.value.find(t => t.name === tag.name && t.color === tag.color)
+          }
+          
+          // 如果还是找不到，只通过名称匹配
+          if (!existingTag) {
+            existingTag = availableTags.value.find(t => t.name === tag.name)
+          }
+          
+          return existingTag ? existingTag.id : null
         }
+        return null
       }).filter(id => id !== null)
+      
+      console.log('当前标签:', JSON.stringify(currentTags.value, null, 2))
+      console.log('可用标签:', JSON.stringify(availableTags.value, null, 2))
+      console.log('选中标签ID:', JSON.stringify(selectedTags.value, null, 2))
+      
+      // 添加匹配过程的详细日志
+      currentTags.value.forEach((tag, index) => {
+        console.log(`标签 ${index} 匹配过程:`, {
+          原始标签: tag,
+          匹配结果: availableTags.value.find(t => t.name === tag.name)
+        })
+      })
       
     } catch (error) {
       console.error('加载标签失败:', error)
       availableTags.value = []
+      selectedTags.value = []
     }
   }
   
@@ -225,15 +291,24 @@ export const useTagManage = () => {
       return
     }
 
-    // 构造选中的标签数据
+    // 构造选中的标签数据，添加空值检查
     const selectedTagData = selectedTags.value.map(tagId => {
       const tag = availableTags.value.find(t => t.id === tagId)
-      return {
+      return tag ? {
         id: tag.id,
         name: tag.name,
         color: tag.color
-      }
-    })
+      } : null
+    }).filter(Boolean) // 过滤掉无效的标签
+
+    // 如果过滤后没有有效标签，提示用户
+    if (selectedTagData.length === 0) {
+      uni.showToast({
+        title: '选中的标签无效，请重新选择',
+        icon: 'error'
+      })
+      return
+    }
 
     // 通过事件传递数据给上一页
     uni.$emit('updateTags', selectedTagData)
@@ -246,6 +321,8 @@ export const useTagManage = () => {
   }
   
   const initializeData = (options) => {
+    console.log('initializeData 接收到的参数:', JSON.stringify(options, null, 2))
+    
     if (options.taskId) {
       taskId.value = options.taskId
     }
@@ -254,11 +331,19 @@ export const useTagManage = () => {
     }
     if (options.currentTags) {
       try {
-        currentTags.value = JSON.parse(decodeURIComponent(options.currentTags))
+        console.log('原始 currentTags 字符串:', options.currentTags)
+        const decodedTags = decodeURIComponent(options.currentTags)
+        console.log('解码后的字符串:', decodedTags)
+        currentTags.value = JSON.parse(decodedTags)
+        console.log('解析后的标签数据:', JSON.stringify(currentTags.value, null, 2))
       } catch (error) {
-        console.error('解析当前标签失败:', error)
+        console.error('解析当前标签失败:', error, '原始数据:', options.currentTags)
         currentTags.value = []
       }
+    } else {
+      // 确保 currentTags 被初始化
+      currentTags.value = []
+      console.log('未传递 currentTags 参数，初始化为空数组')
     }
     
     loadAvailableTags()

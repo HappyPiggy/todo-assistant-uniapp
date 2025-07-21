@@ -497,14 +497,19 @@ const hasChanges = () => {
 
 const openTagManager = () => {
 	// 跳转到标签管理页面
-	const currentTagsStr = encodeURIComponent(JSON.stringify(formData.tags))
+	// 使用 JSON.parse(JSON.stringify()) 确保传递普通对象而不是响应式代理
+	const plainTags = JSON.parse(JSON.stringify(formData.tags))
+	const currentTagsStr = encodeURIComponent(JSON.stringify(plainTags))
 	let url = `/pages/tags/manage?bookId=${bookId}&currentTags=${currentTagsStr}`
+	
+	console.log('即将传递的标签数据:', JSON.stringify(plainTags, null, 2))
 	
 	// 编辑模式下传递taskId
 	if (isEditMode.value && taskId) {
 		url += `&taskId=${taskId}`
 	}
 	
+	console.log('跳转URL:', url)
 	uni.navigateTo({ url })
 }
 

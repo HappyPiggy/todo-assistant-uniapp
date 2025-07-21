@@ -27,6 +27,8 @@
         :task-stats="taskStats"
         :member-count="memberCount"
         :filter-tabs="filterTabs"
+        :available-tags="availableTags"
+        :selected-tags="selectedTags"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"
@@ -44,6 +46,7 @@
         @more-actions="handleMoreActions"
         @search-click="handleSearchClick"
         @filter-change="setActiveFilter"
+        @tag-filter-change="setSelectedTags"
         @scroll="handleScroll"
       />
     </view>
@@ -136,11 +139,14 @@ const {
   error: tasksError,
   activeFilter,
   searchKeyword,
+  selectedTags,
   filterTabs,
+  availableTags,
   filteredTasks,
   initializeTasks,
   setActiveFilter,
   setSearchKeyword,
+  setSelectedTags,
   taskStats,
   overallProgress,
   toggleTaskStatus,

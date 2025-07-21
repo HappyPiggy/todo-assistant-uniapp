@@ -13,11 +13,27 @@
         </view>
       </view>
     </scroll-view>
+    
+    <!-- 标签筛选按钮 -->
+    <view class="tag-filter-btn" @click="showTagFilter">
+      <text class="tag-icon">🏷️</text>
+      <text class="tag-count" v-if="selectedTagsCount > 0">({{ selectedTagsCount }})</text>
+    </view>
+    
+    <!-- 标签筛选弹窗 -->
+    <TagFilter 
+      :show="tagFilterShow"
+      :available-tags="availableTags"
+      :selected-tags="selectedTags"
+      @close="hideTagFilter"
+      @confirm="handleTagConfirm"
+    />
   </view>
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, ref, computed } from 'vue'
+import TagFilter from './TagFilter.vue'
 
 const props = defineProps({
   filterTabs: {
@@ -27,13 +43,39 @@ const props = defineProps({
   activeFilter: {
     type: String,
     default: 'all'
+  },
+  availableTags: {
+    type: Array,
+    default: () => []
+  },
+  selectedTags: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['filterChange'])
+const emit = defineEmits(['filterChange', 'tagFilterChange'])
+
+const tagFilterShow = ref(false)
+
+const selectedTagsCount = computed(() => {
+  return props.selectedTags.length
+})
 
 const setActiveFilter = (filter) => {
   emit('filterChange', filter)
+}
+
+const showTagFilter = () => {
+  tagFilterShow.value = true
+}
+
+const hideTagFilter = () => {
+  tagFilterShow.value = false
+}
+
+const handleTagConfirm = (tags) => {
+  emit('tagFilterChange', tags)
 }
 </script>
 
@@ -42,7 +84,7 @@ const setActiveFilter = (filter) => {
 
 .task-filter {
   @include card-style(0);
-  @include flex-start;
+  @include flex-between;
   padding: $padding-sm $padding-base;
   margin-bottom: $margin-sm;
 }
@@ -92,5 +134,32 @@ const setActiveFilter = (filter) => {
   font-size: $font-size-xs;
   color: $text-tertiary;
   margin-left: 4rpx;
+}
+
+.tag-filter-btn {
+  @include flex-center;
+  padding: $padding-xs $padding-sm;
+  margin-left: $margin-sm;
+  background-color: $gray-100;
+  border-radius: 16rpx;
+  transition: $transition-fast;
+  cursor: pointer;
+  min-width: 60rpx;
+  
+  &:active {
+    transform: scale(0.95);
+    background-color: $gray-200;
+  }
+  
+  .tag-icon {
+    font-size: $font-size-sm;
+  }
+  
+  .tag-count {
+    font-size: $font-size-xs;
+    color: $text-secondary;
+    margin-left: 4rpx;
+    font-weight: $font-weight-medium;
+  }
 }
 </style>
