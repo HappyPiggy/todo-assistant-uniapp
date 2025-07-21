@@ -27,12 +27,15 @@ export function useTaskDetail() {
 			return
 		}
 		
+		console.log('loadTaskDetail 开始加载，taskId:', taskId.value)
 		loading.value = true
 		error.value = null
 		
 		try {
 			const todoBooksObj = uniCloud.importObject('todobook-co')
-			const result = await todoBooksObj.getTaskDetail(taskId.value)
+			// 添加时间戳避免缓存
+			const timestamp = Date.now()
+			const result = await todoBooksObj.getTodoItemDetail(taskId.value)
 			
 			if (result.code === 0) {
 				task.value = result.data.task
@@ -75,7 +78,7 @@ export function useTaskDetail() {
 	const loadParentTask = async () => {
 		try {
 			const todoBooksObj = uniCloud.importObject('todobook-co')
-			const result = await todoBooksObj.getTaskDetail(task.value.parent_id)
+			const result = await todoBooksObj.getTodoItemDetail(task.value.parent_id)
 			
 			if (result.code === 0) {
 				parentTask.value = result.data.task

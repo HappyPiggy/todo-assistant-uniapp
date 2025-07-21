@@ -1,16 +1,16 @@
 // 更新任务信息
 const { checkTaskPermission } = require('../../lib/utils/permission')
+const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 
 async function updateTodoItem(taskId, updateData) {
-  const db = this.db
-  const uid = this.uid
-
-  if (!uid) {
-    return {
-      code: 401,
-      message: '请先登录'
-    }
+  // 认证验证
+  const authResult = await validateAuth(this)
+  if (!authResult.success) {
+    return authResult.error
   }
+  
+  const { uid } = authResult
+  const db = getDatabase(this)
 
   if (!taskId) {
     return {

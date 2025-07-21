@@ -3,11 +3,10 @@
     <!-- 项目册基本信息 -->
     <view class="header-top">
       <view class="book-icon" :style="{ backgroundColor: (bookData && bookData.color) || '#007AFF' }">
-        <uni-icons color="#ffffff" size="32" :type="(bookData && bookData.icon) || 'folder'" />
+        <uni-icons color="#ffffff" size="24" :type="(bookData && bookData.icon) || 'folder'" />
       </view>
       <view class="book-meta">
         <text class="book-title">{{ (bookData && bookData.title) || '项目册' }}</text>
-        <text class="book-description" v-if="bookData && bookData.description">{{ bookData.description }}</text>
       </view>
       <!-- 搜索按钮 -->
       <view class="search-button" @click="handleSearchClick">
@@ -99,16 +98,17 @@ watchEffect(() => {
 .book-header {
   @include card-style;
   margin-bottom: $margin-base;
+  padding: $padding-base;
 }
 
 .header-top {
   @include flex-start;
-  margin-bottom: $margin-base;
+  align-items: center;
 }
 
 .book-icon {
-  width: 80rpx;
-  height: 80rpx;
+  width: 60rpx;
+  height: 60rpx;
   border-radius: $border-radius;
   @include flex-center;
   margin-right: $margin-base;
@@ -120,19 +120,12 @@ watchEffect(() => {
 }
 
 .book-title {
-  font-size: $font-size-2xl;
+  font-size: $font-size-xl;
   color: $text-primary;
   font-weight: $font-weight-semibold;
-  margin-bottom: $margin-xs;
   display: block;
 }
 
-.book-description {
-  font-size: $font-size-base;
-  color: $text-secondary;
-  line-height: $line-height-lg;
-  display: block;
-}
 
 .progress-section {
   margin-bottom: $margin-base;

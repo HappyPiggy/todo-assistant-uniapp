@@ -428,6 +428,7 @@ onMounted(() => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
+	console.log('detail页面 onShow 触发, hasInitialized:', hasInitialized.value, 'taskId:', taskId)
 	// 如果页面已经初始化过，并且 taskId 存在，则刷新数据
 	if (hasInitialized.value && taskId) {
 		refreshTaskDetail()
@@ -447,6 +448,7 @@ onUnmounted(() => {
 const refreshTaskDetail = async () => {
 	if (!taskId) return
 	
+	console.log('refreshTaskDetail 被调用，taskId:', taskId)
 	await loadTaskDetail(taskId)
 	await loadComments(taskId)
 }
