@@ -190,13 +190,17 @@ const {
   updateItemHeight,
   scrollToIndex,
   scrollToTop,
-  scrollToBottom
+  scrollToBottom,
+  getDebugInfo
 } = useVirtualList(computed(() => props.tasks), {
   containerHeight: computed(() => props.containerHeight - fixedHeaderHeight.value),
-  estimatedItemHeight: 120, // 预估任务卡片高度
-  overscan: 3, // 预渲染数量
+  estimatedItemHeight: 90, // 预估任务卡片高度，调整为更合理的数值
+  overscan: 8, // 预渲染数量，增加缓冲区
   fixedHeaderHeight: fixedHeaderHeight
 })
+
+// 调试信息（可选在控制台查看）
+// console.log('Virtual scroll debug:', JSON.stringify(getDebugInfo(), null, 2))
 
 const emptyText = computed(() => {
   const map = {

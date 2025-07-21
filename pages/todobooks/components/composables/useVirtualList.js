@@ -9,8 +9,8 @@ import { ref, computed, nextTick } from 'vue'
 export function useVirtualList(items, options = {}) {
   const {
     containerHeight = 600,
-    estimatedItemHeight = 120,
-    overscan = 3, // 预渲染数量
+    estimatedItemHeight = 90, // 默认预估高度调整为90
+    overscan = 8, // 预渲染数量，增加缓冲区避免空白
     fixedHeaderHeight = ref(0) // 固定头部高度
   } = options
 
@@ -62,12 +62,14 @@ export function useVirtualList(items, options = {}) {
     // 调整滚动位置，减去固定头部高度
     const adjustedScrollTop = Math.max(0, scrollTop.value - headerHeight.value)
     
-    // 计算起始索引
-    const start = Math.floor(adjustedScrollTop / estimatedItemHeight)
-    // 计算可见数量
-    const visibleCount = Math.ceil(effectiveContainerHeight.value / estimatedItemHeight)
+    // 计算起始索引，确保不会超出范围
+    const start = Math.max(0, Math.floor(adjustedScrollTop / estimatedItemHeight))
+    // 计算基础可见数量
+    const baseVisibleCount = Math.ceil(effectiveContainerHeight.value / estimatedItemHeight)
+    // 加上额外的缓冲区，确保有足够的任务显示
+    const visibleCount = Math.max(baseVisibleCount + overscan * 2, 10) // 至少显示10个任务
     // 计算结束索引
-    const end = Math.min(itemList.value.length, start + visibleCount + overscan)
+    const end = Math.min(itemList.value.length, start + visibleCount)
 
     return { 
       start: Math.max(0, start - overscan), 
@@ -96,7 +98,9 @@ export function useVirtualList(items, options = {}) {
    */
   const offsetBottom = computed(() => {
     const { end } = visibleRange.value
-    return (itemList.value.length - end) * estimatedItemHeight
+    const remaining = itemList.value.length - end
+    // 避免负数高度
+    return Math.max(0, remaining * estimatedItemHeight)
   })
 
   /**
@@ -160,7 +164,9 @@ export function useVirtualList(items, options = {}) {
    * 滚动到底部
    */
   const scrollToBottom = () => {
-    scrollTop.value = totalHeight.value + headerHeight.value
+    // 确保滚动到最后一个元素可见
+    const maxScrollTop = Math.max(0, totalHeight.value + headerHeight.value - effectiveContainerHeight.value)
+    scrollTop.value = maxScrollTop
   }
 
   /**
@@ -170,11 +176,15 @@ export function useVirtualList(items, options = {}) {
     return {
       totalItems: itemList.value.length,
       visibleRange: visibleRange.value,
+      visibleTasks: visibleTasks.value.length,
       scrollTop: scrollTop.value,
       totalHeight: totalHeight.value,
       offsetTop: offsetTop.value,
       offsetBottom: offsetBottom.value,
-      isScrolling: isScrolling.value
+      isScrolling: isScrolling.value,
+      effectiveContainerHeight: effectiveContainerHeight.value,
+      headerHeight: headerHeight.value,
+      estimatedItemHeight
     }
   }
 
