@@ -31,7 +31,7 @@
           </view>
           
           <!-- 任务信息卡片 -->
-          <view class="task-card" :class="{ 'card-left': index % 2 === 1 }">
+          <view class="task-card">
             <!-- 任务标题 -->
             <text class="task-title">{{ task.title }}</text>
             
@@ -67,14 +67,15 @@
             
             <!-- 标签 -->
             <view class="task-tags" v-if="task.tags && task.tags.length > 0">
-              <uni-tag 
-                v-for="(tag, tagIndex) in task.tags.slice(0, 3)" 
+              <view 
+                v-for="(tag, tagIndex) in task.tags.slice(0, 2)" 
                 :key="tagIndex"
-                :text="getTagText(tag)" 
-                type="default"
-                size="small"
-              ></uni-tag>
-              <text v-if="task.tags.length > 3" class="more-tags">+{{ task.tags.length - 3 }}</text>
+                class="tag-item"
+                :style="{ backgroundColor: getTagColor(tag) }"
+              >
+                <text class="tag-text">{{ getTagText(tag) }}</text>
+              </view>
+              <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
             </view>
           </view>
         </view>
@@ -139,22 +140,19 @@ const formatCompletedTime = (completedAt) => {
   if (!completedAt) return ''
   
   const date = new Date(completedAt)
-  const now = new Date()
-  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
   
-  if (diffDays === 0) {
-    return `今天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-  } else if (diffDays === 1) {
-    return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-  } else if (diffDays <= 7) {
-    return `${diffDays}天前`
+  const currentYear = new Date().getFullYear()
+  
+  // 如果是当年，不显示年份
+  if (year === currentYear) {
+    return `${month}-${day} ${hour}:${minute}`
   } else {
-    return date.toLocaleDateString('zh-CN', { 
-      month: '2-digit', 
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return `${year}-${month}-${day} ${hour}:${minute}`
   }
 }
 
@@ -195,6 +193,14 @@ const getTagText = (tag) => {
   if (typeof tag === 'string') return tag
   return tag.name || tag.label || '标签'
 }
+
+// 获取标签颜色
+const getTagColor = (tag) => {
+  if (typeof tag === 'object' && tag.color) {
+    return tag.color
+  }
+  return '#007AFF' // 默认蓝色
+}
 </script>
 
 <style lang="scss" scoped>
@@ -204,6 +210,7 @@ const getTagText = (tag) => {
   @include card-style;
   padding: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .loading-container,
@@ -221,125 +228,157 @@ const getTagText = (tag) => {
 
 .timeline-container {
   position: relative;
-  padding: $padding-base;
+  padding: 12rpx 8rpx;
+  @include custom-scrollbar;
 }
 
 .timeline-content {
   position: relative;
-  padding-left: 80rpx;
+  padding-left: 36rpx;
+  min-height: 100%;
 }
 
 .timeline-line {
   position: absolute;
-  left: 60rpx;
+  left: 24rpx;
   top: 0;
   bottom: 0;
-  width: 4rpx;
-  background: linear-gradient(to bottom, $primary-color, #40a9ff);
-  border-radius: 2rpx;
+  width: 1rpx;
+  background: linear-gradient(to bottom, $primary-color 0%, rgba(0, 122, 255, 0.6) 50%, rgba(0, 122, 255, 0.2) 100%);
+  z-index: 1;
 }
 
 .timeline-item {
   position: relative;
-  margin-bottom: $margin-xl;
+  margin-bottom: 12rpx;
   
   &:last-child {
-    margin-bottom: 0;
+    margin-bottom: 8rpx;
   }
 }
 
 .timeline-node {
   position: absolute;
-  left: -80rpx;
-  top: 10rpx;
+  left: -36rpx;
+  top: 3rpx;
   @include flex-center;
   flex-direction: column;
+  z-index: 2;
   
   .node-dot {
-    width: 20rpx;
-    height: 20rpx;
+    width: 8rpx;
+    height: 8rpx;
     border-radius: 50%;
-    border: 4rpx solid #ffffff;
-    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
-    margin-bottom: $margin-xs;
+    border: 1rpx solid #ffffff;
+    box-shadow: 0 0 0 1rpx rgba(255, 255, 255, 0.8), 0 1rpx 3rpx rgba(0,0,0,0.1);
+    margin-bottom: 2rpx;
   }
   
   .node-index {
-    font-size: $font-size-xs;
+    font-size: 16rpx;
     color: $text-tertiary;
-    background-color: $bg-primary;
-    padding: 2rpx 8rpx;
-    border-radius: $border-radius-small;
-    border: 1rpx solid $border-color;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 0rpx 3rpx;
+    border-radius: 3rpx;
+    border: 0.5rpx solid rgba(0, 0, 0, 0.06);
+    min-width: 18rpx;
+    text-align: center;
+    line-height: 1;
+    backdrop-filter: blur(4rpx);
+    font-weight: $font-weight-medium;
   }
 }
 
 .task-card {
-  background-color: $bg-primary;
-  border-radius: $border-radius;
-  padding: $padding-base;
-  border: 1rpx solid $border-color;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
-  transition: all $transition-base;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border-radius: 6rpx;
+  padding: 8rpx 10rpx;
+  border: 0.5rpx solid rgba(0, 0, 0, 0.04);
+  box-shadow: 
+    0 1rpx 3rpx rgba(0, 0, 0, 0.02),
+    0 0 0 0.5rpx rgba(255, 255, 255, 0.8) inset;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  max-width: calc(100vw - 120rpx);
+  box-sizing: border-box;
+  backdrop-filter: blur(10rpx);
   
   &:active {
-    transform: scale(0.98);
-    box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
-  }
-  
-  &.card-left {
-    margin-left: -120rpx;
-    margin-right: 40rpx;
+    transform: translateY(-0.5rpx) scale(0.995);
+    box-shadow: 
+      0 2rpx 8rpx rgba(0, 0, 0, 0.06),
+      0 0 0 0.5rpx rgba(0, 122, 255, 0.1) inset;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
   }
 }
 
 .task-title {
-  font-size: $font-size-lg;
+  font-size: 22rpx;
   color: $text-primary;
-  font-weight: $font-weight-semibold;
+  font-weight: $font-weight-medium;
   display: block;
-  margin-bottom: $margin-xs;
-  line-height: $line-height-base;
+  margin-bottom: 2rpx;
+  line-height: 1.25;
+  @include text-line-clamp(1);
+  word-break: break-all;
+  letter-spacing: -0.2rpx;
 }
 
 .task-time {
-  font-size: $font-size-sm;
-  color: $text-secondary;
+  font-size: 16rpx;
+  color: rgba(107, 114, 126, 0.8);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
   display: block;
-  margin-bottom: $margin-sm;
+  margin-bottom: 4rpx;
+  @include text-truncate;
+  font-weight: $font-weight-medium;
+  letter-spacing: 0.2rpx;
 }
 
 .task-details {
   @include flex-start;
   flex-wrap: wrap;
-  gap: $margin-sm;
-  margin-bottom: $margin-sm;
+  gap: 3rpx;
+  margin-bottom: 4rpx;
+  align-items: flex-start;
 }
 
 .detail-item {
   @include flex-center;
+  flex-shrink: 0;
   
   &.priority {
-    // uni-tag 已有样式
+    order: 1;
   }
   
   &.level {
+    order: 3;
     .level-text {
-      font-size: $font-size-xs;
-      color: $text-tertiary;
-      background-color: $gray-100;
-      padding: 4rpx 8rpx;
-      border-radius: $border-radius-small;
+      font-size: 14rpx;
+      color: rgba(107, 114, 126, 0.7);
+      background: rgba(107, 114, 126, 0.06);
+      padding: 1rpx 3rpx;
+      border-radius: 3rpx;
+      white-space: nowrap;
+      font-weight: $font-weight-medium;
+      letter-spacing: 0.1rpx;
     }
   }
   
   &.hours {
+    order: 2;
     .hours-text {
-      font-size: $font-size-sm;
-      color: $text-secondary;
+      font-size: 14rpx;
+      color: rgba(52, 199, 89, 0.9);
+      background: rgba(52, 199, 89, 0.08);
+      padding: 1rpx 3rpx;
+      border-radius: 3rpx;
+      white-space: nowrap;
+      font-weight: $font-weight-medium;
       
       .estimated {
-        color: $text-tertiary;
+        color: rgba(107, 114, 126, 0.6);
+        font-weight: $font-weight-normal;
       }
     }
   }
@@ -348,31 +387,201 @@ const getTagText = (tag) => {
 .task-tags {
   @include flex-start;
   flex-wrap: wrap;
-  gap: $margin-xs;
+  gap: 2rpx;
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: 2rpx;
+}
+
+.tag-item {
+  padding: 1rpx 4rpx;
+  border-radius: 3rpx;
+  border: 0.5rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0.5rpx 1rpx rgba(0, 0, 0, 0.1);
+  
+  .tag-text {
+    font-size: 14rpx;
+    color: #ffffff;
+    font-weight: $font-weight-medium;
+    text-shadow: 0 0.5rpx 1rpx rgba(0, 0, 0, 0.2);
+    letter-spacing: -0.1rpx;
+  }
 }
 
 .more-tags {
-  font-size: $font-size-xs;
-  color: $text-tertiary;
-  padding: 4rpx 8rpx;
-  background-color: $gray-100;
-  border-radius: $border-radius-small;
+  font-size: 14rpx;
+  color: rgba(107, 114, 126, 0.6);
+  padding: 1rpx 3rpx;
+  background: rgba(107, 114, 126, 0.04);
+  border-radius: 3rpx;
+  white-space: nowrap;
+  font-weight: $font-weight-medium;
 }
 
 // 优先级节点样式
 .node-urgent .node-dot {
-  background-color: #ff4d4f;
+  background: radial-gradient(circle, #ff4d4f 0%, #d32029 100%);
+  box-shadow: 
+    0 0 0 1rpx rgba(255, 255, 255, 0.8),
+    0 0 0 2rpx rgba(255, 77, 79, 0.3),
+    0 1rpx 3rpx rgba(0,0,0,0.1);
 }
 
 .node-high .node-dot {
-  background-color: #ff7a45;
+  background: radial-gradient(circle, #ff7a45 0%, #d73527 100%);
+  box-shadow: 
+    0 0 0 1rpx rgba(255, 255, 255, 0.8),
+    0 0 0 2rpx rgba(255, 122, 69, 0.3),
+    0 1rpx 3rpx rgba(0,0,0,0.1);
 }
 
 .node-medium .node-dot {
-  background-color: #ffa940;
+  background: radial-gradient(circle, #ffa940 0%, #d77c2a 100%);
+  box-shadow: 
+    0 0 0 1rpx rgba(255, 255, 255, 0.8),
+    0 0 0 2rpx rgba(255, 169, 64, 0.3),
+    0 1rpx 3rpx rgba(0,0,0,0.1);
 }
 
 .node-low .node-dot {
-  background-color: #52c41a;
+  background: radial-gradient(circle, #52c41a 0%, #389e0d 100%);
+  box-shadow: 
+    0 0 0 1rpx rgba(255, 255, 255, 0.8),
+    0 0 0 2rpx rgba(82, 196, 26, 0.3),
+    0 1rpx 3rpx rgba(0,0,0,0.1);
+}
+
+// 响应式适配
+@media screen and (max-width: 750rpx) {
+  .timeline-container {
+    padding: 8rpx 6rpx;
+  }
+  
+  .timeline-content {
+    padding-left: 32rpx;
+  }
+  
+  .timeline-line {
+    left: 20rpx;
+  }
+  
+  .timeline-node {
+    left: -32rpx;
+    top: 2rpx;
+    
+    .node-dot {
+      width: 6rpx;
+      height: 6rpx;
+      margin-bottom: 1rpx;
+    }
+    
+    .node-index {
+      font-size: 14rpx;
+      padding: 0rpx 2rpx;
+      min-width: 16rpx;
+    }
+  }
+  
+  .task-card {
+    max-width: calc(100vw - 100rpx);
+    padding: 6rpx 8rpx;
+  }
+  
+  .task-title {
+    font-size: 20rpx;
+    margin-bottom: 1rpx;
+  }
+  
+  .task-time {
+    font-size: 14rpx;
+    margin-bottom: 3rpx;
+  }
+  
+  .task-details {
+    gap: 2rpx;
+    margin-bottom: 3rpx;
+  }
+  
+  .detail-item {
+    &.level .level-text,
+    &.hours .hours-text {
+      font-size: 12rpx;
+      padding: 0.5rpx 2rpx;
+    }
+  }
+  
+  .tag-item {
+    .tag-text {
+      font-size: 12rpx;
+    }
+  }
+  
+  .more-tags {
+    font-size: 12rpx;
+  }
+}
+
+// 小屏幕优化
+@media screen and (max-width: 600rpx) {
+  .timeline-container {
+    padding: 6rpx 4rpx;
+  }
+  
+  .timeline-content {
+    padding-left: 28rpx;
+  }
+  
+  .timeline-line {
+    left: 18rpx;
+  }
+  
+  .timeline-node {
+    left: -28rpx;
+    
+    .node-dot {
+      width: 5rpx;
+      height: 5rpx;
+    }
+    
+    .node-index {
+      font-size: 12rpx;
+      padding: 0rpx 1rpx;
+      min-width: 14rpx;
+    }
+  }
+  
+  .task-card {
+    max-width: calc(100vw - 80rpx);
+    padding: 4rpx 6rpx;
+  }
+  
+  .task-title {
+    font-size: 18rpx;
+  }
+  
+  .task-time {
+    font-size: 12rpx;
+  }
+  
+  .task-details {
+    gap: 1rpx;
+  }
+  
+  .detail-item {
+    &.level .level-text,
+    &.hours .hours-text {
+      font-size: 10rpx;
+    }
+  }
+  
+  .tag-item {
+    .tag-text {
+      font-size: 10rpx;
+    }
+  }
+  
+  .more-tags {
+    font-size: 10rpx;
+  }
 }
 </style>
