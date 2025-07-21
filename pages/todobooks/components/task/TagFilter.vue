@@ -9,7 +9,7 @@
       
       <scroll-view class="tag-list" :scroll-y="true">
         <view class="tag-section">
-          <text class="section-title">可用标签</text>
+          <text class="section-title">可用标签 ({{ availableTags.length }})</text>
           <view class="tag-items">
             <view 
               v-for="tag in availableTags"
@@ -80,7 +80,9 @@ const getTagId = (tag) => {
 }
 
 const getTagName = (tag) => {
-  return typeof tag === 'object' ? tag.name : tag
+  const name = typeof tag === 'object' ? tag.name : tag
+  console.log('getTagName - tag:', tag, 'name:', name)
+  return name
 }
 
 const toggleTag = (tag) => {
@@ -116,9 +118,17 @@ const resetTempSelection = () => {
 // 监听显示状态变化，重置临时选择
 watch(() => props.show, (newVal) => {
   if (newVal) {
+    console.log('TagFilter弹窗打开，可用标签数据:', JSON.stringify(props.availableTags, null, 2))
+    console.log('TagFilter弹窗打开，可用标签数量:', props.availableTags.length)
     resetTempSelection()
   }
 })
+
+// 监听availableTags变化
+watch(() => props.availableTags, (newTags) => {
+  console.log('TagFilter availableTags变化:', JSON.stringify(newTags, null, 2))
+  console.log('TagFilter availableTags数量:', newTags.length)
+}, { deep: true, immediate: true })
 </script>
 
 <style lang="scss" scoped>

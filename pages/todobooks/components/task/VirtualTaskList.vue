@@ -90,7 +90,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, defineExpose, ref, computed } from 'vue'
+import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
 import { useVirtualList } from '../composables/useVirtualList.js'
 import LoadingState from '../common/LoadingState.vue'
 import ErrorState from '../common/ErrorState.vue'
@@ -217,7 +217,6 @@ const {
 const scrollTop = virtualScrollTop
 
 // 监听任务变化，输出调试信息
-import { watch } from 'vue'
 watch(() => props.tasks.length, (newLength) => {
   if (newLength > 0) {
     console.log('Virtual scroll info:', {
@@ -339,6 +338,12 @@ const handleTagFilterChange = (tags) => {
 const customScrollToTop = () => {
   return virtualScrollToTop()
 }
+
+// 监听availableTags props变化
+watch(() => props.availableTags, (newTags) => {
+  console.log('VirtualTaskList接收到availableTags:', JSON.stringify(newTags, null, 2))
+  console.log('VirtualTaskList availableTags数量:', newTags.length)
+}, { deep: true, immediate: true })
 
 // 暴露滚动控制方法
 defineExpose({

@@ -107,9 +107,10 @@ function searchTasks(tasks, keyword) {
 /**
  * 任务数据管理组合式函数
  * @param {string} bookId - 项目册ID
+ * @param {Object} allTasks - 所有任务数据的响应式引用
  * @returns {Object} 任务数据和操作方法
  */
-export function useTaskData(bookId) {
+export function useTaskData(bookId, allTasks = null) {
   // 响应式数据
   const tasks = ref([])
   const loading = ref(false)
@@ -171,23 +172,64 @@ export function useTaskData(bookId) {
     ]
   })
   
-  // 获取所有可用标签
+  // 获取所有可用标签（从所有任务数据中获取，而不仅仅是当前筛选后的任务）
   const availableTags = computed(() => {
     const allTags = new Set()
     
-    tasks.value.forEach(task => {
+    // 优先使用传入的allTasks，如果没有则使用当前的tasks
+    const sourceData = allTasks?.value || tasks.value
+    
+    console.log('useTaskData availableTags计算 - allTasks存在:', !!allTasks?.value)
+    console.log('useTaskData availableTags计算 - sourceData长度:', sourceData.length)
+    console.log('useTaskData availableTags计算 - sourceData数据:', JSON.stringify(sourceData.slice(0, 2), null, 2))
+    
+    sourceData.forEach(task => {
       if (task.tags && Array.isArray(task.tags)) {
+        console.log('useTaskData - 任务标签:', task.title, JSON.stringify(task.tags, null, 2))
         task.tags.forEach(tag => {
-          if (typeof tag === 'object' && tag.id) {
-            allTags.add(JSON.stringify(tag))
-          } else if (typeof tag === 'string') {
+          if (typeof tag === 'object' && tag !== null) {
+            // 对象格式的标签，支持多种字段名
+            const tagId = tag.id || tag.name || tag._id
+            const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
+            if (tagId && tagName) {
+              allTags.add(JSON.stringify({ id: tagId, name: tagName }))
+            }
+          } else if (typeof tag === 'string' && tag.trim()) {
             allTags.add(JSON.stringify({ id: tag, name: tag }))
+          }
+        })
+      }
+      
+      // 如果任务有子任务，也从子任务中获取标签
+      if (task.subtasks && Array.isArray(task.subtasks)) {
+        task.subtasks.forEach(subtask => {
+          if (subtask.tags && Array.isArray(subtask.tags)) {
+            console.log('useTaskData - 子任务标签:', subtask.title, JSON.stringify(subtask.tags, null, 2))
+            subtask.tags.forEach(tag => {
+              if (typeof tag === 'object' && tag !== null) {
+                // 对象格式的标签，支持多种字段名
+                const tagId = tag.id || tag.name || tag._id
+                const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
+                if (tagId && tagName) {
+                  allTags.add(JSON.stringify({ id: tagId, name: tagName }))
+                }
+              } else if (typeof tag === 'string' && tag.trim()) {
+                allTags.add(JSON.stringify({ id: tag, name: tag }))
+              }
+            })
           }
         })
       }
     })
     
-    return Array.from(allTags).map(tagStr => JSON.parse(tagStr))
+    // 转换为数组并按名称排序
+    const uniqueTags = Array.from(allTags).map(tagStr => JSON.parse(tagStr))
+    const sortedTags = uniqueTags.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    
+    console.log('useTaskData availableTags计算结果 - 唯一标签数量:', sortedTags.length)
+    console.log('useTaskData availableTags计算结果 - 标签列表:', JSON.stringify(sortedTags, null, 2))
+    
+    return sortedTags
   })
   
   /**
