@@ -1,15 +1,5 @@
 <template>
   <view class="detail-page">
-    <!-- 项目册头部信息 -->
-    <BookHeader
-      v-if="!bookLoading && !bookError"
-      :book-data="bookData"
-      :overall-progress="overallProgress"
-      :task-stats="taskStats"
-      :member-count="memberCount"
-      @more-actions="handleMoreActions"
-    />
-    
     <!-- 加载状态 -->
     <LoadingState v-if="bookLoading" />
     
@@ -19,33 +9,23 @@
       :message="bookError"
       @retry="loadBookDetail" />
 
-    <!-- 任务搜索框 - 固定在头部下方 -->
-    <view class="search-sticky" v-if="!bookLoading && !bookError">
-      <TaskSearch
-        v-model="searchKeyword"
-        @search="handleSearch"
-        @clear="handleClearSearch"
-      />
-    </view>
-
-    <!-- 任务筛选标签 - 固定在搜索框下方 -->
-    <view class="filter-sticky" v-if="!bookLoading && !bookError">
-      <TaskFilter
-        :filter-tabs="filterTabs"
-        :active-filter="activeFilter"
-        @filter-change="setActiveFilter"
-      />
-    </view>
-
-    <!-- 虚拟滚动任务列表 -->
-    <view class="task-list-container" v-if="!bookLoading && !bookError">
+    <!-- 虚拟滚动任务列表（包含BookHeader和TaskFilter） -->
+    <view 
+      v-if="!bookLoading && !bookError"
+      class="task-list-wrapper"
+    >
       <VirtualTaskList
         :tasks="filteredTasks"
         :loading="tasksLoading"
         :error="tasksError"
         :active-filter="activeFilter"
         :get-unread-comment-count="getUnreadCommentCount"
-        :container-height="virtualListHeight"
+        :container-height="mainScrollHeight"
+        :book-data="bookData"
+        :overall-progress="overallProgress"
+        :task-stats="taskStats"
+        :member-count="memberCount"
+        :filter-tabs="filterTabs"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"
@@ -60,6 +40,9 @@
         @subtask-touch-start="handleSubtaskTouchStart"
         @subtask-touch-move="handleSubtaskTouchMove"
         @subtask-touch-end="handleSubtaskTouchEnd"
+        @more-actions="handleMoreActions"
+        @search-click="handleSearchClick"
+        @filter-change="setActiveFilter"
       />
     </view>
 
@@ -69,6 +52,15 @@
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
     </view>
+
+    <!-- 搜索弹窗 -->
+    <SearchOverlay
+      :visible="showSearchOverlay"
+      :keyword="searchKeyword"
+      @search="handleSearchOverlaySearch"
+      @clear="handleSearchOverlayClear"
+      @close="handleSearchOverlayClose"
+    />
 
     <!-- 操作弹窗 -->
     <uni-popup ref="actionPopupRef" type="bottom" background-color="#ffffff" :safe-area="true">
@@ -106,12 +98,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 
-import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
-import TaskSearch from '@/pages/todobooks/components/task/TaskSearch.vue'
-import TaskFilter from '@/pages/todobooks/components/task/TaskFilter.vue'
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
+import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
@@ -153,6 +143,8 @@ const {
 const currentTask = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 const virtualListHeight = ref(600) // 虚拟滚动容器高度
+const mainScrollHeight = ref(600) // 主滚动区域高度
+const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const dragState = ref({
   isDragging: false,
   dragItem: null,
@@ -184,14 +176,15 @@ onMounted(() => {
   calculateVirtualListHeight()
 })
 
-// 计算虚拟滚动容器高度
+// 计算滚动区域高度
 const calculateVirtualListHeight = () => {
   uni.getSystemInfo({
     success: (res) => {
       const screenHeight = res.windowHeight
-      // 减去固定元素的高度：导航栏、搜索框、筛选器、底部安全区域等
-      const fixedHeight = 200 // 预估固定元素高度
-      virtualListHeight.value = screenHeight - fixedHeight
+      // 主滚动区域占满整个屏幕（除去导航栏）
+      mainScrollHeight.value = screenHeight
+      // 虚拟列表高度设为屏幕高度的一部分
+      virtualListHeight.value = screenHeight * 0.6
     }
   })
 }
@@ -235,14 +228,22 @@ const refreshTasks = async () => {
   await initializeTasks(allTasks.value)
 }
 
-// 搜索处理函数
-const handleSearch = (keyword) => {
-  setSearchKeyword(keyword)
+// 搜索弹窗处理函数
+const handleSearchClick = () => {
+  showSearchOverlay.value = true
 }
 
-// 清空搜索
-const handleClearSearch = () => {
+const handleSearchOverlaySearch = (keyword) => {
+  setSearchKeyword(keyword)
+  showSearchOverlay.value = false
+}
+
+const handleSearchOverlayClear = () => {
   setSearchKeyword('')
+}
+
+const handleSearchOverlayClose = () => {
+  showSearchOverlay.value = false
 }
 
 
@@ -400,49 +401,17 @@ const handleSubtaskTouchEnd = (event) => {
   padding-bottom: $safe-area-bottom;
 }
 
-/* 固定搜索框 */
-.search-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  background-color: $bg-secondary;
-  
-  /* 确保在不同平台下都有足够的顶部空间 */
-  /* #ifdef H5 */
-  top: 44px;
-  /* #endif */
-  
-  /* #ifdef MP-WEIXIN */
-  top: 0;
-  /* #endif */
-  
-  /* #ifdef APP-PLUS */
-  top: 0;
-  /* #endif */
+/* 主滚动区域 */
+.main-scroll-view {
+  flex: 1;
+  width: 100%;
 }
 
-/* 固定筛选器 */
-.filter-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background-color: $bg-secondary;
-  padding-top: 8rpx;
-  padding-bottom: 8rpx;
-  margin-top: -8rpx;
-  
-  /* 确保在不同平台下都有足够的顶部空间，考虑搜索框的高度 */
-  /* #ifdef H5 */
-  top: calc(44px + 88rpx);
-  /* #endif */
-  
-  /* #ifdef MP-WEIXIN */
-  top: 88rpx;
-  /* #endif */
-  
-  /* #ifdef APP-PLUS */
-  top: 88rpx;
-  /* #endif */
+
+/* 任务列表包装器 */
+.task-list-wrapper {
+  flex: 1;
+  min-height: 0;
 }
 
 /* 操作弹窗 */
@@ -552,12 +521,4 @@ const handleSubtaskTouchEnd = (event) => {
   }
 }
 
-/* 虚拟滚动任务列表容器 */
-.task-list-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  /* 确保容器占用剩余空间 */
-  min-height: 0;
-}
 </style>

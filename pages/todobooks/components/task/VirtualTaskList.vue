@@ -27,6 +27,25 @@
       @scroll="handleScroll"
       :style="{ height: containerHeight + 'px' }">
       
+      <!-- 项目册头部信息 -->
+      <BookHeader
+        v-if="bookData"
+        :book-data="bookData"
+        :overall-progress="overallProgress"
+        :task-stats="taskStats"
+        :member-count="memberCount"
+        @more-actions="handleMoreActions"
+        @search-click="handleSearchClick"
+      />
+      
+      <!-- 任务筛选标签 -->
+      <TaskFilter
+        v-if="filterTabs"
+        :filter-tabs="filterTabs"
+        :active-filter="activeFilter"
+        @filter-change="handleFilterChange"
+      />
+      
       <!-- 上边距占位 -->
       <view :style="{ height: offsetTop + 'px' }"></view>
       
@@ -74,6 +93,8 @@ import ErrorState from '../common/ErrorState.vue'
 import EmptyState from '../common/EmptyState.vue'
 import TaskItem from './TaskItem.vue'
 import TaskMenuPopup from './TaskMenuPopup.vue'
+import BookHeader from '../book/BookHeader.vue'
+import TaskFilter from './TaskFilter.vue'
 
 const props = defineProps({
   tasks: {
@@ -99,6 +120,28 @@ const props = defineProps({
   containerHeight: {
     type: Number,
     default: 600
+  },
+  // BookHeader 相关属性
+  bookData: {
+    type: Object,
+    default: null
+  },
+  overallProgress: {
+    type: Number,
+    default: 0
+  },
+  taskStats: {
+    type: Object,
+    default: () => ({ total: 0, completed: 0, todo: 0 })
+  },
+  memberCount: {
+    type: Number,
+    default: 0
+  },
+  // TaskFilter 相关属性
+  filterTabs: {
+    type: Array,
+    default: null
   }
 })
 
@@ -116,12 +159,25 @@ const emit = defineEmits([
   'subtaskClick',
   'subtaskTouchStart',
   'subtaskTouchMove',
-  'subtaskTouchEnd'
+  'subtaskTouchEnd',
+  // BookHeader 相关事件
+  'moreActions',
+  'searchClick',
+  // TaskFilter 相关事件
+  'filterChange'
 ])
 
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 const scrollTop = ref(0)
+
+// 计算固定头部高度
+const fixedHeaderHeight = computed(() => {
+  let height = 0
+  if (props.bookData) height += 140 // BookHeader 预估高度
+  if (props.filterTabs) height += 80 // TaskFilter 预估高度
+  return height
+})
 
 // 使用虚拟滚动组合函数
 const {
@@ -132,9 +188,10 @@ const {
   updateItemHeight,
   scrollToIndex
 } = useVirtualList(computed(() => props.tasks), {
-  containerHeight: props.containerHeight,
+  containerHeight: computed(() => props.containerHeight - fixedHeaderHeight.value),
   estimatedItemHeight: 120, // 预估任务卡片高度
-  overscan: 3 // 预渲染数量
+  overscan: 3, // 预渲染数量
+  fixedHeaderHeight: fixedHeaderHeight
 })
 
 const emptyText = computed(() => {
@@ -218,7 +275,19 @@ const handleSubtaskTouchEnd = (event) => {
   emit('subtaskTouchEnd', event)
 }
 
-// 简化版本不需要清理资源
+// BookHeader 事件处理
+const handleMoreActions = () => {
+  emit('moreActions')
+}
+
+const handleSearchClick = () => {
+  emit('searchClick')
+}
+
+// TaskFilter 事件处理
+const handleFilterChange = (filter) => {
+  emit('filterChange', filter)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -233,6 +302,7 @@ const handleSubtaskTouchEnd = (event) => {
   width: 100%;
   height: 100%;
 }
+
 
 .visible-tasks {
   padding: 0 $padding-base;

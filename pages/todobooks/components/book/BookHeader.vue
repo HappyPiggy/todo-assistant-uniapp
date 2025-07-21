@@ -9,6 +9,10 @@
         <text class="book-title">{{ (bookData && bookData.title) || '项目册' }}</text>
         <text class="book-description" v-if="bookData && bookData.description">{{ bookData.description }}</text>
       </view>
+      <!-- 搜索按钮 -->
+      <view class="search-button" @click="handleSearchClick">
+        <uni-icons color="#666666" size="20" type="search" />
+      </view>
       <!-- 更多操作按钮 -->
       <view class="actions-button" @click="handleMoreActions">
         <uni-icons color="#666666" size="20" type="more-filled" />
@@ -69,7 +73,12 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['more-actions'])
+const emit = defineEmits(['more-actions', 'search-click'])
+
+// 处理搜索按钮点击
+const handleSearchClick = () => {
+  emit('search-click')
+}
 
 // 处理更多操作按钮点击
 const handleMoreActions = () => {
@@ -178,6 +187,7 @@ watchEffect(() => {
   color: $text-tertiary;
 }
 
+.search-button,
 .actions-button {
   width: 40rpx;
   height: 40rpx;

@@ -10,7 +10,8 @@ export function useVirtualList(items, options = {}) {
   const {
     containerHeight = 600,
     estimatedItemHeight = 120,
-    overscan = 3 // 预渲染数量
+    overscan = 3, // 预渲染数量
+    fixedHeaderHeight = ref(0) // 固定头部高度
   } = options
 
   // 滚动状态
@@ -34,6 +35,23 @@ export function useVirtualList(items, options = {}) {
   })
 
   /**
+   * 获取有效的容器高度
+   */
+  const effectiveContainerHeight = computed(() => {
+    const height = typeof containerHeight === 'function' ? containerHeight() : 
+                   (containerHeight.value || containerHeight)
+    return height
+  })
+
+  /**
+   * 获取固定头部高度值
+   */
+  const headerHeight = computed(() => {
+    return typeof fixedHeaderHeight === 'function' ? fixedHeaderHeight() :
+           (fixedHeaderHeight.value || fixedHeaderHeight || 0)
+  })
+
+  /**
    * 计算可见范围
    */
   const visibleRange = computed(() => {
@@ -41,10 +59,13 @@ export function useVirtualList(items, options = {}) {
       return { start: 0, end: 0 }
     }
 
+    // 调整滚动位置，减去固定头部高度
+    const adjustedScrollTop = Math.max(0, scrollTop.value - headerHeight.value)
+    
     // 计算起始索引
-    const start = Math.floor(scrollTop.value / estimatedItemHeight)
+    const start = Math.floor(adjustedScrollTop / estimatedItemHeight)
     // 计算可见数量
-    const visibleCount = Math.ceil(containerHeight / estimatedItemHeight)
+    const visibleCount = Math.ceil(effectiveContainerHeight.value / estimatedItemHeight)
     // 计算结束索引
     const end = Math.min(itemList.value.length, start + visibleCount + overscan)
 
@@ -110,7 +131,7 @@ export function useVirtualList(items, options = {}) {
    */
   const scrollToIndex = (index) => {
     if (index < 0 || index >= itemList.value.length) return
-    scrollTop.value = index * estimatedItemHeight
+    scrollTop.value = index * estimatedItemHeight + headerHeight.value
   }
 
   /**
@@ -124,7 +145,7 @@ export function useVirtualList(items, options = {}) {
    * 滚动到底部
    */
   const scrollToBottom = () => {
-    scrollTop.value = totalHeight.value
+    scrollTop.value = totalHeight.value + headerHeight.value
   }
 
   /**
