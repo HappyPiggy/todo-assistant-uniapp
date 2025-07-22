@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { tagService } from '@/composables/useTagService.js'
+import { tagService } from '@/pages/tasks/composables/useTagService.js'
 import { organizeParentChildTasks, calculateTaskStats, filterTasks, validateTaskCompletion } from '@/pages/todobooks/utils/taskUtils.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'

@@ -57,7 +57,10 @@
 		<!-- 已有标签列表 -->
 		<view class="tags-section">
 			<view class="section-title">选择标签</view>
-			<view class="section-subtitle">点击标签添加到任务中</view>
+			<view class="section-subtitle">点击标签添加到任务中（最多5个）</view>
+			<view class="tags-count" :class="{ 'limit-reached': selectedTags.length >= 5 }">
+				已选择：{{ selectedTags.length }} / 5
+			</view>
 			
 			<view v-if="availableTags.length > 0" class="tags-list">
 				<view 
@@ -68,12 +71,9 @@
 					:style="{ backgroundColor: tag.color }"
 					@click="handleTagTap(tag)">
 					<text class="tag-name">{{ tag.name }}</text>
-					<view v-if="selectedTags.includes(tag.id)" class="selected-icon">
-						<uni-icons color="#ffffff" size="16" type="checkmarkempty" />
-					</view>
 					<view class="tag-actions">
 						<view class="delete-btn" @click.stop="deleteTag(tag)">
-							<uni-icons color="#ffffff" size="14" type="trash" />
+							<uni-icons color="#ffffff" size="10" type="clear" />
 						</view>
 					</view>
 				</view>

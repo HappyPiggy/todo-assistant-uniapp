@@ -1,6 +1,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { currentUserId } from '@/store/storage.js'
-import { tagService } from '@/composables/useTagService.js'
+import { tagService } from '@/pages/tasks/composables/useTagService.js'
 
 export const useTagManage = () => {
   // 响应式数据
@@ -125,7 +125,6 @@ export const useTagManage = () => {
         .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
       
       console.log('合并后的可用标签:', availableTags.value.length, '个')
-      console.log('标签详情:', JSON.stringify(availableTags.value, null, 2))
       
       // 4. 处理当前任务的标签，确保它们都在可用标签列表中
       currentTags.value.forEach(tag => {
@@ -168,9 +167,6 @@ export const useTagManage = () => {
         }
         return null
       }).filter(id => id !== null)
-      
-      console.log('当前任务标签:', JSON.stringify(currentTags.value, null, 2))
-      console.log('选中标签ID:', JSON.stringify(selectedTags.value, null, 2))
       
     } catch (error) {
       console.error('加载标签失败:', error)
@@ -236,6 +232,15 @@ export const useTagManage = () => {
     if (index > -1) {
       selectedTags.value.splice(index, 1)
     } else {
+      // 检查是否超过5个标签的限制
+      if (selectedTags.value.length >= 5) {
+        uni.showToast({
+          title: '最多只能选择5个标签',
+          icon: 'none',
+          duration: 2000
+        })
+        return
+      }
       selectedTags.value.push(tag.id)
     }
   }
@@ -359,7 +364,6 @@ export const useTagManage = () => {
   }
   
   const initializeData = (options) => {
-    console.log('initializeData 接收到的参数:', JSON.stringify(options, null, 2))
     
     if (options.taskId) {
       taskId.value = options.taskId
@@ -369,11 +373,8 @@ export const useTagManage = () => {
     }
     if (options.currentTags) {
       try {
-        console.log('原始 currentTags 字符串:', options.currentTags)
         const decodedTags = decodeURIComponent(options.currentTags)
-        console.log('解码后的字符串:', decodedTags)
         currentTags.value = JSON.parse(decodedTags)
-        console.log('解析后的标签数据:', JSON.stringify(currentTags.value, null, 2))
       } catch (error) {
         console.error('解析当前标签失败:', error, '原始数据:', options.currentTags)
         currentTags.value = []

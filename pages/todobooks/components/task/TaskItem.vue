@@ -38,13 +38,13 @@
               v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
               class="task-tags">
               <view 
-                v-for="(tag, index) in task.tags.slice(0, 2)" 
+                v-for="(tag, index) in task.tags.slice(0, 4)" 
                 :key="getTagKey(tag, index)" 
                 class="tag-item"
                 :style="{ backgroundColor: getTagColor(tag) }">
                 <text class="tag-text">{{ getTagName(tag) }}</text>
               </view>
-              <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+              <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
             </view>
           </view>
           

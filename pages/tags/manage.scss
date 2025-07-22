@@ -56,6 +56,23 @@ page {
   margin-bottom: 20rpx;
 }
 
+.tags-count {
+  font-size: 24rpx;
+  color: #999999;
+  text-align: right;
+  margin-bottom: 20rpx;
+  padding: 8rpx 16rpx;
+  background-color: #f8f8f8;
+  border-radius: 12rpx;
+  border: 1rpx solid #e8e8e8;
+}
+
+.tags-count.limit-reached {
+  color: #ff4444;
+  background-color: #fff5f5;
+  border-color: #ffcccc;
+}
+
 /* 颜色选择器 */
 .color-picker {
   flex-direction: row;
@@ -160,7 +177,7 @@ page {
 .tag-item {
   flex-direction: row;
   align-items: center;
-  padding: 12rpx 16rpx;
+  padding: 12rpx 24rpx 12rpx 16rpx;
   border-radius: 20rpx;
   position: relative;
   min-height: 56rpx;
@@ -174,21 +191,10 @@ page {
 }
 
 .tag-item.selected {
-  border-color: #007AFF;
-  box-shadow: 0 0 0 2rpx rgba(0, 122, 255, 0.2);
-  transform: scale(1.02);
-}
-
-.tag-item.selected::after {
-  content: '';
-  position: absolute;
-  top: -4rpx;
-  right: -4rpx;
-  width: 24rpx;
-  height: 24rpx;
-  background-color: #007AFF;
-  border-radius: 12rpx;
-  border: 2rpx solid #ffffff;
+  border-color: #ffffff;
+  border-width: 6rpx;
+  box-shadow: 0 0 0 6rpx #ff6b35, 0 6rpx 16rpx rgba(255, 107, 53, 0.3);
+  transform: scale(1.05);
 }
 
 .tag-name {
@@ -219,23 +225,25 @@ page {
 }
 
 .tag-actions {
+  position: absolute;
+  top: 2rpx;
+  right: 2rpx;
   flex-direction: row;
-  gap: 8rpx;
 }
 
 .delete-btn {
-  width: 28rpx;
-  height: 28rpx;
+  width: 14rpx;
+  height: 14rpx;
   justify-content: center;
   align-items: center;
-  border-radius: 14rpx;
-  background-color: rgba(255, 0, 0, 0.6);
-  transition: all 0.2s ease;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
+  transition: opacity 0.15s ease;
 }
 
 .delete-btn:active {
-  background-color: rgba(255, 0, 0, 0.8);
-  transform: scale(0.9);
+  opacity: 0.7;
 }
 
 .empty-tags {
