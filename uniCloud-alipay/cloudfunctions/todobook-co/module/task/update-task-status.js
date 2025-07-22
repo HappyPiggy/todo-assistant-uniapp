@@ -1,6 +1,5 @@
 // 更新任务状态
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse } = require('../../common/utils')
 const { checkTaskPermission } = require('../../lib/utils/permission')
 const { handleParentChildStatusUpdate } = require('../../lib/utils/database')
@@ -13,14 +12,7 @@ const { ERROR_CODES, PERMISSION_TYPE, TASK_STATUS } = require('../../common/cons
  * @returns {Object} 响应结果
  */
 async function updateTodoItemStatus(itemId, status) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 权限检查和获取任务信息

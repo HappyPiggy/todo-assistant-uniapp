@@ -1,6 +1,5 @@
 // 添加任务评论
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -20,14 +19,7 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
 async function addTaskComment(params) {
   const { taskId, content, parentCommentId = null } = params
   
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   // 参数验证
   if (!taskId) {

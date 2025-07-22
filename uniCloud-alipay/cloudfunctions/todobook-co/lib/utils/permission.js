@@ -2,7 +2,6 @@
 
 const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
 const { createErrorResponse } = require('../../common/utils')
-const { getDatabase } = require('./auth')
 
 /**
  * 检查项目册权限
@@ -13,7 +12,7 @@ const { getDatabase } = require('./auth')
  * @returns {Object} 权限检查结果 { success: boolean, error?: Object }
  */
 async function checkTodoBookPermission(context, userId, todoBookId, permission) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     // 检查是否是项目册创建者
@@ -76,7 +75,7 @@ async function checkTodoBookPermission(context, userId, todoBookId, permission) 
  * @returns {Object} 权限检查结果 { success: boolean, task?: Object, error?: Object }
  */
 async function checkTaskPermission(context, userId, taskId, permission) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     // 获取任务信息
@@ -121,7 +120,7 @@ async function checkTaskPermission(context, userId, taskId, permission) {
  * @returns {Object} 检查结果 { success: boolean, isCreator: boolean, error?: Object }
  */
 async function checkIsCreator(context, userId, todoBookId) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     const bookResult = await db.collection('todobooks')

@@ -1,5 +1,4 @@
 // 删除任务
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { checkTodoBookPermission } = require('../../lib/utils/permission')
 
 module.exports = async function deleteTask(taskId) {
@@ -14,16 +13,9 @@ module.exports = async function deleteTask(taskId) {
   }
   
   try {
-    // 验证用户身份
-    const authResult = await validateAuth(this)
-    if (!authResult.success) {
-      return authResult.error
-    }
-    
-    const { uid } = authResult
+    const { uid, db } = this
     
     // 获取任务信息
-    const db = getDatabase(this)
     const taskResult = await db.collection('todoitems')
       .doc(taskId)
       .get()

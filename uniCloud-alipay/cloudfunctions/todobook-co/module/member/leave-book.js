@@ -1,6 +1,5 @@
 // 退出项目册
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse } = require('../../common/utils')
 const { checkIsCreator } = require('../../lib/utils/permission')
 const { updateTodoBookStats } = require('../../lib/utils/database')
@@ -12,14 +11,7 @@ const { ERROR_CODES } = require('../../common/constants')
  * @returns {Object} 响应结果
  */
 async function leaveBook(todobook_id) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 检查用户是否是项目册创建者

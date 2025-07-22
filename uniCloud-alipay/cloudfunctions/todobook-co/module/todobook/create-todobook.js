@@ -1,6 +1,5 @@
 // 创建项目册
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -18,14 +17,8 @@ const { ERROR_CODES, MEMBER_ROLE, PERMISSION_TYPE } = require('../../common/cons
  * @returns {Object} 响应结果
  */
 async function createTodoBook(bookData) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  // uid 和 db 已由 index.obj.js 的 _before & _beforeEach 注入
+  const { uid, db } = this
   
   // 数据验证
   const { title, description = '', color = '#007AFF', icon = 'folder' } = bookData

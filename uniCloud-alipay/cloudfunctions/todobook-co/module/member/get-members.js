@@ -1,6 +1,5 @@
 // 获取成员列表
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse, handleAggregateWithFallback } = require('../../common/utils')
 const { checkTodoBookPermission } = require('../../lib/utils/permission')
 const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
@@ -11,14 +10,7 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  * @returns {Object} 响应结果
  */
 async function getMembers(todobook_id) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 权限检查

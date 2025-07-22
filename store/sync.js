@@ -36,8 +36,9 @@ class SyncManager {
     this.retryCount = 0
     this.maxRetries = 3
     
-    this.initNetworkListener()
-    this.initAutoSync()
+    // 屏蔽自动同步和网络监听，暂停同步功能
+    // this.initNetworkListener()
+    // this.initAutoSync()
   }
 
   // 初始化网络监听

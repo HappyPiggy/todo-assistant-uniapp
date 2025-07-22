@@ -1,6 +1,5 @@
 // 获取项目册详情
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse } = require('../../common/utils')
 const { checkTodoBookPermission } = require('../../lib/utils/permission')
 const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
@@ -101,14 +100,8 @@ async function getTodoBookDetail(bookId, options = {}) {
     includeTasks = false,
     includeBasic = true
   } = options
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
   
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 权限检查

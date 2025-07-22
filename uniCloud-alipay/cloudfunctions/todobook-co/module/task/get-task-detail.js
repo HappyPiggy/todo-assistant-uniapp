@@ -1,6 +1,5 @@
 // 获取任务详情
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse } = require('../../common/utils')
 const { checkTaskPermission } = require('../../lib/utils/permission')
 const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
@@ -11,14 +10,7 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  * @returns {Object} 响应结果
  */
 async function getTaskDetail(taskId) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 权限检查和获取任务信息

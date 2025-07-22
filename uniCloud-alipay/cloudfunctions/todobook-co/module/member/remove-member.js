@@ -1,6 +1,5 @@
 // 移除成员
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { createSuccessResponse, createErrorResponse } = require('../../common/utils')
 const { checkTodoBookPermission, checkIsCreator } = require('../../lib/utils/permission')
 const { updateTodoBookStats } = require('../../lib/utils/database')
@@ -13,14 +12,7 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  * @returns {Object} 响应结果
  */
 async function removeMember(todobook_id, member_user_id) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   try {
     // 权限检查

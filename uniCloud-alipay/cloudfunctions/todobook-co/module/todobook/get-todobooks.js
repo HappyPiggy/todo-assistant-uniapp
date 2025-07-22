@@ -1,6 +1,5 @@
 // 获取项目册列表
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -67,14 +66,7 @@ const { ERROR_CODES } = require('../../common/constants')
  * }
  */
 async function getTodoBooks(options = {}) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   const { 
     include_archived = false, 

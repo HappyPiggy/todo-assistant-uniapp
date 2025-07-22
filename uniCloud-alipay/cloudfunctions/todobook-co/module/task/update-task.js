@@ -2,15 +2,7 @@
 const { checkTaskPermission } = require('../../lib/utils/permission')
 
 async function updateTodoItem(taskId, updateData) {
-  const db = this.db
-  const uid = this.uid
-
-  if (!uid) {
-    return {
-      code: 401,
-      message: '请先登录'
-    }
-  }
+  const { db, uid } = this
 
   if (!taskId) {
     return {

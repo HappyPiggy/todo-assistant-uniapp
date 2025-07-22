@@ -49,9 +49,16 @@ module.exports = {
     const token = this.getUniIdToken()
     if (token) {
       const payload = await this.uniID.checkToken(token)
-      if (payload.code === 0) {
+      if (payload.code && payload.code === 0) {
         this.uid = payload.uid
         this.userInfo = payload
+      }
+      else
+      {
+        return {
+          code: payload.code,
+          message: payload.message
+        }
       }
     }
   },

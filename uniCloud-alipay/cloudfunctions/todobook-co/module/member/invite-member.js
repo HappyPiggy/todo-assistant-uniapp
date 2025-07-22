@@ -1,6 +1,5 @@
 // 邀请成员
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -17,14 +16,7 @@ const { ERROR_CODES, PERMISSION_TYPE, MEMBER_ROLE } = require('../../common/cons
  * @returns {Object} 响应结果
  */
 async function inviteUserByNickname(todobook_id, nickname) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   // 验证昵称参数
   const nicknameValidation = validateStringParam(nickname, '用户昵称')

@@ -2,7 +2,6 @@
 
 const { ERROR_CODES } = require('../../common/constants')
 const { createErrorResponse } = require('../../common/utils')
-const { getDatabase } = require('./auth')
 
 /**
  * 更新项目册统计数据
@@ -12,7 +11,7 @@ const { getDatabase } = require('./auth')
  * @returns {Object} 更新结果 { success: boolean, error?: Object }
  */
 async function updateTodoBookStats(context, todoBookId, updates = {}) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     const updateData = {
@@ -41,7 +40,7 @@ async function updateTodoBookStats(context, todoBookId, updates = {}) {
  * @returns {Object} 统计结果 { success: boolean, stats?: Object, error?: Object }
  */
 async function getTodoBookTaskStats(context, todoBookId) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     const taskStatsResult = await db.collection('todoitems')
@@ -87,7 +86,7 @@ async function getTodoBookTaskStats(context, todoBookId) {
  * @returns {Object} 成员数量结果 { success: boolean, count?: number, error?: Object }
  */
 async function getTodoBookMemberCount(context, todoBookId) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     const memberResult = await db.collection('todobook_members')
@@ -116,7 +115,7 @@ async function getTodoBookMemberCount(context, todoBookId) {
  * @returns {Object} 未读评论数量结果 { success: boolean, count?: number, error?: Object }
  */
 async function getTodoBookUnreadCommentCount(context, todoBookId, userId, lastViewTimes = {}) {
-  const db = getDatabase(context)
+  const db = context.db
   
   console.log('[Cloud] 计算项目册未读评论数量:', {
     todoBookId,
@@ -208,7 +207,7 @@ async function getTodoBookUnreadCommentCount(context, todoBookId, userId, lastVi
  * @returns {Object} 处理结果 { success: boolean, error?: Object }
  */
 async function handleParentChildStatusUpdate(context, task, newStatus) {
-  const db = getDatabase(context)
+  const db = context.db
   
   try {
     // 如果是子任务状态变更，检查是否需要更新父任务

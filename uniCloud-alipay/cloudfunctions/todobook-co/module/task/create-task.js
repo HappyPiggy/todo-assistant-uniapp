@@ -1,6 +1,5 @@
 // 创建任务
 
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 const { 
   createSuccessResponse, 
   createErrorResponse, 
@@ -22,14 +21,7 @@ const { ERROR_CODES, PERMISSION_TYPE, TASK_STATUS, TASK_PRIORITY } = require('..
  * @returns {Object} 响应结果
  */
 async function createTodoItem(itemData) {
-  // 认证验证
-  const authResult = await validateAuth(this)
-  if (!authResult.success) {
-    return authResult.error
-  }
-  
-  const { uid } = authResult
-  const db = getDatabase(this)
+  const { uid, db } = this
   
   const { 
     todobook_id, 
