@@ -71,22 +71,6 @@ export function useVirtualList(items, options = {}) {
     const renderStart = Math.max(0, viewStart - overscan)
     const renderEnd = Math.min(itemList.value.length, viewEnd + overscan + 2) // 额外缓冲
 
-    // 调试信息
-    if (process.env.NODE_ENV === 'development') {
-      console.log('虚拟滚动计算:', {
-        scrollTop: scrollTop.value,
-        headerHeight: headerHeight.value,
-        adjustedScrollTop,
-        estimatedItemHeight,
-        containerHeight: effectiveContainerHeight.value,
-        viewStart,
-        viewEnd,
-        renderStart,
-        renderEnd,
-        totalItems: itemList.value.length,
-        baseVisibleCount
-      })
-    }
 
     return { 
       start: viewStart,
@@ -166,14 +150,8 @@ export function useVirtualList(items, options = {}) {
    * 滚动到顶部（直接跳转，无动画）
    */
   const scrollToTop = () => {
-    console.log('useVirtualList: 调用scrollToTop')
-    console.log('useVirtualList: 当前scrollTop值', scrollTop.value)
-    
     // 直接设置为0，无动画效果
     scrollTop.value = 0
-    
-    console.log('useVirtualList: 设置后scrollTop值', scrollTop.value)
-    
     // 立即返回，不等待动画
     return Promise.resolve()
   }

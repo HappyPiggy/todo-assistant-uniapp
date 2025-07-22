@@ -334,7 +334,6 @@ const handleTagFilterChange = (tags) => {
 
 // 自定义滚动到顶部方法
 const customScrollToTop = () => {
-  console.log('VirtualTaskList: 调用customScrollToTop')
   return virtualScrollToTop()
 }
 
