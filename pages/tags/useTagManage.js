@@ -1,5 +1,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { currentUserId } from '@/store/storage.js'
+import { tagService } from '@/composables/useTagService.js'
 
 export const useTagManage = () => {
   // 响应式数据
@@ -51,83 +52,7 @@ export const useTagManage = () => {
   }
 
   /**
-   * 从任务数据中提取所有标签
-   * @param {Array} tasks - 任务列表
-   * @returns {Array} 提取出的标签列表
-   */
-  const extractTagsFromTasks = (tasks) => {
-    const allTags = new Set()
-    
-    if (!Array.isArray(tasks)) {
-      return []
-    }
-    
-    tasks.forEach(task => {
-      // 从主任务提取标签
-      if (task.tags && Array.isArray(task.tags)) {
-        task.tags.forEach(tag => {
-          if (typeof tag === 'object' && tag !== null) {
-            // 对象格式标签，支持多种字段名
-            const tagId = tag.id || tag.name || tag._id
-            const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
-            const tagColor = tag.color || '#007AFF'
-            if (tagId && tagName) {
-              allTags.add(JSON.stringify({ 
-                id: tagId, 
-                name: tagName, 
-                color: tagColor,
-                createdAt: tag.createdAt || new Date().toISOString()
-              }))
-            }
-          } else if (typeof tag === 'string' && tag.trim()) {
-            allTags.add(JSON.stringify({ 
-              id: tag, 
-              name: tag, 
-              color: '#007AFF',
-              createdAt: new Date().toISOString()
-            }))
-          }
-        })
-      }
-      
-      // 从子任务提取标签
-      if (task.subtasks && Array.isArray(task.subtasks)) {
-        task.subtasks.forEach(subtask => {
-          if (subtask.tags && Array.isArray(subtask.tags)) {
-            subtask.tags.forEach(tag => {
-              if (typeof tag === 'object' && tag !== null) {
-                const tagId = tag.id || tag.name || tag._id
-                const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
-                const tagColor = tag.color || '#007AFF'
-                if (tagId && tagName) {
-                  allTags.add(JSON.stringify({ 
-                    id: tagId, 
-                    name: tagName, 
-                    color: tagColor,
-                    createdAt: tag.createdAt || new Date().toISOString()
-                  }))
-                }
-              } else if (typeof tag === 'string' && tag.trim()) {
-                allTags.add(JSON.stringify({ 
-                  id: tag, 
-                  name: tag, 
-                  color: '#007AFF',
-                  createdAt: new Date().toISOString()
-                }))
-              }
-            })
-          }
-        })
-      }
-    })
-    
-    // 转换为数组并按名称排序
-    const uniqueTags = Array.from(allTags).map(tagStr => JSON.parse(tagStr))
-    return uniqueTags.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-  }
-
-  /**
-   * 加载 TodoBook 的任务数据并提取标签
+   * 加载 TodoBook 的任务数据并提取标签（使用缓存）
    * @returns {Promise<Array>} 从任务中提取的标签列表
    */
   const loadTaskTags = async () => {
@@ -137,21 +62,10 @@ export const useTagManage = () => {
     }
     
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBookDetail(bookId.value, {
-        includeBasic: false,
-        includeMembers: false,
-        includeTasks: true
-      })
-      
-      if (result.code === 0 && result.data.tasks) {
-        const tasks = result.data.tasks || []
-        console.log('从云端加载任务数据:', tasks.length, '个任务')
-        return extractTagsFromTasks(tasks)
-      } else {
-        console.error('加载任务数据失败:', result.message)
-        return []
-      }
+      // 使用标签服务获取标签，带缓存功能
+      const tags = await tagService.getBookTags(bookId.value)
+      console.log('通过标签服务获取到标签:', tags.length, '个')
+      return tags
     } catch (error) {
       console.error('加载任务标签失败:', error)
       return []
@@ -493,7 +407,6 @@ export const useTagManage = () => {
     initializeData,
     loadAvailableTags,
     loadTaskTags,
-    extractTagsFromTasks,
     selectColor,
     createTag,
     toggleTagSelection,

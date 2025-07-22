@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { tagService } from '@/composables/useTagService.js'
 import { organizeParentChildTasks, calculateTaskStats, filterTasks, validateTaskCompletion } from '@/pages/todobooks/utils/taskUtils.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
@@ -118,6 +119,7 @@ export function useTaskData(bookId, allTasks = null) {
   const activeFilter = ref('all')
   const searchKeyword = ref('')
   const selectedTags = ref([])
+  const cachedAvailableTags = ref([])
   
   // 计算属性
   const filteredTasks = computed(() => {
@@ -172,57 +174,50 @@ export function useTaskData(bookId, allTasks = null) {
     ]
   })
   
-  // 获取所有可用标签（从所有任务数据中获取，而不仅仅是当前筛选后的任务）
+  // 获取所有可用标签（优先使用缓存，回退到实时计算）
   const availableTags = computed(() => {
-    const allTags = new Set()
+    // 如果有缓存的标签数据，优先使用
+    if (cachedAvailableTags.value.length > 0) {
+      return cachedAvailableTags.value
+    }
     
-    // 优先使用传入的allTasks，如果没有则使用当前的tasks
+    // 回退到原来的实时计算逻辑
     const sourceData = allTasks?.value || tasks.value
+    if (!Array.isArray(sourceData)) {
+      return []
+    }
     
+    // 使用标签服务的提取逻辑，但不包含颜色信息（用于筛选）
+    const extractedTags = tagService.extractTagsFromTasks(sourceData, false)
+    return extractedTags
+  })
+  
+  /**
+   * 异步加载并缓存标签数据
+   * @param {boolean} forceRefresh - 是否强制刷新
+   */
+  const loadAvailableTags = async (forceRefresh = false) => {
+    if (!bookId) {
+      console.warn('loadAvailableTags: bookId is required')
+      return
+    }
     
-    sourceData.forEach(task => {
-      if (task.tags && Array.isArray(task.tags)) {
-        task.tags.forEach(tag => {
-          if (typeof tag === 'object' && tag !== null) {
-            // 对象格式的标签，支持多种字段名
-            const tagId = tag.id || tag.name || tag._id
-            const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
-            if (tagId && tagName) {
-              allTags.add(JSON.stringify({ id: tagId, name: tagName }))
-            }
-          } else if (typeof tag === 'string' && tag.trim()) {
-            allTags.add(JSON.stringify({ id: tag, name: tag }))
-          }
-        })
+    try {
+      // 优先使用已有的任务数据
+      const sourceData = allTasks?.value || tasks.value
+      if (Array.isArray(sourceData) && sourceData.length > 0) {
+        // 先缓存任务数据到标签服务
+        tagService.cacheTaskData(bookId, sourceData)
       }
       
-      // 如果任务有子任务，也从子任务中获取标签
-      if (task.subtasks && Array.isArray(task.subtasks)) {
-        task.subtasks.forEach(subtask => {
-          if (subtask.tags && Array.isArray(subtask.tags)) {
-            subtask.tags.forEach(tag => {
-              if (typeof tag === 'object' && tag !== null) {
-                // 对象格式的标签，支持多种字段名
-                const tagId = tag.id || tag.name || tag._id
-                const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
-                if (tagId && tagName) {
-                  allTags.add(JSON.stringify({ id: tagId, name: tagName }))
-                }
-              } else if (typeof tag === 'string' && tag.trim()) {
-                allTags.add(JSON.stringify({ id: tag, name: tag }))
-              }
-            })
-          }
-        })
-      }
-    })
-    
-    // 转换为数组并按名称排序
-    const uniqueTags = Array.from(allTags).map(tagStr => JSON.parse(tagStr))
-    const sortedTags = uniqueTags.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-    
-    return sortedTags
-  })
+      // 使用标签服务获取标签（支持缓存）
+      const tags = await tagService.getBookTagsForFilter(bookId, sourceData, forceRefresh)
+      cachedAvailableTags.value = tags
+      console.log('已缓存可用标签:', tags.length, '个')
+    } catch (error) {
+      console.error('加载可用标签失败:', error)
+    }
+  }
   
   /**
    * 初始化任务数据
@@ -261,6 +256,11 @@ export function useTaskData(bookId, allTasks = null) {
       
       // 加载任务评论数据（用于显示未读提示）
       await loadTasksCommentCounts(processedTasks)
+      
+      // 异步加载并缓存标签数据
+      if (bookId) {
+        loadAvailableTags()
+      }
       
     } catch (err) {
       console.error('加载任务列表失败:', err)
@@ -583,6 +583,12 @@ export function useTaskData(bookId, allTasks = null) {
     error.value = null
     activeFilter.value = 'all'
     searchKeyword.value = ''
+    cachedAvailableTags.value = []
+    
+    // 清除标签服务中的缓存
+    if (bookId) {
+      tagService.clearBookCache(bookId)
+    }
   }
 
   const overallProgress = computed(() => {
@@ -677,6 +683,7 @@ export function useTaskData(bookId, allTasks = null) {
     
     // 方法
     initializeTasks,
+    loadAvailableTags,
     toggleTaskStatus,
     toggleSubtaskStatus,
     deleteTask,
