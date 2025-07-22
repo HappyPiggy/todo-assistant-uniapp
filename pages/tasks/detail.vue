@@ -340,9 +340,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { useTaskDetail } from '@/composables/useTaskDetail.js'
-import { useTaskComments } from '@/composables/useTaskComments.js'
-import { useTaskUtils } from '@/composables/useTaskUtils.js'
+import { useTaskDetail } from './composables/useTaskDetail.js'
+import { useTaskComments } from './composables/useTaskComments.js'
+import { useTaskUtils } from './composables/useTaskUtils.js'
 
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null

@@ -10,7 +10,17 @@ export function useTaskDetail() {
 	const loading = ref(true)
 	const error = ref(null)
 
-	const loadTaskDetail = async () => {
+	const loadTaskDetail = async (id) => {
+		if (id) {
+			taskId.value = id
+		}
+		
+		if (!taskId.value) {
+			error.value = '任务ID不能为空'
+			loading.value = false
+			return
+		}
+		
 		loading.value = true
 		error.value = null
 		
