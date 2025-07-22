@@ -1,4 +1,5 @@
 import { ref, reactive, computed, onMounted } from 'vue'
+import { currentUserId } from '@/store/storage.js'
 
 export const useTagManage = () => {
   // 响应式数据
@@ -46,53 +47,199 @@ export const useTagManage = () => {
   
   // 方法
   const getCurrentUserId = () => {
-    // 获取当前用户ID，这里使用简单的方法
-    // 实际项目中应该从store或其他地方获取
-    return 'current_user' // 临时方案
+    return currentUserId.value || 'current_user'
+  }
+
+  /**
+   * 从任务数据中提取所有标签
+   * @param {Array} tasks - 任务列表
+   * @returns {Array} 提取出的标签列表
+   */
+  const extractTagsFromTasks = (tasks) => {
+    const allTags = new Set()
+    
+    if (!Array.isArray(tasks)) {
+      return []
+    }
+    
+    tasks.forEach(task => {
+      // 从主任务提取标签
+      if (task.tags && Array.isArray(task.tags)) {
+        task.tags.forEach(tag => {
+          if (typeof tag === 'object' && tag !== null) {
+            // 对象格式标签，支持多种字段名
+            const tagId = tag.id || tag.name || tag._id
+            const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
+            const tagColor = tag.color || '#007AFF'
+            if (tagId && tagName) {
+              allTags.add(JSON.stringify({ 
+                id: tagId, 
+                name: tagName, 
+                color: tagColor,
+                createdAt: tag.createdAt || new Date().toISOString()
+              }))
+            }
+          } else if (typeof tag === 'string' && tag.trim()) {
+            allTags.add(JSON.stringify({ 
+              id: tag, 
+              name: tag, 
+              color: '#007AFF',
+              createdAt: new Date().toISOString()
+            }))
+          }
+        })
+      }
+      
+      // 从子任务提取标签
+      if (task.subtasks && Array.isArray(task.subtasks)) {
+        task.subtasks.forEach(subtask => {
+          if (subtask.tags && Array.isArray(subtask.tags)) {
+            subtask.tags.forEach(tag => {
+              if (typeof tag === 'object' && tag !== null) {
+                const tagId = tag.id || tag.name || tag._id
+                const tagName = tag.name || tag.label || tag.title || tag.id || tag._id
+                const tagColor = tag.color || '#007AFF'
+                if (tagId && tagName) {
+                  allTags.add(JSON.stringify({ 
+                    id: tagId, 
+                    name: tagName, 
+                    color: tagColor,
+                    createdAt: tag.createdAt || new Date().toISOString()
+                  }))
+                }
+              } else if (typeof tag === 'string' && tag.trim()) {
+                allTags.add(JSON.stringify({ 
+                  id: tag, 
+                  name: tag, 
+                  color: '#007AFF',
+                  createdAt: new Date().toISOString()
+                }))
+              }
+            })
+          }
+        })
+      }
+    })
+    
+    // 转换为数组并按名称排序
+    const uniqueTags = Array.from(allTags).map(tagStr => JSON.parse(tagStr))
+    return uniqueTags.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+  }
+
+  /**
+   * 加载 TodoBook 的任务数据并提取标签
+   * @returns {Promise<Array>} 从任务中提取的标签列表
+   */
+  const loadTaskTags = async () => {
+    if (!bookId.value) {
+      console.log('没有 bookId，无法加载任务标签')
+      return []
+    }
+    
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.getTodoBookDetail(bookId.value, {
+        includeBasic: false,
+        includeMembers: false,
+        includeTasks: true
+      })
+      
+      if (result.code === 0 && result.data.tasks) {
+        const tasks = result.data.tasks || []
+        console.log('从云端加载任务数据:', tasks.length, '个任务')
+        return extractTagsFromTasks(tasks)
+      } else {
+        console.error('加载任务数据失败:', result.message)
+        return []
+      }
+    } catch (error) {
+      console.error('加载任务标签失败:', error)
+      return []
+    }
   }
   
   const loadAvailableTags = async () => {
     try {
-      // 从本地存储加载标签
-      const storedTags = uni.getStorageSync(`user_tags_${getCurrentUserId()}`) || []
-      availableTags.value = [...storedTags]
+      console.log('开始加载可用标签...')
       
-      // 确保当前任务的标签都在可用标签列表中
+      // 1. 从本地存储加载用户创建的标签
+      const storedTags = uni.getStorageSync(`user_tags_${getCurrentUserId()}`) || []
+      console.log('本地存储标签:', storedTags.length, '个')
+      
+      // 2. 从任务中提取标签
+      const taskTags = await loadTaskTags()
+      console.log('任务中的标签:', taskTags.length, '个')
+      
+      // 3. 合并标签（去重）
+      const allTagsMap = new Map()
+      
+      // 先添加本地存储的标签
+      storedTags.forEach(tag => {
+        if (tag.id && tag.name) {
+          allTagsMap.set(tag.id, {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color || '#007AFF',
+            createdAt: tag.createdAt || new Date().toISOString(),
+            source: 'local' // 标记来源
+          })
+        }
+      })
+      
+      // 再添加任务中的标签（如果本地没有同名标签）
+      taskTags.forEach(tag => {
+        if (tag.id && tag.name) {
+          // 检查是否已存在相同名称的标签
+          const existingTag = Array.from(allTagsMap.values()).find(t => t.name === tag.name)
+          if (!existingTag) {
+            allTagsMap.set(tag.id, {
+              ...tag,
+              source: 'task' // 标记来源
+            })
+          } else if (existingTag.source === 'task' && tag.color !== '#007AFF') {
+            // 如果都是任务中的标签，但新的有颜色信息，则更新
+            allTagsMap.set(existingTag.id, {
+              ...existingTag,
+              color: tag.color
+            })
+          }
+        }
+      })
+      
+      // 转换为数组并排序
+      availableTags.value = Array.from(allTagsMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+      
+      console.log('合并后的可用标签:', availableTags.value.length, '个')
+      console.log('标签详情:', JSON.stringify(availableTags.value, null, 2))
+      
+      // 4. 处理当前任务的标签，确保它们都在可用标签列表中
       currentTags.value.forEach(tag => {
-        if (typeof tag === 'object' && tag.name && tag.color) {
-          // 先尝试通过 id 匹配
-          let existingTag = null
-          if (tag.id) {
-            existingTag = availableTags.value.find(t => t.id === tag.id)
-          }
-          
-          // 如果通过 id 找不到，尝试通过名称和颜色匹配
-          if (!existingTag) {
-            existingTag = availableTags.value.find(t => t.name === tag.name && t.color === tag.color)
-          }
-          
-          // 如果还是找不到，尝试只通过名称匹配
-          if (!existingTag) {
-            existingTag = availableTags.value.find(t => t.name === tag.name)
-          }
+        if (typeof tag === 'object' && tag.name) {
+          // 查找匹配的标签
+          let existingTag = availableTags.value.find(t => t.id === tag.id) ||
+                           availableTags.value.find(t => t.name === tag.name && t.color === tag.color) ||
+                           availableTags.value.find(t => t.name === tag.name)
           
           if (!existingTag) {
-            // 如果完全不存在，创建一个新的标签并添加到列表中
+            // 如果找不到匹配的标签，创建新标签并添加到列表
             const newTag = {
-              id: tag.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: tag.id || `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               name: tag.name,
-              color: tag.color,
-              createdAt: tag.createdAt || new Date().toISOString()
+              color: tag.color || '#007AFF',
+              createdAt: tag.createdAt || new Date().toISOString(),
+              source: 'current_task'
             }
             availableTags.value.push(newTag)
+            availableTags.value.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
           } else if (!tag.id && existingTag.id) {
-            // 如果当前标签没有 id 但找到了匹配的标签，更新当前标签的 id
+            // 更新当前标签的 id 引用
             tag.id = existingTag.id
           }
         }
       })
       
-      // 初始化选中状态（当前任务已有的标签）
+      // 5. 初始化选中状态（当前任务已有的标签）
       selectedTags.value = currentTags.value.map(tag => {
         if (typeof tag === 'string') {
           // 处理旧格式的字符串标签
@@ -100,39 +247,16 @@ export const useTagManage = () => {
           return existingTag ? existingTag.id : null
         } else if (typeof tag === 'object' && tag.name) {
           // 新格式的标签对象
-          let existingTag = null
-          
-          // 优先通过 id 匹配
-          if (tag.id) {
-            existingTag = availableTags.value.find(t => t.id === tag.id)
-          }
-          
-          // 如果没有 id 或通过 id 找不到，尝试通过名称和颜色匹配
-          if (!existingTag && tag.color) {
-            existingTag = availableTags.value.find(t => t.name === tag.name && t.color === tag.color)
-          }
-          
-          // 如果还是找不到，只通过名称匹配
-          if (!existingTag) {
-            existingTag = availableTags.value.find(t => t.name === tag.name)
-          }
-          
+          const existingTag = availableTags.value.find(t => t.id === tag.id) ||
+                             availableTags.value.find(t => t.name === tag.name && t.color === tag.color) ||
+                             availableTags.value.find(t => t.name === tag.name)
           return existingTag ? existingTag.id : null
         }
         return null
       }).filter(id => id !== null)
       
-      console.log('当前标签:', JSON.stringify(currentTags.value, null, 2))
-      console.log('可用标签:', JSON.stringify(availableTags.value, null, 2))
+      console.log('当前任务标签:', JSON.stringify(currentTags.value, null, 2))
       console.log('选中标签ID:', JSON.stringify(selectedTags.value, null, 2))
-      
-      // 添加匹配过程的详细日志
-      currentTags.value.forEach((tag, index) => {
-        console.log(`标签 ${index} 匹配过程:`, {
-          原始标签: tag,
-          匹配结果: availableTags.value.find(t => t.name === tag.name)
-        })
-      })
       
     } catch (error) {
       console.error('加载标签失败:', error)
@@ -368,6 +492,8 @@ export const useTagManage = () => {
     // 方法
     initializeData,
     loadAvailableTags,
+    loadTaskTags,
+    extractTagsFromTasks,
     selectColor,
     createTag,
     toggleTagSelection,
