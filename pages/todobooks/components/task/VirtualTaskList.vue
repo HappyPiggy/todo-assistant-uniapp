@@ -87,7 +87,7 @@
 
 <script setup>
 import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
-import { useVirtualList } from '@/pages/todobooks/components/composables/useVirtualList.js'
+import { useVirtualList } from '@/pages/todobooks/composables/useVirtualList.js'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import EmptyState from '@/pages/todobooks/components/common/EmptyState.vue'
