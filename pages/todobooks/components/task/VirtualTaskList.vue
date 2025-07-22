@@ -9,20 +9,17 @@
       :message="error"
       @retry="handleRetry" />
     
-    <!-- 空状态 -->
-    <EmptyState 
-      v-else-if="tasks.length === 0"
-      :title="emptyText"
-      :show-action="activeFilter === 'all'"
-      action-text="创建第一个任务"
-      @action="handleAddTask" />
     
     <!-- 虚拟滚动容器 -->
     <scroll-view
       v-else
+      ref="scrollViewRef"
       class="virtual-scroll-container"
       :scroll-y="true"
-      :scroll-with-animation="true"
+      :scroll-with-animation="false"
+      :enhanced="true"
+      :enable-flex="true"
+      :bounces="false"
       :scroll-top="scrollTop"
       @scroll="handleScroll"
       :style="{ height: containerHeight + 'px' }">
@@ -43,34 +40,45 @@
         v-if="filterTabs"
         :filter-tabs="filterTabs"
         :active-filter="activeFilter"
+        :available-tags="availableTags"
+        :selected-tags="selectedTags"
+        :todorbook-id="todorbookId"
         @filter-change="handleFilterChange"
+        @tag-filter-change="handleTagFilterChange"
       />
       
-      <!-- 上边距占位 -->
-      <view :style="{ height: offsetTop + 'px' }"></view>
-      
-      <!-- 可见任务列表 -->
-      <view class="visible-tasks">
-        <TaskItem
-          v-for="(task, index) in visibleTasks"
-          :key="task._id"
-          :task="task"
-          :variant="'card'"
-          :unreadCommentCount="unreadCountsMap[task._id]"
-          @click="handleTaskClick"
-          @statusToggle="handleStatusToggle"
-          @menuClick="handleMenuClick"
-          @subtaskStatusToggle="handleSubtaskStatusToggle"
-          @subtaskMenuClick="handleSubtaskMenuClick"
-          @subtaskClick="handleSubtaskClick"
-          @touchStart="handleSubtaskTouchStart"
-          @touchMove="handleSubtaskTouchMove"
-          @touchEnd="handleSubtaskTouchEnd"
-        />
+      <!-- 任务列表内容区域 -->
+      <view v-if="tasks.length === 0" class="empty-content">
+        <EmptyState 
+          :title="emptyText"
+          :show-action="activeFilter === 'all'"
+          action-text="创建第一个任务"
+          @action="handleAddTask" />
       </view>
-      
-      <!-- 下边距占位 -->
-      <view :style="{ height: offsetBottom + 'px' }"></view>
+      <view v-else class="tasks-content">
+        <!-- 上边距占位 -->
+        <view :style="{ height: offsetTop + 'px' }"></view>
+        
+        <!-- 可见任务列表 -->
+        <view class="visible-tasks">
+          <TaskItem
+            v-for="(task, index) in visibleTasks"
+            :key="task._id"
+            :task="task"
+            :variant="'card'"
+            :unreadCommentCount="unreadCountsMap[task._id]"
+            @click="handleTaskClick"
+            @statusToggle="handleStatusToggle"
+            @menuClick="handleMenuClick"
+            @subtaskStatusToggle="handleSubtaskStatusToggle"
+            @subtaskMenuClick="handleSubtaskMenuClick"
+            @subtaskClick="handleSubtaskClick"
+          />
+        </view>
+        
+        <!-- 下边距占位 -->
+        <view :style="{ height: offsetBottom + 'px' }"></view>
+      </view>
     </scroll-view>
     
     <!-- 任务菜单弹窗 -->
@@ -142,6 +150,18 @@ const props = defineProps({
   filterTabs: {
     type: Array,
     default: null
+  },
+  availableTags: {
+    type: Array,
+    default: () => []
+  },
+  selectedTags: {
+    type: Array,
+    default: () => []
+  },
+  todorbookId: {
+    type: String,
+    required: true
   }
 })
 
@@ -157,14 +177,12 @@ const emit = defineEmits([
   'subtaskStatusToggle',
   'subtaskMenuClick',
   'subtaskClick',
-  'subtaskTouchStart',
-  'subtaskTouchMove',
-  'subtaskTouchEnd',
   // BookHeader 相关事件
   'moreActions',
   'searchClick',
   // TaskFilter 相关事件
   'filterChange',
+  'tagFilterChange',
   // 滚动事件
   'scroll'
 ])
@@ -186,8 +204,8 @@ const unreadCountsMap = computed(() => {
 // 计算固定头部高度
 const fixedHeaderHeight = computed(() => {
   let height = 0
-  if (props.bookData) height += 140 // BookHeader 预估高度
-  if (props.filterTabs) height += 80 // TaskFilter 预估高度
+  if (props.bookData) height += 200 // BookHeader 实际高度更大
+  if (props.filterTabs) height += 60 // TaskFilter 实际高度
   return height
 })
 
@@ -199,18 +217,25 @@ const {
   handleScroll: onScroll,
   updateItemHeight,
   scrollToIndex,
-  scrollToTop,
+  scrollToTop: virtualScrollToTop,
   scrollToBottom,
-  getDebugInfo
+  getDebugInfo,
+  scrollTop: virtualScrollTop
 } = useVirtualList(computed(() => props.tasks), {
-  containerHeight: computed(() => props.containerHeight - fixedHeaderHeight.value),
-  estimatedItemHeight: 90, // 预估任务卡片高度，调整为更合理的数值
-  overscan: 8, // 预渲染数量，增加缓冲区
+  containerHeight: computed(() => props.containerHeight),
+  estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
+  overscan: 5, // 预渲染数量，上下各5个缓冲，提升滚动流畅度
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 调试信息（可选在控制台查看）
-// console.log('Virtual scroll debug:', JSON.stringify(getDebugInfo(), null, 2))
+// 直接使用虚拟滚动的 scrollTop
+const scrollTop = virtualScrollTop
+
+// 监听任务变化，输出调试信息
+watch(() => props.tasks.length, (newLength) => {
+  if (newLength > 0) {
+  }
+})
 
 const emptyText = computed(() => {
   const map = {
@@ -221,17 +246,25 @@ const emptyText = computed(() => {
   return map[props.activeFilter] || '暂无数据'
 })
 
+// 滚动事件节流
+let scrollTimer = null
+
 // 处理滚动事件
 const handleScroll = (event) => {
   const { scrollTop: newScrollTop } = event.detail
   scrollTop.value = newScrollTop
   onScroll(event)
   
-  // 向外暴露滚动事件
-  emit('scroll', {
-    scrollTop: newScrollTop,
-    detail: event.detail
-  })
+  // 节流处理滚动事件向外暴露
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+  scrollTimer = setTimeout(() => {
+    emit('scroll', {
+      scrollTop: newScrollTop,
+      detail: event.detail
+    })
+  }, 16) // 约60fps
 }
 
 // 简化版本不需要动态高度测量
@@ -287,17 +320,6 @@ const handleSubtaskClick = (subtask) => {
   emit('subtaskClick', subtask)
 }
 
-const handleSubtaskTouchStart = (subtask, index, parentTask, event) => {
-  emit('subtaskTouchStart', subtask, index, parentTask, event)
-}
-
-const handleSubtaskTouchMove = (event) => {
-  emit('subtaskTouchMove', event)
-}
-
-const handleSubtaskTouchEnd = (event) => {
-  emit('subtaskTouchEnd', event)
-}
 
 // BookHeader 事件处理
 const handleMoreActions = () => {
@@ -313,9 +335,22 @@ const handleFilterChange = (filter) => {
   emit('filterChange', filter)
 }
 
+const handleTagFilterChange = (tags) => {
+  emit('tagFilterChange', tags)
+}
+
+// 自定义滚动到顶部方法
+const customScrollToTop = () => {
+  return virtualScrollToTop()
+}
+
+// 监听availableTags props变化
+watch(() => props.availableTags, (newTags) => {
+}, { deep: true, immediate: true })
+
 // 暴露滚动控制方法
 defineExpose({
-  scrollToTop,
+  scrollToTop: customScrollToTop,
   scrollToBottom,
   scrollToIndex
 })
@@ -334,6 +369,15 @@ defineExpose({
   height: 100%;
 }
 
+
+.empty-content {
+  padding: $padding-lg $padding-base;
+  min-height: 300rpx;
+}
+
+.tasks-content {
+  flex: 1;
+}
 
 .visible-tasks {
   padding: 0 $padding-base;

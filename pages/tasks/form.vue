@@ -127,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 // 用于存储从路由获取的参数，初始为 null
@@ -246,25 +246,35 @@ onUnmounted(() => {
 const loadTaskData = async () => {
 	if (!isEditMode.value) return
 	
+	console.log('开始加载任务数据，taskId:', taskId)
 	loading.value = true
 	try {
 		const todoBooksObj = uniCloud.importObject('todobook-co')
 		const result = await todoBooksObj.getTodoItemDetail(taskId)
 		
-		if (result.code === 0 && result.data) {
-			const task = result.data
+		console.log('任务数据加载结果:', JSON.stringify(result, null, 2))
+		
+		if (result.code === 0 && result.data && result.data.task) {
+			const task = result.data.task
 			
-			// 填充表单数据
-			formData.title = task.title || ''
-			formData.description = task.description || ''
-			formData.priority = task.priority || 'medium'
-			formData.due_date = task.due_date || null
-			formData.estimated_hours = task.estimated_hours ? String(task.estimated_hours) : ''
-			formData.tags = task.tags || []
-			formData.parent_id = task.parent_id || null
+			// 填充表单数据 - 使用 Object.assign 确保响应式更新
+			Object.assign(formData, {
+				title: task.title || '',
+				description: task.description || '',
+				priority: task.priority || 'medium',
+				due_date: task.due_date || null,
+				estimated_hours: task.estimated_hours ? String(task.estimated_hours) : '',
+				tags: task.tags || [],
+				parent_id: task.parent_id || null
+			})
+			
+			console.log('表单数据已填充:', JSON.stringify(formData, null, 2))
 			
 			// 保存原始数据用于比较
 			originalData.value = JSON.parse(JSON.stringify(formData))
+			
+			// 确保DOM更新
+			await nextTick()
 		} else {
 			throw new Error(result.message || '加载任务数据失败')
 		}
@@ -399,14 +409,19 @@ const hasChanges = () => {
 
 const openTagManager = () => {
 	// 跳转到标签管理页面
-	const currentTagsStr = encodeURIComponent(JSON.stringify(formData.tags))
+	// 使用 JSON.parse(JSON.stringify()) 确保传递普通对象而不是响应式代理
+	const plainTags = JSON.parse(JSON.stringify(formData.tags))
+	const currentTagsStr = encodeURIComponent(JSON.stringify(plainTags))
 	let url = `/pages/tags/manage?bookId=${bookId}&currentTags=${currentTagsStr}`
+	
+	console.log('即将传递的标签数据:', JSON.stringify(plainTags, null, 2))
 	
 	// 编辑模式下传递taskId
 	if (isEditMode.value && taskId) {
 		url += `&taskId=${taskId}`
 	}
 	
+	console.log('跳转URL:', url)
 	uni.navigateTo({ url })
 }
 

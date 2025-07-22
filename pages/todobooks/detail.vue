@@ -27,6 +27,9 @@
         :task-stats="taskStats"
         :member-count="memberCount"
         :filter-tabs="filterTabs"
+        :available-tags="availableTags"
+        :selected-tags="selectedTags"
+        :todorbook-id="bookId"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"
@@ -38,12 +41,10 @@
         @subtask-status-toggle="toggleSubtaskStatus"
         @subtask-menu-click="showSubtaskMenu"
         @subtask-click="handleSubtaskClick"
-        @subtask-touch-start="handleSubtaskTouchStart"
-        @subtask-touch-move="handleSubtaskTouchMove"
-        @subtask-touch-end="handleSubtaskTouchEnd"
         @more-actions="handleMoreActions"
         @search-click="handleSearchClick"
         @filter-change="setActiveFilter"
+        @tag-filter-change="setSelectedTags"
         @scroll="handleScroll"
       />
     </view>
@@ -146,11 +147,14 @@ const {
   error: tasksError,
   activeFilter,
   searchKeyword,
+  selectedTags,
   filterTabs,
+  availableTags,
   filteredTasks,
   initializeTasks,
   setActiveFilter,
   setSearchKeyword,
+  setSelectedTags,
   taskStats,
   overallProgress,
   toggleTaskStatus,
@@ -158,7 +162,11 @@ const {
   deleteTask: removeTask,
   updateTaskOptimistic,
   createTaskOptimistic
-} = useTaskData()
+} = useTaskData(null, allTasks)
+
+// 监听availableTags变化
+watch(availableTags, (newTags) => {
+}, { deep: true, immediate: true })
 
 // 组件本地状态
 const currentTask = ref(null)
@@ -168,16 +176,6 @@ const mainScrollHeight = ref(600) // 主滚动区域高度
 const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const showBackToTop = ref(false) // 返回顶部按钮显示状态
 const virtualTaskListRef = ref(null) // VirtualTaskList 组件引用
-const dragState = ref({
-  isDragging: false,
-  dragItem: null,
-  dragParent: null,
-  startY: 0,
-  currentY: 0,
-  originalIndex: -1,
-  newIndex: -1,
-  longPressTimer: null
-})
 
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
@@ -187,6 +185,11 @@ onLoad(async (options) => {
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
     initializeTasks(allTasks.value)
+    
+    // 如果从列表页跳转过来，设置默认筛选为待办
+    if (options.filter === 'todo') {
+      setActiveFilter('todo')
+    }
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })
@@ -208,10 +211,8 @@ const calculateVirtualListHeight = () => {
   uni.getSystemInfo({
     success: (res) => {
       const screenHeight = res.windowHeight
-      // 考虑到 BookHeader（~140px）和 TaskFilter（~80px）的高度
-      const headerHeight = 220 // 预估的固定头部高度
-      // 主滚动区域高度减去头部高度
-      mainScrollHeight.value = Math.max(400, screenHeight - headerHeight)
+      // 直接使用窗口高度，VirtualTaskList 组件内部会处理固定头部的高度
+      mainScrollHeight.value = screenHeight
       // 虚拟列表高度与主滚动区域保持一致
       virtualListHeight.value = mainScrollHeight.value
     }
@@ -282,7 +283,7 @@ const handleScroll = (event) => {
   showBackToTop.value = scrollTop > 200
 }
 
-// 返回顶部函数
+// 返回顶部函数（直接跳转，无动画）
 const scrollToTop = () => {
   if (virtualTaskListRef.value) {
     virtualTaskListRef.value.scrollToTop()
@@ -389,37 +390,6 @@ const handleSubtaskClick = (subtask) => {
   })
 }
 
-// --- 拖拽相关方法 ---
-const handleSubtaskTouchStart = (subtask, index, parentTask, event) => {
-  dragState.value.isDragging = false
-  dragState.value.dragItem = subtask
-  dragState.value.dragParent = parentTask
-  dragState.value.originalIndex = index
-  dragState.value.startY = event.touches[0].clientY
-  
-  dragState.value.longPressTimer = setTimeout(() => {
-    dragState.value.isDragging = true
-    uni.vibrateShort()
-  }, 500)
-}
-
-const handleSubtaskTouchMove = (event) => {
-  if (!dragState.value.isDragging) return
-  dragState.value.currentY = event.touches[0].clientY
-  // ... 拖拽移动逻辑 ...
-}
-
-const handleSubtaskTouchEnd = (event) => {
-  if (dragState.value.longPressTimer) {
-    clearTimeout(dragState.value.longPressTimer)
-    dragState.value.longPressTimer = null
-  }
-  
-  if (dragState.value.isDragging) {
-    dragState.value.isDragging = false
-    // ... 拖拽结束排序逻辑 ...
-  }
-}
 
 // 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return。
 </script>

@@ -4,14 +4,10 @@
     :class="{ 
       'task-item--card': variant === 'card',
       'task-item--item': variant === 'item',
-      'task-item--completed': task.status === 'completed',
-      'task-item--dragging': isDragging
+      'task-item--completed': task.status === 'completed'
     }"
     :style="{ marginLeft: level > 0 ? (level * 40) + 'rpx' : '0' }"
-    @click="handleClick"
-    @touchstart="handleTouchStart"
-    @touchmove="handleTouchMove"
-    @touchend="handleTouchEnd">
+    @click="handleClick">
     
     <!-- 主要内容区域 -->
     <view class="task-header">
@@ -129,14 +125,10 @@
         :level="level + 1"
         :index="index"
         :parentTask="task"
-        :isDragging="isDragging"
         :unreadCommentCount="getSubtaskUnreadCount(subtask)"
         @click="handleSubtaskClick"
         @statusToggle="handleSubtaskStatusToggle"
         @menuClick="handleSubtaskMenuClick"
-        @touchStart="handleSubtaskTouchStart"
-        @touchMove="handleSubtaskTouchMove"
-        @touchEnd="handleSubtaskTouchEnd"
       />
     </view>
   </view>
@@ -170,10 +162,6 @@ const props = defineProps({
     type: Object,
     default: null
   },
-  isDragging: {
-    type: Boolean,
-    default: false
-  },
   unreadCommentCount: {
     type: Number,
     default: undefined
@@ -186,10 +174,7 @@ const emit = defineEmits([
   'menuClick',
   'subtaskStatusToggle',
   'subtaskMenuClick',
-  'subtaskClick',
-  'touchStart',
-  'touchMove',
-  'touchEnd'
+  'subtaskClick'
 ])
 
 const hasMetaInfo = computed(() => {
@@ -222,39 +207,6 @@ const handleSubtaskClick = (subtask) => {
   emit('subtaskClick', subtask)
 }
 
-const handleTouchStart = (event) => {
-  if (!event) return
-  if (props.variant === 'item') {
-    emit('touchStart', props.task, props.index, props.parentTask, event)
-  } else {
-    emit('touchStart', props.task, 0, null, event)
-  }
-}
-
-const handleTouchMove = (event) => {
-  if (!event) return
-  emit('touchMove', event)
-}
-
-const handleTouchEnd = (event) => {
-  if (!event) return
-  emit('touchEnd', event)
-}
-
-const handleSubtaskTouchStart = (subtask, index, parentTask, event) => {
-  if (!event) return
-  emit('touchStart', subtask, index, parentTask, event)
-}
-
-const handleSubtaskTouchMove = (event) => {
-  if (!event) return
-  emit('touchMove', event)
-}
-
-const handleSubtaskTouchEnd = (event) => {
-  if (!event) return
-  emit('touchEnd', event)
-}
 
 // 获取子任务未读评论数
 const getSubtaskUnreadCount = (subtask) => {
@@ -289,7 +241,6 @@ const getTagColor = (tag) => {
 @import '@/pages/todobooks/styles/mixins.scss';
 
 .task-item {
-  transition: all $transition-base;
   cursor: pointer;
   position: relative;
   
@@ -380,14 +331,6 @@ const getTagColor = (tag) => {
     }
   }
   
-  // 拖拽状态
-  &--dragging {
-    transform: scale(1.02);
-    box-shadow: $box-shadow-heavy;
-    background-color: $bg-white;
-    border: 2rpx solid $primary-color;
-    z-index: 1000;
-  }
 }
 
 .task-header {
