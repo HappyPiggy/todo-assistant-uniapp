@@ -86,14 +86,14 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, defineExpose, ref, computed } from 'vue'
-import { useVirtualList } from '../composables/useVirtualList.js'
-import LoadingState from '../common/LoadingState.vue'
-import ErrorState from '../common/ErrorState.vue'
-import EmptyState from '../common/EmptyState.vue'
+import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
+import { useVirtualList } from '@/pages/todobooks/components/composables/useVirtualList.js'
+import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
+import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
+import EmptyState from '@/pages/todobooks/components/common/EmptyState.vue'
 import TaskItem from './TaskItem.vue'
 import TaskMenuPopup from './TaskMenuPopup.vue'
-import BookHeader from '../book/BookHeader.vue'
+import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
 import TaskFilter from './TaskFilter.vue'
 
 const props = defineProps({
@@ -233,19 +233,6 @@ const handleScroll = (event) => {
     detail: event.detail
   })
 }
-
-// Watch for changes in visible tasks to trigger lazy loading
-watch(visibleTasks, (newVisibleTasks) => {
-  if (!newVisibleTasks) return;
-  for (const task of newVisibleTasks) {
-    // If the count for this task is not in the map yet, fetch it.
-    if (props.unreadCounts[task._id] === undefined) {
-      props.onFetchUnreadCount(task);
-    }
-  }
-}, {
-  immediate: true // Trigger once on initial load for the first visible items
-});
 
 // 简化版本不需要动态高度测量
 
