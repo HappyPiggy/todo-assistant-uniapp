@@ -44,11 +44,13 @@ export function useTaskDetail() {
 			const todoBooksObj = uniCloud.importObject('todobook-co')
 			// 添加时间戳避免缓存
 			const timestamp = Date.now()
-			const result = await todoBooksObj.getTodoItemDetail(taskId.value)
+			console.log('loadTaskDetail 调用云函数, taskId:', taskId.value, 'timestamp:', timestamp)
+			const result = await todoBooksObj.getTodoItemDetail(taskId.value, { _t: timestamp })
 			
 			if (result.code === 0) {
 				task.value = result.data.task
 				subtasks.value = result.data.subtasks || []
+				console.log('任务数据更新完成, 标签信息:', JSON.stringify(task.value.tags, null, 2))
 				
 				if (task.value.parent_id) {
 					await loadParentTask()

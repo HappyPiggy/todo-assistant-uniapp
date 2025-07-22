@@ -483,8 +483,10 @@ uni.$on('updateTags', updateTaskTags)
 <style lang="scss" scoped>
 .task-form {
 	padding: 20rpx;
+	padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
 	background-color: #f5f5f5;
 	min-height: 100vh;
+	box-sizing: border-box;
 }
 
 .form-section {

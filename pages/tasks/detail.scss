@@ -31,7 +31,6 @@ page {
 .task-header,
 .description-section,
 .attributes-section,
-.tags-section,
 .debug-section,
 .subtasks-section,
 .comments-section {
@@ -75,12 +74,21 @@ page {
 	flex: 1;
 }
 
+/* 任务标题行布局 */
+.task-title-row {
+	flex-direction: row;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	margin-bottom: 12rpx;
+}
+
 .task-title {
 	font-size: 36rpx;
 	color: #333333;
 	font-weight: 600;
 	line-height: 1.4;
-	margin-bottom: 12rpx;
+	flex-shrink: 0;
 }
 
 .task-title.completed {
@@ -232,7 +240,29 @@ page {
 	color: #ff4757;
 }
 
-/* 标签区域 */
+/* 内联标签样式 */
+.inline-tags {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 8rpx;
+	margin-top: 4rpx;
+}
+
+.inline-tag-item {
+	background-color: #f0f6ff;
+	padding: 6rpx 12rpx;
+	border-radius: 16rpx;
+	border: 1rpx solid rgba(255, 255, 255, 0.3);
+	flex-shrink: 0;
+}
+
+.inline-tag-text {
+	font-size: 22rpx;
+	color: #ffffff;
+	font-weight: 500;
+}
+
+/* 原标签区域样式（保留以防其他地方使用） */
 .tags-list {
 	flex-direction: row;
 	flex-wrap: wrap;

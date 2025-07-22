@@ -22,7 +22,19 @@
 							type="circle" />
 					</view>
 					<view class="task-info">
-						<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
+						<view class="task-title-row">
+							<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
+							<!-- 标签直接显示在标题后面 -->
+							<view v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" class="inline-tags">
+								<view 
+									v-for="(tag, index) in task.tags" 
+									:key="getTagKey(tag, index)" 
+									class="inline-tag-item"
+									:style="{ backgroundColor: getTagColor(tag) }">
+									<text class="inline-tag-text">{{ getTagName(tag) }}</text>
+								</view>
+							</view>
+						</view>
 						<view class="task-meta">
 							<text class="meta-text">{{ formatTime(task.created_at) }} 创建</text>
 							<view class="priority-badge" :class="task.priority">
@@ -113,21 +125,6 @@
 				</view>
 			</view>
 
-			<!-- 标签 -->
-			<view class="tags-section">
-				<view class="section-header">
-					<text class="section-title">标签</text>
-				</view>
-				<view v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" class="tags-list">
-					<view 
-						v-for="(tag, index) in task.tags" 
-						:key="getTagKey(tag, index)" 
-						class="tag-item"
-						:style="{ backgroundColor: getTagColor(tag) }">
-						<text class="tag-text">{{ getTagName(tag) }}</text>
-					</view>
-				</view>
-			</view>
 
 			<!-- 子任务 -->
 			<view class="subtasks-section" v-if="subtasks.length > 0">
@@ -431,6 +428,7 @@ onShow(() => {
 	console.log('detail页面 onShow 触发, hasInitialized:', hasInitialized.value, 'taskId:', taskId)
 	// 如果页面已经初始化过，并且 taskId 存在，则刷新数据
 	if (hasInitialized.value && taskId) {
+		console.log('onShow 触发刷新任务详情')
 		refreshTaskDetail()
 		// 页面显示时标记评论为已读
 		if (comments.value && comments.value.length > 0) {
