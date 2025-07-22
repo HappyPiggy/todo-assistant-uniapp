@@ -1,6 +1,10 @@
 import { ref, reactive } from 'vue'
 import { markCommentIdsAsRead, extractCommentIds } from '@/utils/commentUtils.js'
 
+/**
+ * @description 任务评论相关功能的组合式函数
+ * @returns {object} 包含评论状态、数据和方法的对象
+ */
 export function useTaskComments() {
 	const comments = ref([])
 	const commentsData = reactive({
@@ -18,6 +22,10 @@ export function useTaskComments() {
 	})
 	const currentUser = ref(null)
 
+	/**
+	 * @description 获取当前登录的用户信息
+	 * @returns {Promise<void>}
+	 */
 	const getCurrentUser = async () => {
 		try {
 			const userInfo = await uniCloud.getCurrentUserInfo()
@@ -27,6 +35,12 @@ export function useTaskComments() {
 		}
 	}
 
+	/**
+	 * @description 加载指定任务的评论列表
+	 * @param {string} taskId - 任务的唯一标识符
+	 * @param {boolean} [refresh=true] - 是否刷新列表（true）或加载更多（false）
+	 * @returns {Promise<void>}
+	 */
 	const loadComments = async (taskId, refresh = true) => {
 		if (commentsLoading.value) return
 		
@@ -70,6 +84,11 @@ export function useTaskComments() {
 		}
 	}
 
+	/**
+	 * @description 加载更多评论
+	 * @param {string} taskId - 任务的唯一标识符
+	 * @returns {void}
+	 */
 	const loadMoreComments = (taskId) => {
 		if (commentsLoading.value || !commentsData.hasMore) return
 		
@@ -77,6 +96,12 @@ export function useTaskComments() {
 		loadComments(taskId, false)
 	}
 
+	/**
+	 * @description 提交评论（新增或编辑）
+	 * @param {string} taskId - 任务的唯一标识符
+	 * @param {string} content - 评论内容
+	 * @returns {Promise<boolean>} - 操作成功返回 true，否则返回 false
+	 */
 	const submitComment = async (taskId, content) => {
 		if (!content || content.trim().length === 0) {
 			uni.showToast({
@@ -129,6 +154,12 @@ export function useTaskComments() {
 		}
 	}
 
+	/**
+	 * @description 删除一条评论
+	 * @param {string} taskId - 任务的唯一标识符，用于刷新评论列表
+	 * @param {object} comment - 要删除的评论对象
+	 * @returns {Promise<boolean>} - 用户确认并删除成功返回 true，否则返回 false
+	 */
 	const deleteComment = async (taskId, comment) => {
 		return new Promise((resolve) => {
 			uni.showModal({
@@ -172,6 +203,11 @@ export function useTaskComments() {
 		})
 	}
 
+	/**
+	 * @description 将当前任务的评论标记为已读
+	 * @param {string} taskId - 任务的唯一标识符
+	 * @returns {void}
+	 */
 	const markTaskAsRead = (taskId) => {
 		if (!taskId || !comments.value || comments.value.length === 0) return
 		
@@ -191,11 +227,20 @@ export function useTaskComments() {
 		}
 	}
 
+	/**
+	 * @description 准备添加新评论的表单状态
+	 * @returns {void}
+	 */
 	const prepareAddComment = () => {
 		commentEditMode.value = 'add'
 		resetCommentForm()
 	}
 
+	/**
+	 * @description 准备回复指定评论的表单状态
+	 * @param {object} comment - 被回复的评论对象
+	 * @returns {void}
+	 */
 	const prepareReplyComment = (comment) => {
 		commentEditMode.value = 'reply'
 		commentFormData.content = ''
@@ -203,6 +248,11 @@ export function useTaskComments() {
 		commentFormData.parentCommentId = comment._id
 	}
 
+	/**
+	 * @description 准备编辑指定评论的表单状态
+	 * @param {object} comment - 被编辑的评论对象
+	 * @returns {void}
+	 */
 	const prepareEditComment = (comment) => {
 		commentEditMode.value = 'edit'
 		commentFormData.content = comment.content
@@ -210,16 +260,31 @@ export function useTaskComments() {
 		commentFormData.parentCommentId = null
 	}
 
+	/**
+	 * @description 重置评论表单的状态
+	 * @returns {void}
+	 */
 	const resetCommentForm = () => {
 		commentFormData.content = ''
 		commentFormData.commentId = null
 		commentFormData.parentCommentId = null
 	}
 
+	/**
+	 * @description 检查当前用户是否可以编辑指定评论
+	 * @param {object} comment - 评论对象
+	 * @returns {boolean} - 如果可以编辑返回 true，否则返回 false
+	 */
 	const canEditComment = (comment) => {
 		return currentUser.value && comment.user_id === currentUser.value.uid
 	}
 
+	/**
+	 * @description 检查当前用户是否可以删除指定评论
+	 * @param {object} comment - 评论对象
+	 * @param {object} task - 任务对象，用于判断是否为任务创建者
+	 * @returns {boolean} - 如果可以删除返回 true，否则返回 false
+	 */
 	const canDeleteComment = (comment, task) => {
 		if (!currentUser.value) return false
 		

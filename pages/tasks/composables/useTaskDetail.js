@@ -1,5 +1,9 @@
 import { ref, reactive } from 'vue'
 
+/**
+ * @description 任务详情页的核心业务逻辑，包括数据获取、状态管理和操作
+ * @returns {object} 包含任务详情状态、数据和方法的对象
+ */
 export function useTaskDetail() {
 	const taskId = ref('')
 	const bookId = ref('')
@@ -10,6 +14,11 @@ export function useTaskDetail() {
 	const loading = ref(true)
 	const error = ref(null)
 
+	/**
+	 * @description 加载任务的详细信息，包括子任务、负责人等
+	 * @param {string} id - 任务的唯一标识符
+	 * @returns {Promise<void>}
+	 */
 	const loadTaskDetail = async (id) => {
 		if (id) {
 			taskId.value = id
@@ -66,6 +75,10 @@ export function useTaskDetail() {
 		}
 	}
 
+	/**
+	 * @description 加载父任务的简要信息
+	 * @returns {Promise<void>}
+	 */
 	const loadParentTask = async () => {
 		try {
 			const todoBooksObj = uniCloud.importObject('todobook-co')
@@ -79,6 +92,10 @@ export function useTaskDetail() {
 		}
 	}
 
+	/**
+	 * @description 切换主任务的完成状态
+	 * @returns {Promise<void>}
+	 */
 	const toggleStatus = async () => {
 		if (subtasks.value.length > 0 && task.value.completed_subtask_count < task.value.subtask_count && task.value.status !== 'completed') {
 			uni.showToast({
@@ -120,6 +137,11 @@ export function useTaskDetail() {
 		}
 	}
 
+	/**
+	 * @description 切换子任务的完成状态
+	 * @param {object} subtask - 要切换状态的子任务对象
+	 * @returns {Promise<void>}
+	 */
 	const toggleSubtaskStatus = async (subtask) => {
 		const newStatus = subtask.status === 'completed' ? 'todo' : 'completed'
 
@@ -155,6 +177,10 @@ export function useTaskDetail() {
 		}
 	}
 
+	/**
+	 * @description 删除当前任务，如果包含子任务则一并删除
+	 * @returns {Promise<boolean>} - 用户确认并删除成功返回 true，否则返回 false
+	 */
 	const deleteTask = async () => {
 		if (!task.value || !taskId.value) {
 			uni.showToast({
