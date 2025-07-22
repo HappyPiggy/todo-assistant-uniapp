@@ -56,7 +56,7 @@
           :key="task._id"
           :task="task"
           :variant="'card'"
-          :unreadCommentCount="getUnreadCommentCount(task)"
+          :unreadCommentCount="unreadCountsMap[task._id]"
           @click="handleTaskClick"
           @statusToggle="handleStatusToggle"
           @menuClick="handleMenuClick"
@@ -173,6 +173,16 @@ const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 const scrollTop = ref(0)
 
+// 缓存未读评论数，避免在滚动时重复计算
+// 只有在 props.tasks 数组本身发生变化时，这个 computed 才会重新计算
+const unreadCountsMap = computed(() => {
+  const map = {};
+  for (const task of props.tasks) {
+    map[task._id] = props.getUnreadCommentCount(task);
+  }
+  return map;
+});
+
 // 计算固定头部高度
 const fixedHeaderHeight = computed(() => {
   let height = 0
@@ -223,6 +233,19 @@ const handleScroll = (event) => {
     detail: event.detail
   })
 }
+
+// Watch for changes in visible tasks to trigger lazy loading
+watch(visibleTasks, (newVisibleTasks) => {
+  if (!newVisibleTasks) return;
+  for (const task of newVisibleTasks) {
+    // If the count for this task is not in the map yet, fetch it.
+    if (props.unreadCounts[task._id] === undefined) {
+      props.onFetchUnreadCount(task);
+    }
+  }
+}, {
+  immediate: true // Trigger once on initial load for the first visible items
+});
 
 // 简化版本不需要动态高度测量
 

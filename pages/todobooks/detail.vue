@@ -273,15 +273,7 @@ const scrollToTop = () => {
   }
 }
 
-const getUnreadCommentCount = (task) => {
-  try {
-    if (!task || !task.comments) return 0
-    return calculateUnreadCount(task._id, task.comments, currentUserId.value)
-  } catch (error) {
-    console.error('获取未读评论数量失败:', error)
-    return 0
-  }
-}
+
 
 // 弹窗相关数据
 const actionPopupRef = ref(null)
