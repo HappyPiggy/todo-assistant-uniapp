@@ -117,6 +117,16 @@ import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
 
+const getUnreadCommentCount = (task) => {
+  try {
+    if (!task || !task.comments) return 0
+    return calculateUnreadCount(task._id, task.comments, currentUserId.value)
+  } catch (error) {
+    console.error('获取未读评论数量失败:', error)
+    return 0
+  }
+}
+
 // 用于存储从路由获取的 bookId，初始为 null
 let bookId = null
 
@@ -145,7 +155,9 @@ const {
   overallProgress,
   toggleTaskStatus,
   toggleSubtaskStatus,
-  deleteTask: removeTask
+  deleteTask: removeTask,
+  updateTaskOptimistic,
+  createTaskOptimistic
 } = useTaskData()
 
 // 组件本地状态
@@ -185,6 +197,10 @@ onLoad(async (options) => {
 onMounted(() => {
   hasInitialized.value = true
   calculateVirtualListHeight()
+  
+  // 注册事件监听
+  uni.$on('task-updated', updateTaskOptimistic)
+  uni.$on('task-created', createTaskOptimistic)
 })
 
 // 计算滚动区域高度
@@ -204,10 +220,7 @@ const calculateVirtualListHeight = () => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
-  // 如果页面已经初始化过，并且 bookId 存在，则刷新数据
-  if (hasInitialized.value && bookId) {
-    refreshTasks()
-  }
+  // 不再需要全量刷新，保留为空或用于其他逻辑
 })
 
 
@@ -226,11 +239,14 @@ onPullDownRefresh(async () => {
   }
 })
 
-// 页面卸载时清理定时器
+// 页面卸载时清理
 onUnmounted(() => {
   if (dragState.value.longPressTimer) {
     clearTimeout(dragState.value.longPressTimer)
   }
+  // 移除事件监听
+  uni.$off('task-updated', updateTaskOptimistic)
+  uni.$off('task-created', createTaskOptimistic)
 })
 
 // 刷新任务数据

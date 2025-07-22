@@ -351,105 +351,17 @@ const submitTask = async () => {
 		taskData.estimated_hours = null
 	}
 
-	// 创建模式需要项目册ID
-	if (!isEditMode.value) {
-		taskData.todobook_id = bookId
-	}
-
-	// 乐观更新：立即返回并显示成功消息
-	uni.showToast({
-		title: isEditMode.value ? '保存中...' : '创建中...',
-		icon: 'loading',
-		duration: 10000 // 设置较长时间，后续会手动关闭
-	})
-
-	// 立即返回列表页
-	setTimeout(() => {
-		uni.navigateBack()
-	}, 300)
-
-	// 异步执行操作
 	if (isEditMode.value) {
-		updateTaskAsync(taskData)
+		// 编辑模式：发出更新事件
+		uni.$emit('task-updated', { ...originalData.value, ...taskData, _id: taskId });
 	} else {
-		createTaskAsync(taskData)
+		// 创建模式：发出创建事件
+		taskData.todobook_id = bookId;
+		uni.$emit('task-created', taskData);
 	}
-}
-
-// 创建任务
-const createTaskAsync = async (taskData) => {
-	try {
-		// 使用云对象创建任务
-		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.createTodoItem(taskData)
-		
-		// 隐藏loading提示
-		uni.hideToast()
-		
-		if (result.code === 0) {
-			// 创建成功，显示成功提示
-			uni.showToast({
-				title: '创建成功',
-				icon: 'success',
-				duration: 1500
-			})
-		} else {
-			// 创建失败，显示错误
-			uni.showToast({
-				title: result.message || '创建失败',
-				icon: 'error',
-				duration: 2000
-			})
-		}
-	} catch (error) {
-		console.error('创建任务失败:', error)
-		uni.hideToast()
-		uni.showToast({
-			title: error.message || '网络错误',
-			icon: 'error',
-			duration: 2000
-		})
-	} finally {
-		submitting.value = false
-	}
-}
-
-// 更新任务
-const updateTaskAsync = async (updateData) => {
-	try {
-		// 使用云对象更新任务
-		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.updateTodoItem(taskId, updateData)
-		
-		// 隐藏loading提示
-		uni.hideToast()
-		
-		if (result.code === 0) {
-			// 更新成功，显示成功提示
-			uni.showToast({
-				title: '保存成功',
-				icon: 'success',
-				duration: 1500
-			})
-		} else {
-			// 更新失败，显示错误
-			uni.showToast({
-				title: result.message || '保存失败',
-				icon: 'error',
-				duration: 2000
-			})
-		}
-	} catch (error) {
-		console.error('更新任务失败:', error)
-		uni.hideToast()
-		uni.showToast({
-			title: error.message || '网络错误',
-			icon: 'error',
-			duration: 2000
-		})
-	} finally {
-		submitting.value = false
-	}
+	
+	// 无论成功与否，都直接返回
+	uni.navigateBack();
 }
 
 const cancel = () => {

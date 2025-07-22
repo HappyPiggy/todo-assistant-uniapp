@@ -493,6 +493,73 @@ export function useTaskData(bookId) {
     return Math.round((stats.completed / stats.total) * 100)
   })
   
+  /**
+   * 乐观更新任务
+   * @param {Object} updatedTask - 更新后的任务对象
+   */
+  const updateTaskOptimistic = async (updatedTask) => {
+    const taskIndex = tasks.value.findIndex(t => t._id === updatedTask._id)
+    if (taskIndex === -1) return
+
+    const originalTask = JSON.parse(JSON.stringify(tasks.value[taskIndex]))
+    
+    // 乐观更新UI
+    Object.assign(tasks.value[taskIndex], updatedTask)
+
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
+      if (result.code !== 0) {
+        throw new Error(result.message)
+      }
+      uni.showToast({ title: '保存成功', icon: 'success' })
+    } catch (error) {
+      // 回滚
+      Object.assign(tasks.value[taskIndex], originalTask)
+      uni.showToast({ title: error.message || '保存失败', icon: 'error' })
+    }
+  }
+
+  /**
+   * 乐观创建任务
+   * @param {Object} newTaskData - 新任务的数据
+   */
+  const createTaskOptimistic = async (newTaskData) => {
+    const tempId = `temp_${Date.now()}`
+    const tempTask = {
+      ...newTaskData,
+      _id: tempId,
+      status: 'todo',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // 乐观添加到列表
+    tasks.value.unshift(tempTask)
+
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      const result = await todoBooksObj.createTodoItem(newTaskData)
+      
+      if (result.code === 0 && result.data) {
+        // 成功后，用真实数据替换临时数据
+        const taskIndex = tasks.value.findIndex(t => t._id === tempId)
+        if (taskIndex !== -1) {
+          tasks.value[taskIndex] = result.data
+        }
+        uni.showToast({ title: '创建成功', icon: 'success' })
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      // 失败后，从列表中移除临时任务
+      const taskIndex = tasks.value.findIndex(t => t._id === tempId)
+      if (taskIndex !== -1) {
+        tasks.value.splice(taskIndex, 1)
+      }
+      uni.showToast({ title: error.message || '创建失败', icon: 'error' })
+    }
+  }
   
   return {
     // 响应式数据
@@ -515,6 +582,8 @@ export function useTaskData(bookId) {
     deleteTask,
     setActiveFilter,
     setSearchKeyword,
-    resetState
+    resetState,
+    updateTaskOptimistic,
+    createTaskOptimistic
   }
 }
