@@ -166,8 +166,13 @@ export function useVirtualList(items, options = {}) {
    * 滚动到顶部（直接跳转，无动画）
    */
   const scrollToTop = () => {
+    console.log('useVirtualList: 调用scrollToTop')
+    console.log('useVirtualList: 当前scrollTop值', scrollTop.value)
+    
     // 直接设置为0，无动画效果
     scrollTop.value = 0
+    
+    console.log('useVirtualList: 设置后scrollTop值', scrollTop.value)
     
     // 立即返回，不等待动画
     return Promise.resolve()

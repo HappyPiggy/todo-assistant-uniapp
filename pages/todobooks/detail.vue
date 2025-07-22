@@ -282,8 +282,31 @@ const handleScroll = (event) => {
 
 // 返回顶部函数（直接跳转，无动画）
 const scrollToTop = () => {
+  console.log('detail.vue: 接收到scrollToTop事件')
+  console.log('detail.vue: virtualTaskListRef.value存在?', !!virtualTaskListRef.value)
+  
   if (virtualTaskListRef.value) {
-    virtualTaskListRef.value.scrollToTop()
+    console.log('detail.vue: 调用virtualTaskListRef.scrollToTop()')
+    try {
+      const result = virtualTaskListRef.value.scrollToTop()
+      console.log('detail.vue: scrollToTop返回结果', result)
+    } catch (error) {
+      console.log('detail.vue: scrollToTop调用出错', JSON.stringify(error, null, 2))
+    }
+  } else {
+    console.log('detail.vue: virtualTaskListRef.value不存在，尝试其他方法')
+    
+    // 备用方案：直接操作页面滚动
+    uni.pageScrollTo({
+      scrollTop: 0,
+      duration: 0,
+      success: () => {
+        console.log('detail.vue: 备用方案uni.pageScrollTo成功')
+      },
+      fail: (err) => {
+        console.log('detail.vue: 备用方案uni.pageScrollTo失败', JSON.stringify(err, null, 2))
+      }
+    })
   }
 }
 

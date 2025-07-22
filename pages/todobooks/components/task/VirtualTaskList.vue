@@ -189,7 +189,6 @@ const emit = defineEmits([
 
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
-const scrollTop = ref(0)
 
 // 缓存未读评论数，避免在滚动时重复计算
 // 只有在 props.tasks 数组本身发生变化时，这个 computed 才会重新计算
@@ -224,11 +223,12 @@ const {
 } = useVirtualList(computed(() => props.tasks), {
   containerHeight: computed(() => props.containerHeight),
   estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
-  overscan: 5, // 预渲染数量，上下各5个缓冲，提升滚动流畅度
+  overscan: 5, // 预渲动数量，上下各5个缓冲，提升滚动流畅度
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 使用虚拟滚动的 scrollTop
+// 直接使用虚拟滚动的 scrollTop
+const scrollTop = virtualScrollTop
 
 
 const emptyText = computed(() => {
@@ -246,7 +246,6 @@ let scrollTimer = null
 // 处理滚动事件
 const handleScroll = (event) => {
   const { scrollTop: newScrollTop } = event.detail
-  scrollTop.value = newScrollTop
   onScroll(event)
   
   // 节流处理滚动事件向外暴露
@@ -335,6 +334,7 @@ const handleTagFilterChange = (tags) => {
 
 // 自定义滚动到顶部方法
 const customScrollToTop = () => {
+  console.log('VirtualTaskList: 调用customScrollToTop')
   return virtualScrollToTop()
 }
 

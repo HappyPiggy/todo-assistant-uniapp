@@ -45,7 +45,7 @@ module.exports = {
     })
     const {uid} = await this.uniID.checkToken(token)
     this.uid = uid
-	this.db = uniCloud.database()
+	  this.db = uniCloud.database()
   },
 
   // 项目册管理接口

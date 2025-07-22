@@ -24,6 +24,7 @@ const emit = defineEmits(['scroll-to-top'])
 
 // 返回顶部处理函数
 const scrollToTop = () => {
+  console.log('BackToTopButton: 点击返回顶部按钮')
   emit('scroll-to-top')
 }
 </script>
