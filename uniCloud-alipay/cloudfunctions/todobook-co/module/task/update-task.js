@@ -1,6 +1,5 @@
 // 更新任务信息
 const { checkTaskPermission } = require('../../lib/utils/permission')
-const { validateAuth, getDatabase } = require('../../lib/utils/auth')
 
 async function updateTodoItem(taskId, updateData) {
   const { db, uid } = this

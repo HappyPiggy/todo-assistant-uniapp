@@ -34,33 +34,18 @@ const {
 } = require('./module/comments/index')
 
 module.exports = {
-  _before: function () {
+  _before: async function () {
+    const token = this.getUniIdToken();  
+    if (!token) {  
+      throw new Error('请登录后再访问');  
+    } 
+
     this.uniID = uniID.createInstance({
       context: this.getCloudInfo()
     })
-    // 为子模块提供上下文
-    this.db = uniCloud.database()
-    this.uid = null
-    this.userInfo = null
-  },
-
-  async _beforeEach() {
-    // 在每个方法执行前获取用户信息
-    const token = this.getUniIdToken()
-    if (token) {
-      const payload = await this.uniID.checkToken(token)
-      if (payload.code && payload.code === 0) {
-        this.uid = payload.uid
-        this.userInfo = payload
-      }
-      else
-      {
-        return {
-          code: payload.code,
-          message: payload.message
-        }
-      }
-    }
+    const {uid} = await this.uniID.checkToken(token)
+    this.uid = uid
+	this.db = uniCloud.database()
   },
 
   // 项目册管理接口

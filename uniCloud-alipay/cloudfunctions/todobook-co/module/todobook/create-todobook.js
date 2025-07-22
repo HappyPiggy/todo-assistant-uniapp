@@ -19,6 +19,8 @@ const { ERROR_CODES, MEMBER_ROLE, PERMISSION_TYPE } = require('../../common/cons
 async function createTodoBook(bookData) {
   // uid 和 db 已由 index.obj.js 的 _before & _beforeEach 注入
   const { uid, db } = this
+
+  console.log("createTodoBook ", uid)
   
   // 数据验证
   const { title, description = '', color = '#007AFF', icon = 'folder' } = bookData

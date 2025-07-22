@@ -228,14 +228,8 @@ const {
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 直接使用虚拟滚动的 scrollTop
-const scrollTop = virtualScrollTop
+// 使用虚拟滚动的 scrollTop
 
-// 监听任务变化，输出调试信息
-watch(() => props.tasks.length, (newLength) => {
-  if (newLength > 0) {
-  }
-})
 
 const emptyText = computed(() => {
   const map = {
@@ -344,9 +338,6 @@ const customScrollToTop = () => {
   return virtualScrollToTop()
 }
 
-// 监听availableTags props变化
-watch(() => props.availableTags, (newTags) => {
-}, { deep: true, immediate: true })
 
 // 暴露滚动控制方法
 defineExpose({

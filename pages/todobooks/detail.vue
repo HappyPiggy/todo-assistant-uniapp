@@ -104,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
@@ -242,9 +242,6 @@ onPullDownRefresh(async () => {
 
 // 页面卸载时清理
 onUnmounted(() => {
-  if (dragState.value.longPressTimer) {
-    clearTimeout(dragState.value.longPressTimer)
-  }
   // 移除事件监听
   uni.$off('task-updated', updateTaskOptimistic)
   uni.$off('task-created', createTaskOptimistic)
@@ -278,7 +275,7 @@ const handleSearchOverlayClose = () => {
 
 // 滚动处理函数
 const handleScroll = (event) => {
-  const { scrollTop } = event.detail
+  const scrollTop = event.detail.scrollTop
   // 当滚动超过200px时显示返回顶部按钮（大约滚动过BookHeader后）
   showBackToTop.value = scrollTop > 200
 }
