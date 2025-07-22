@@ -56,24 +56,43 @@ export function useVirtualList(items, options = {}) {
    */
   const visibleRange = computed(() => {
     if (itemList.value.length === 0) {
-      return { start: 0, end: 0 }
+      return { start: 0, end: 0, renderStart: 0, renderEnd: 0 }
     }
 
-    // 调整滚动位置，减去固定头部高度
-    const adjustedScrollTop = Math.max(0, scrollTop.value - headerHeight.value)
+    // 暂时简化计算，直接使用滚动位置
+    const adjustedScrollTop = Math.max(0, scrollTop.value)
     
-    // 计算起始索引，确保不会超出范围
-    const start = Math.max(0, Math.floor(adjustedScrollTop / estimatedItemHeight))
-    // 计算基础可见数量，精确计算可视区域能显示的任务数
+    // 计算可视区域的起始和结束索引（更保守的计算）
+    const viewStart = Math.max(0, Math.floor(adjustedScrollTop / estimatedItemHeight))
     const baseVisibleCount = Math.ceil(effectiveContainerHeight.value / estimatedItemHeight)
-    // 加上缓冲区，避免快速滚动时出现空白
-    const visibleCount = baseVisibleCount + overscan * 2
-    // 计算结束索引
-    const end = Math.min(itemList.value.length, start + visibleCount)
+    const viewEnd = Math.min(itemList.value.length, viewStart + baseVisibleCount + 2) // +2 确保更多边界元素被渲染
+    
+    // 计算渲染范围（更大的缓冲区）
+    const renderStart = Math.max(0, viewStart - overscan)
+    const renderEnd = Math.min(itemList.value.length, viewEnd + overscan + 2) // 额外缓冲
+
+    // 调试信息
+    if (process.env.NODE_ENV === 'development') {
+      console.log('虚拟滚动计算:', {
+        scrollTop: scrollTop.value,
+        headerHeight: headerHeight.value,
+        adjustedScrollTop,
+        estimatedItemHeight,
+        containerHeight: effectiveContainerHeight.value,
+        viewStart,
+        viewEnd,
+        renderStart,
+        renderEnd,
+        totalItems: itemList.value.length,
+        baseVisibleCount
+      })
+    }
 
     return { 
-      start: Math.max(0, start - overscan), 
-      end 
+      start: viewStart,
+      end: viewEnd,
+      renderStart,
+      renderEnd
     }
   })
 
@@ -81,24 +100,24 @@ export function useVirtualList(items, options = {}) {
    * 可见的任务列表
    */
   const visibleTasks = computed(() => {
-    const { start, end } = visibleRange.value
-    return itemList.value.slice(start, end)
+    const { renderStart, renderEnd } = visibleRange.value
+    return itemList.value.slice(renderStart, renderEnd)
   })
 
   /**
    * 上方偏移量（占位高度）
    */
   const offsetTop = computed(() => {
-    const { start } = visibleRange.value
-    return start * estimatedItemHeight
+    const { renderStart } = visibleRange.value
+    return renderStart * estimatedItemHeight
   })
 
   /**
    * 下方偏移量（占位高度）
    */
   const offsetBottom = computed(() => {
-    const { end } = visibleRange.value
-    const remaining = itemList.value.length - end
+    const { renderEnd } = visibleRange.value
+    const remaining = itemList.value.length - renderEnd
     // 避免负数高度
     return Math.max(0, remaining * estimatedItemHeight)
   })
@@ -108,8 +127,13 @@ export function useVirtualList(items, options = {}) {
    */
   const handleScroll = (event) => {
     const { scrollTop: newScrollTop } = event.detail
-    scrollTop.value = newScrollTop
     
+    // 避免不必要的更新
+    if (Math.abs(scrollTop.value - newScrollTop) < 1) {
+      return
+    }
+    
+    scrollTop.value = newScrollTop
     isScrolling.value = true
     
     // 清除之前的计时器
@@ -139,34 +163,14 @@ export function useVirtualList(items, options = {}) {
   }
 
   /**
-   * 滚动到顶部（滚动到页面最顶部，包含 BookHeader）
+   * 滚动到顶部（直接跳转，无动画）
    */
   const scrollToTop = () => {
-    // H5 平台特殊处理
-    // #ifdef H5
-    // 尝试直接操作 DOM
-    const scrollViewDom = document.querySelector('.virtual-scroll-container')
-    if (scrollViewDom) {
-      scrollViewDom.scrollTop = 0
-    }
-    // #endif
+    // 直接设置为0，无动画效果
+    scrollTop.value = 0
     
-    // uni-app 的 scroll-view 需要强制触发滚动
-    const currentTop = scrollTop.value
-    
-    // 先设置一个临时值再回到0，确保触发滚动
-    const tempValue = currentTop === 0 ? -1 : currentTop + 1
-    scrollTop.value = tempValue
-    
-    // 使用 nextTick 确保 DOM 更新后再设置最终值
-    nextTick(() => {
-      scrollTop.value = 0
-    })
-    
-    // 返回 Promise 等待滚动动画完成
-    return new Promise((resolve) => {
-      setTimeout(resolve, 300)
-    })
+    // 立即返回，不等待动画
+    return Promise.resolve()
   }
 
   /**
@@ -182,10 +186,12 @@ export function useVirtualList(items, options = {}) {
    * 获取调试信息
    */
   const getDebugInfo = () => {
+    const range = visibleRange.value
     return {
       totalItems: itemList.value.length,
-      visibleRange: visibleRange.value,
-      visibleTasks: visibleTasks.value.length,
+      viewRange: { start: range.start, end: range.end },
+      renderRange: { start: range.renderStart, end: range.renderEnd },
+      renderedTasks: visibleTasks.value.length,
       scrollTop: scrollTop.value,
       totalHeight: totalHeight.value,
       offsetTop: offsetTop.value,
@@ -193,7 +199,8 @@ export function useVirtualList(items, options = {}) {
       isScrolling: isScrolling.value,
       effectiveContainerHeight: effectiveContainerHeight.value,
       headerHeight: headerHeight.value,
-      estimatedItemHeight
+      estimatedItemHeight,
+      overscan
     }
   }
 

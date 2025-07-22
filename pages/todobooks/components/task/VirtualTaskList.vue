@@ -16,7 +16,10 @@
       ref="scrollViewRef"
       class="virtual-scroll-container"
       :scroll-y="true"
-      :scroll-with-animation="true"
+      :scroll-with-animation="false"
+      :enhanced="true"
+      :enable-flex="true"
+      :bounces="false"
       :scroll-top="scrollTop"
       @scroll="handleScroll"
       :style="{ height: containerHeight + 'px' }">
@@ -70,9 +73,6 @@
             @subtaskStatusToggle="handleSubtaskStatusToggle"
             @subtaskMenuClick="handleSubtaskMenuClick"
             @subtaskClick="handleSubtaskClick"
-            @touchStart="handleSubtaskTouchStart"
-            @touchMove="handleSubtaskTouchMove"
-            @touchEnd="handleSubtaskTouchEnd"
           />
         </view>
         
@@ -177,9 +177,6 @@ const emit = defineEmits([
   'subtaskStatusToggle',
   'subtaskMenuClick',
   'subtaskClick',
-  'subtaskTouchStart',
-  'subtaskTouchMove',
-  'subtaskTouchEnd',
   // BookHeader 相关事件
   'moreActions',
   'searchClick',
@@ -216,8 +213,8 @@ const {
   scrollTop: virtualScrollTop
 } = useVirtualList(computed(() => props.tasks), {
   containerHeight: computed(() => props.containerHeight),
-  estimatedItemHeight: 150, // 预估任务卡片高度，包含间距和内边距
-  overscan: 3, // 预渲染数量，上下各3个缓冲
+  estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
+  overscan: 5, // 预渲染数量，上下各5个缓冲，提升滚动流畅度
   fixedHeaderHeight: fixedHeaderHeight
 })
 
@@ -239,17 +236,25 @@ const emptyText = computed(() => {
   return map[props.activeFilter] || '暂无数据'
 })
 
+// 滚动事件节流
+let scrollTimer = null
+
 // 处理滚动事件
 const handleScroll = (event) => {
   const { scrollTop: newScrollTop } = event.detail
   scrollTop.value = newScrollTop
   onScroll(event)
   
-  // 向外暴露滚动事件
-  emit('scroll', {
-    scrollTop: newScrollTop,
-    detail: event.detail
-  })
+  // 节流处理滚动事件向外暴露
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+  scrollTimer = setTimeout(() => {
+    emit('scroll', {
+      scrollTop: newScrollTop,
+      detail: event.detail
+    })
+  }, 16) // 约60fps
 }
 
 // 简化版本不需要动态高度测量
@@ -305,17 +310,6 @@ const handleSubtaskClick = (subtask) => {
   emit('subtaskClick', subtask)
 }
 
-const handleSubtaskTouchStart = (subtask, index, parentTask, event) => {
-  emit('subtaskTouchStart', subtask, index, parentTask, event)
-}
-
-const handleSubtaskTouchMove = (event) => {
-  emit('subtaskTouchMove', event)
-}
-
-const handleSubtaskTouchEnd = (event) => {
-  emit('subtaskTouchEnd', event)
-}
 
 // BookHeader 事件处理
 const handleMoreActions = () => {
