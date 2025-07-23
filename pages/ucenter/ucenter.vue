@@ -3,10 +3,13 @@
 		<!-- 用户信息区域 -->
 		<view class="user-header">
 			<view class="avatar-section" @click="toUserInfo">
-				<cloud-image width="150rpx" height="150rpx" v-if="hasLogin&&userInfo.avatar_file&&userInfo.avatar_file.url" :src="userInfo.avatar_file.url" class="avatar-image"></cloud-image>
+				<image width="150rpx" height="150rpx" v-if="hasLogin&&userInfo.avatar_url" :src="userInfo.avatar_url" class="avatar-image"></image>
 				
 				<view v-else class="default-avatar">
-					<uni-icons color="#ffffff" size="50" type="person-filled" />
+					<text v-if="hasLogin && userInfo.nickname" class="avatar-text">
+						{{ userInfo.nickname.charAt(0).toUpperCase() }}
+					</text>
+					<uni-icons v-else color="#ffffff" size="50" type="person-filled" />
 				</view>
 				
 				<view class="edit-avatar-tip" v-if="hasLogin">
@@ -198,6 +201,13 @@
 		justify-content: center;
 		align-items: center;
 		border: 4rpx solid rgba(255, 255, 255, 0.3);
+	}
+
+	.avatar-text {
+		font-size: 60rpx;
+		color: #ffffff;
+		font-weight: 600;
+		text-align: center;
 	}
 
 	.edit-avatar-tip {

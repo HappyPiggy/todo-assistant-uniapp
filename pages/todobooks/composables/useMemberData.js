@@ -236,6 +236,12 @@ export function useMemberData() {
    * @returns {string} 头像URL或占位符文本
    */
   const getMemberAvatar = (member) => {
+    // 优先使用新的avatar_url字段
+    if (member['user_info.avatar_url']) {
+      return member['user_info.avatar_url']
+    }
+    
+    // 兼容旧的avatar_file字段
     if (member['user_info.avatar_file']) {
       return member['user_info.avatar_file']
     }

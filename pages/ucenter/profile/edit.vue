@@ -1,16 +1,19 @@
 <template>
 	<view class="edit-profile">
 		<uni-forms ref="form" :model="formData" :rules="rules" label-position="top">
-			<!-- 头像编辑区域 -->
+			<!-- 头像选择区域 -->
 			<view class="avatar-section">
-				<view class="avatar-wrapper" @click="chooseAvatar">
-					<cloud-image 
-						v-if="formData.avatar_file && formData.avatar_file.url" 
-						:src="formData.avatar_file.url" 
+				<view class="current-avatar-wrapper" @click="showAvatarPicker">
+					<image 
+						v-if="formData.avatar_url" 
+						:src="formData.avatar_url" 
 						class="avatar-preview">
-					</cloud-image>
+					</image>
 					<view v-else class="default-avatar">
-						<uni-icons color="#cccccc" size="60" type="person-filled" />
+						<text v-if="formData.nickname" class="avatar-text">
+							{{ formData.nickname.charAt(0).toUpperCase() }}
+						</text>
+						<uni-icons v-else color="#cccccc" size="60" type="person-filled" />
 					</view>
 					<view class="avatar-mask">
 						<uni-icons color="#ffffff" size="24" type="camera" />
@@ -18,6 +21,31 @@
 					</view>
 				</view>
 			</view>
+
+			<!-- 头像选择弹窗 -->
+			<uni-popup ref="avatarPopup" type="bottom">
+				<view class="avatar-picker">
+					<view class="picker-header">
+						<text class="picker-title">选择头像</text>
+						<view class="close-btn" @click="closeAvatarPicker">
+							<uni-icons type="close" size="20" color="#666"></uni-icons>
+						</view>
+					</view>
+					<view class="avatar-grid">
+						<view 
+							v-for="(avatar, index) in defaultAvatars" 
+							:key="index"
+							class="avatar-item"
+							:class="{ 'selected': formData.avatar_url === avatar.url }"
+							@click="selectAvatar(avatar)">
+							<image :src="avatar.url" class="avatar-thumbnail"></image>
+							<view v-if="formData.avatar_url === avatar.url" class="selected-mark">
+								<uni-icons type="checkmarkempty" size="16" color="#ffffff"></uni-icons>
+							</view>
+						</view>
+					</view>
+				</view>
+			</uni-popup>
 
 			<!-- 基本信息表单 -->
 			<view class="form-section">
@@ -89,8 +117,18 @@
 					mobile: '',
 					email: '',
 					comment: '',
-					avatar_file: null
+					avatar_url: ''
 				},
+				defaultAvatars: [
+					{ url: '/static/avatar/avatar1.svg', name: '红色头像' },
+					{ url: '/static/avatar/avatar2.svg', name: '青色头像' },
+					{ url: '/static/avatar/avatar3.svg', name: '蓝色头像' },
+					{ url: '/static/avatar/avatar4.svg', name: '绿色头像' },
+					{ url: '/static/avatar/avatar5.svg', name: '黄色头像' },
+					{ url: '/static/avatar/avatar6.svg', name: '紫色头像' },
+					{ url: '/static/avatar/avatar7.svg', name: '粉色头像' },
+					{ url: '/static/avatar/avatar8.svg', name: '橙色头像' }
+				],
 				rules: {
 					nickname: {
 						rules: [
@@ -128,60 +166,27 @@
 						mobile: this.userInfo.mobile || '',
 						email: this.userInfo.email || '',
 						comment: this.userInfo.comment || '',
-						avatar_file: this.userInfo.avatar_file || null
+						avatar_url: this.userInfo.avatar_url || this.defaultAvatars[0].url
 					}
 				}
 			},
 			
-			async chooseAvatar() {
-				try {
-					const res = await uni.chooseImage({
-						count: 1,
-						sizeType: ['compressed'],
-						sourceType: ['album', 'camera']
-					})
-					
-					if (res.tempFilePaths && res.tempFilePaths.length > 0) {
-						await this.uploadAvatar(res.tempFilePaths[0])
-					}
-				} catch (error) {
-					console.error('选择头像失败:', error)
-					uni.showToast({
-						title: '选择头像失败',
-						icon: 'error'
-					})
-				}
+			showAvatarPicker() {
+				this.$refs.avatarPopup.open()
 			},
 			
-			async uploadAvatar(filePath) {
-				uni.showLoading({
-					title: '上传中...'
+			closeAvatarPicker() {
+				this.$refs.avatarPopup.close()
+			},
+			
+			selectAvatar(avatar) {
+				this.formData.avatar_url = avatar.url
+				this.closeAvatarPicker()
+				uni.showToast({
+					title: '头像已选择',
+					icon: 'success',
+					duration: 1000
 				})
-				
-				try {
-					const result = await uniCloud.uploadFile({
-						filePath: filePath,
-						cloudPath: `avatar/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`
-					})
-					
-					this.formData.avatar_file = {
-						url: result.fileID,
-						filename: result.fileID.split('/').pop()
-					}
-					
-					uni.hideLoading()
-					uni.showToast({
-						title: '头像上传成功',
-						icon: 'success'
-					})
-				} catch (error) {
-					uni.hideLoading()
-					console.error('头像上传失败:', error)
-					uni.showToast({
-						title: '头像上传失败',
-						icon: 'error'
-					})
-				}
 			},
 			
 			async saveProfile() {
@@ -254,7 +259,7 @@
 		margin-bottom: 20rpx;
 	}
 
-	.avatar-wrapper {
+	.current-avatar-wrapper {
 		position: relative;
 		width: 200rpx;
 		height: 200rpx;
@@ -277,6 +282,13 @@
 		align-items: center;
 	}
 
+	.default-avatar .avatar-text {
+		font-size: 80rpx;
+		color: #666666;
+		font-weight: 600;
+		text-align: center;
+	}
+
 	.avatar-mask {
 		position: absolute;
 		top: 0;
@@ -291,7 +303,7 @@
 		transition: opacity 0.3s ease;
 	}
 
-	.avatar-wrapper:active .avatar-mask {
+	.current-avatar-wrapper:active .avatar-mask {
 		opacity: 1;
 	}
 
@@ -300,6 +312,78 @@
 		color: #ffffff;
 		margin-top: 8rpx;
 		text-align: center;
+	}
+
+	/* 头像选择器样式 */
+	.avatar-picker {
+		background-color: #ffffff;
+		border-radius: 20rpx 20rpx 0 0;
+		max-height: 80vh;
+		overflow: hidden;
+	}
+
+	.picker-header {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		padding: 40rpx 30rpx 20rpx;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+
+	.picker-title {
+		font-size: 36rpx;
+		color: #333333;
+		font-weight: 600;
+	}
+
+	.close-btn {
+		width: 60rpx;
+		height: 60rpx;
+		justify-content: center;
+		align-items: center;
+		border-radius: 50%;
+		background-color: #f5f5f5;
+	}
+
+	.avatar-grid {
+		padding: 30rpx;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: space-between;
+	}
+
+	.avatar-item {
+		position: relative;
+		width: 140rpx;
+		height: 140rpx;
+		margin-bottom: 30rpx;
+		border-radius: 50%;
+		overflow: hidden;
+		border: 4rpx solid transparent;
+	}
+
+	.avatar-item.selected {
+		border-color: #007AFF;
+		box-shadow: 0 4rpx 12rpx rgba(0, 122, 255, 0.3);
+	}
+
+	.avatar-thumbnail {
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+	}
+
+	.selected-mark {
+		position: absolute;
+		top: -2rpx;
+		right: -2rpx;
+		width: 40rpx;
+		height: 40rpx;
+		background-color: #007AFF;
+		border-radius: 50%;
+		justify-content: center;
+		align-items: center;
+		border: 4rpx solid #ffffff;
 	}
 
 	/* 表单区域 */

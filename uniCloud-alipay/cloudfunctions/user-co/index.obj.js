@@ -24,7 +24,7 @@ module.exports = {
     const uid = payload.uid
     const userInfo = await this.uniID.getUserInfo({
       uid,
-      field: ['_id', 'username', 'nickname', 'avatar_file', 'gender', 'mobile', 'email', 'comment', 'register_date', 'last_login_date']
+      field: ['_id', 'username', 'nickname', 'avatar_file', 'avatar_url', 'gender', 'mobile', 'email', 'comment', 'register_date', 'last_login_date']
     })
 
     if (userInfo.code === 0) {
@@ -56,7 +56,7 @@ module.exports = {
     const uid = payload.uid
 
     // 数据验证
-    const { nickname, gender, email, comment, avatar_file } = profileData
+    const { nickname, gender, email, comment, avatar_file, avatar_url } = profileData
     
     if (nickname && (nickname.length < 2 || nickname.length > 20)) {
       return {
@@ -104,6 +104,7 @@ module.exports = {
     if (email !== undefined) updateData.email = email
     if (comment !== undefined) updateData.comment = comment
     if (avatar_file !== undefined) updateData.avatar_file = avatar_file
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url
 
     try {
       const result = await this.uniID.updateUser({
