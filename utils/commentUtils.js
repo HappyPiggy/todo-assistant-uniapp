@@ -21,64 +21,21 @@ export function calculateUnreadCount(taskId, comments, currentUserId) {
   
   // 遍历所有评论（包括回复）
   comments.forEach((comment, index) => {
-    console.log(`[DEBUG] 处理评论 ${index + 1}:`, {
-      commentId: comment._id,
-      userId: comment.user_id,
-      isOwnComment: comment.user_id === currentUserId,
-      createdAt: comment.created_at,
-      isDeleted: comment.is_deleted
-    })
-    
-    // 不计算自己的评论
-    if (comment.user_id === currentUserId) {
-      console.log('[DEBUG] 跳过自己的评论')
-      return
+    // 处理主评论：如果不是自己的且未删除，则检查是否已读
+    if (comment.user_id !== currentUserId && !comment.is_deleted) {
+      const lastReadTime = taskReadRecords[comment._id] || 0
+      const commentTime = new Date(comment.created_at).getTime()
+      
+      if (commentTime > lastReadTime) {
+        unreadCount++
+      }
     }
     
-    // 如果评论已删除，不计算
-    if (comment.is_deleted) {
-      console.log('[DEBUG] 跳过已删除的评论')
-      return
-    }
-    
-    // 检查是否已读
-    const lastReadTime = taskReadRecords[comment._id] || 0
-    const commentTime = new Date(comment.created_at).getTime()
-    
-    console.log(`[DEBUG] 评论时间对比:`, {
-      commentTime,
-      lastReadTime,
-      isUnread: commentTime > lastReadTime
-    })
-    
-    if (commentTime > lastReadTime) {
-      unreadCount++
-      console.log(`[DEBUG] 评论未读，计数+1，当前未读数:`, unreadCount)
-    } else {
-      console.log('[DEBUG] 评论已读，跳过')
-    }
-    
-    // 处理回复
+    // 处理回复：无论主评论是否是自己的，都要检查回复
     if (comment.replies && comment.replies.length > 0) {
-      console.log(`[DEBUG] 处理 ${comment.replies.length} 个回复`)
       comment.replies.forEach((reply, replyIndex) => {
-        console.log(`[DEBUG] 处理回复 ${replyIndex + 1}:`, {
-          replyId: reply._id,
-          userId: reply.user_id,
-          isOwnReply: reply.user_id === currentUserId,
-          createdAt: reply.created_at,
-          isDeleted: reply.is_deleted
-        })
-        
-        // 不计算自己的回复
-        if (reply.user_id === currentUserId) {
-          console.log('[DEBUG] 跳过自己的回复')
-          return
-        }
-        
-        // 如果回复已删除，不计算
-        if (reply.is_deleted) {
-          console.log('[DEBUG] 跳过已删除的回复')
+        // 不计算自己的回复或已删除的回复
+        if (reply.user_id === currentUserId || reply.is_deleted) {
           return
         }
         
@@ -86,25 +43,14 @@ export function calculateUnreadCount(taskId, comments, currentUserId) {
         const replyLastReadTime = taskReadRecords[reply._id] || 0
         const replyTime = new Date(reply.created_at).getTime()
         
-        console.log(`[DEBUG] 回复时间对比:`, {
-          replyTime,
-          replyLastReadTime,
-          isUnread: replyTime > replyLastReadTime
-        })
-        
         if (replyTime > replyLastReadTime) {
           unreadCount++
-          console.log(`[DEBUG] 回复未读，计数+1，当前未读数:`, unreadCount)
-        } else {
-          console.log('[DEBUG] 回复已读，跳过')
         }
       })
     }
   })
   
   const finalCount = Math.min(unreadCount, 99) // 最多显示99+
-  console.log('[DEBUG] calculateUnreadCount 结果:', { unreadCount, finalCount })
-  
   return finalCount
 }
 
@@ -208,8 +154,6 @@ export function markCommentIdsAsRead(taskId, commentIds) {
   })
   
   uni.setStorageSync('task_comment_read_records', commentReadRecords)
-  
-  console.log('批量标记评论为已读:', taskId, '评论数量:', commentIds.length)
 }
 
 /**

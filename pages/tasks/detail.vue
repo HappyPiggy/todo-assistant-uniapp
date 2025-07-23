@@ -336,7 +336,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
 import { useTaskUtils } from './composables/useTaskUtils.js'
@@ -423,6 +423,9 @@ onMounted(() => {
 	hasInitialized.value = true
 })
 
+// 停留1秒后标记已读的定时器
+let readMarkTimer = null
+
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
 	console.log('detail页面 onShow 触发, hasInitialized:', hasInitialized.value, 'taskId:', taskId)
@@ -430,10 +433,25 @@ onShow(() => {
 	if (hasInitialized.value && taskId) {
 		console.log('onShow 触发刷新任务详情')
 		refreshTaskDetail()
-		// 页面显示时标记评论为已读
-		if (comments.value && comments.value.length > 0) {
-			markTaskAsRead(taskId)
+	}
+	
+	// 设置1秒后标记评论为已读
+	if (taskId && comments.value && comments.value.length > 0) {
+		if (readMarkTimer) {
+			clearTimeout(readMarkTimer)
 		}
+		readMarkTimer = setTimeout(() => {
+			markTaskAsRead(taskId)
+		}, 1000)
+	}
+})
+
+// 页面隐藏时触发
+onHide(() => {
+	// 清除已读标记定时器
+	if (readMarkTimer) {
+		clearTimeout(readMarkTimer)
+		readMarkTimer = null
 	}
 })
 

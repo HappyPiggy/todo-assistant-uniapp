@@ -20,7 +20,6 @@
         :loading="tasksLoading"
         :error="tasksError"
         :active-filter="activeFilter"
-        :get-unread-comment-count="getUnreadCommentCount"
         :container-height="mainScrollHeight"
         :book-data="bookData"
         :overall-progress="overallProgress"
@@ -115,18 +114,6 @@ import BackToTopButton from '@/pages/todobooks/components/common/BackToTopButton
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
-import { calculateUnreadCount } from '@/utils/commentUtils.js'
-import { currentUserId } from '@/store/storage.js'
-
-const getUnreadCommentCount = (task) => {
-  try {
-    if (!task || !task.comments) return 0
-    return calculateUnreadCount(task._id, task.comments, currentUserId.value)
-  } catch (error) {
-    console.error('获取未读评论数量失败:', error)
-    return 0
-  }
-}
 
 // 用于存储从路由获取的 bookId，初始为 null
 let bookId = null

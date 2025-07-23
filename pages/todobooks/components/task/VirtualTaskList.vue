@@ -96,6 +96,8 @@
 <script setup>
 import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
 import { useVirtualList } from '@/pages/todobooks/composables/useVirtualList.js'
+import { calculateUnreadCount } from '@/utils/commentUtils.js'
+import { currentUserId } from '@/store/storage.js'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import EmptyState from '@/pages/todobooks/components/common/EmptyState.vue'
@@ -120,10 +122,6 @@ const props = defineProps({
   activeFilter: {
     type: String,
     default: 'all'
-  },
-  getUnreadCommentCount: {
-    type: Function,
-    required: true
   },
   containerHeight: {
     type: Number,
@@ -190,15 +188,21 @@ const emit = defineEmits([
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 
-// 缓存未读评论数，避免在滚动时重复计算
-// 只有在 props.tasks 数组本身发生变化时，这个 computed 才会重新计算
-const unreadCountsMap = computed(() => {
-  const map = {};
-  for (const task of props.tasks) {
-    map[task._id] = props.getUnreadCommentCount(task);
+// 本地工具函数：获取任务未读评论数量
+const getUnreadCommentCount = (task) => {
+  try {
+    if (!task || !task.comments) return 0
+    return calculateUnreadCount(task._id, task.comments, currentUserId.value)
+  } catch (error) {
+    console.error('获取未读评论数量失败:', error)
+    return 0
   }
-  return map;
-});
+}
+
+// 已加载过未读数的任务ID集合
+const loadedTaskIds = ref(new Set())
+// 未读数缓存
+const unreadCountsCache = ref({})
 
 // 计算固定头部高度
 const fixedHeaderHeight = computed(() => {
@@ -225,6 +229,23 @@ const {
   estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
   overscan: 5, // 预渲动数量，上下各5个缓冲，提升滚动流畅度
   fixedHeaderHeight: fixedHeaderHeight
+})
+
+// 监听可见任务变化，为首次可见的任务加载未读数
+watch(visibleTasks, (newVisibleTasks) => {
+  newVisibleTasks.forEach(task => {
+    if (!loadedTaskIds.value.has(task._id)) {
+      // 首次可见，调用加载函数
+      loadedTaskIds.value.add(task._id)
+      const count = getUnreadCommentCount(task)
+      unreadCountsCache.value[task._id] = count
+    }
+  })
+}, { immediate: true, deep: true })
+
+// 用于模板的未读数映射
+const unreadCountsMap = computed(() => {
+  return unreadCountsCache.value
 })
 
 // 直接使用虚拟滚动的 scrollTop

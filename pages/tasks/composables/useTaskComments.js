@@ -71,9 +71,6 @@ export function useTaskComments() {
 				commentsData.pageSize = result.data.pageSize
 				commentsData.hasMore = result.data.hasMore
 				
-				if (refresh) {
-					markTaskAsRead(taskId)
-				}
 			} else {
 				console.error('加载评论失败:', result.message)
 			}
@@ -218,10 +215,6 @@ export function useTaskComments() {
 				markCommentIdsAsRead(taskId, commentIds)
 				console.log('任务评论已标记为已读:', taskId, '评论数量:', commentIds.length)
 			}
-			
-			const lastViewTimes = uni.getStorageSync('task_comment_view_times') || {}
-			lastViewTimes[taskId] = Date.now()
-			uni.setStorageSync('task_comment_view_times', lastViewTimes)
 		} catch (error) {
 			console.error('标记已读失败:', error)
 		}
