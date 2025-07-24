@@ -1,5 +1,6 @@
 // 更新任务信息
 const { checkTaskPermission } = require('../../lib/utils/permission')
+const { PERMISSION_TYPE } = require('../../common/constants')
 
 async function updateTodoItem(taskId, updateData) {
   const { db, uid } = this
@@ -24,11 +25,11 @@ async function updateTodoItem(taskId, updateData) {
     const task = taskRes.data[0]
 
     // 检查权限
-    const hasPermission = await checkTaskPermission.call(this, task.todobook_id, 'update')
-    if (!hasPermission) {
+    const permissionResult = await checkTaskPermission(this, uid, taskId, PERMISSION_TYPE.WRITE)
+    if (!permissionResult.success) {
       return {
         code: 403,
-        message: '无权限修改此任务'
+        message: permissionResult.error?.message || '无权限修改此任务'
       }
     }
 

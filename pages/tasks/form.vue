@@ -263,7 +263,7 @@ const loadTaskData = async () => {
 		const todoBooksObj = uniCloud.importObject('todobook-co')
 		const result = await todoBooksObj.getTodoItemDetail(taskId)
 		
-		console.log('任务数据加载结果:', JSON.stringify(result, null, 2))
+		//console.log('任务数据加载结果:', JSON.stringify(result, null, 2))
 		
 		if (result.code === 0 && result.data && result.data.task) {
 			const task = result.data.task
@@ -280,7 +280,7 @@ const loadTaskData = async () => {
 				parent_id: task.parent_id || null
 			})
 			
-			console.log('表单数据已填充:', JSON.stringify(formData, null, 2))
+			//console.log('表单数据已填充:', JSON.stringify(formData, null, 2))
 			
 			// 保存原始数据用于比较
 			originalData.value = JSON.parse(JSON.stringify(formData))

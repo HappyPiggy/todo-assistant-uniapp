@@ -1,5 +1,6 @@
 // 更新任务排序
 const { checkTodoBookPermission } = require('../../lib/utils/permission')
+const { PERMISSION_TYPE } = require('../../common/constants')
 
 module.exports = async function updateTaskOrder(taskId, newOrder) {
   console.log('[updateTaskOrder] 开始更新任务排序:', { taskId, newOrder })
@@ -37,11 +38,11 @@ module.exports = async function updateTaskOrder(taskId, newOrder) {
     const task = taskResult.data[0]
     
     // 检查项目册权限
-    const hasPermission = await checkTodoBookPermission(task.todobook_id, uid, 'update')
-    if (!hasPermission) {
+    const permissionResult = await checkTodoBookPermission(this, uid, task.todobook_id, PERMISSION_TYPE.WRITE)
+    if (!permissionResult.success) {
       return {
         code: 403,
-        message: '无权限操作此任务'
+        message: permissionResult.error?.message || '无权限操作此任务'
       }
     }
     

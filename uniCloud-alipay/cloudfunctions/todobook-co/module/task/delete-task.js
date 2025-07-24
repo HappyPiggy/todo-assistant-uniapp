@@ -1,5 +1,6 @@
 // 删除任务
 const { checkTodoBookPermission } = require('../../lib/utils/permission')
+const { PERMISSION_TYPE } = require('../../common/constants')
 
 module.exports = async function deleteTask(taskId) {
   console.log('[deleteTask] 开始删除任务:', taskId)
@@ -30,11 +31,11 @@ module.exports = async function deleteTask(taskId) {
     const task = taskResult.data[0]
     
     // 检查项目册权限
-    const hasPermission = await checkTodoBookPermission(task.todobook_id, uid, 'update')
-    if (!hasPermission) {
+    const permissionResult = await checkTodoBookPermission(this, uid, task.todobook_id, PERMISSION_TYPE.DELETE)
+    if (!permissionResult.success) {
       return {
         code: 403,
-        message: '无权限删除此任务'
+        message: permissionResult.error?.message || '无权限删除此任务'
       }
     }
     
