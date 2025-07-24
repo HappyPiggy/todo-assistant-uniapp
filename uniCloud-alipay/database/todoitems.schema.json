@@ -133,40 +133,16 @@
 			"minimum": 0,
 			"description": "预估工时"
 		},
-		"actual_hours": {
-			"bsonType": "double",
+		"budget": {
+			"bsonType": "int",
+			"minimum": 0,
+			"description": "预算金额"
+		},
+		"actual_cost": {
+			"bsonType": "int",
 			"minimum": 0,
 			"default": 0,
-			"description": "实际工时"
-		},
-		"attachments": {
-			"bsonType": "array",
-			"items": {
-				"bsonType": "object",
-				"properties": {
-					"file_id": {
-						"bsonType": "string",
-						"description": "文件ID"
-					},
-					"filename": {
-						"bsonType": "string",
-						"description": "文件名"
-					},
-					"file_size": {
-						"bsonType": "int",
-						"description": "文件大小"
-					},
-					"file_type": {
-						"bsonType": "string",
-						"description": "文件类型"
-					},
-					"uploaded_at": {
-						"bsonType": "timestamp",
-						"description": "上传时间"
-					}
-				}
-			},
-			"description": "附件列表"
+			"description": "实际花费"
 		},
 		"comments": {
 			"bsonType": "array",
@@ -223,31 +199,6 @@
 			"minimum": 0,
 			"default": 0,
 			"description": "已完成子任务数量"
-		},
-		"is_recurring": {
-			"bsonType": "bool",
-			"default": false,
-			"description": "是否循环任务"
-		},
-		"recurrence_rule": {
-			"bsonType": "object",
-			"properties": {
-				"type": {
-					"bsonType": "string",
-					"enum": ["daily", "weekly", "monthly", "yearly"],
-					"description": "循环类型"
-				},
-				"interval": {
-					"bsonType": "int",
-					"minimum": 1,
-					"description": "循环间隔"
-				},
-				"end_date": {
-					"bsonType": "timestamp",
-					"description": "循环结束日期"
-				}
-			},
-			"description": "循环规则"
 		},
 		"last_activity_at": {
 			"bsonType": "timestamp",

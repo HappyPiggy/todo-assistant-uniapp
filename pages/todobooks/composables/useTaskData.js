@@ -246,7 +246,6 @@ export function useTaskData(bookId, allTasks = null) {
       const processedTasks = tasks.value.map(task => ({
         ...task,
         tags: Array.isArray(task.tags) ? task.tags : [],
-        attachments: Array.isArray(task.attachments) ? task.attachments : [],
         expanded: false,
         subtasks: []
       }))

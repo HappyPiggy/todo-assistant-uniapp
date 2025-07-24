@@ -103,13 +103,26 @@
 						</view>
 					</view>
 
-					<view class="attribute-item" v-if="task.actual_hours > 0">
+					<view class="attribute-item" v-if="task.budget > 0">
 						<view class="attr-icon">
-							<uni-icons color="#28a745" size="20" type="clock" />
+							<uni-icons color="#28a745" size="20" type="wallet" />
 						</view>
 						<view class="attr-content">
-							<text class="attr-label">实际工时</text>
-							<text class="attr-value">{{ task.actual_hours }}小时</text>
+							<text class="attr-label">预算</text>
+							<text class="attr-value">{{ task.budget }}元</text>
+						</view>
+					</view>
+
+					<view class="attribute-item" v-if="task.budget > 0">
+						<view class="attr-icon">
+							<uni-icons color="#dc3545" size="20" type="wallet-filled" />
+						</view>
+						<view class="attr-content">
+							<text class="attr-label">实际花费</text>
+							<view class="attr-value-editable" @click="editActualCost">
+								<text class="attr-value">{{ task.actual_cost || 0 }}元</text>
+								<uni-icons color="#666" size="16" type="compose" />
+							</view>
 						</view>
 					</view>
 
@@ -331,6 +344,38 @@
 				</view>
 			</view>
 		</uni-popup>
+
+		<!-- 编辑实际花费弹窗 -->
+		<uni-popup ref="costPopup" type="center" background-color="rgba(0,0,0,0.5)">
+			<view class="cost-dialog">
+				<view class="dialog-header">
+					<text class="dialog-title">编辑实际花费</text>
+					<view class="dialog-close" @click="closeCostDialog">
+						<uni-icons color="#999" size="20" type="close" />
+					</view>
+				</view>
+				<view class="dialog-content">
+					<uni-forms-item label="实际花费（元）">
+						<uni-easyinput 
+							v-model="costFormData.actual_cost" 
+							type="number"
+							placeholder="请输入实际花费金额"
+							:min="0"
+							:step="1"
+							:focus="true">
+						</uni-easyinput>
+					</uni-forms-item>
+				</view>
+				<view class="dialog-actions">
+					<view class="action-btn cancel-btn" @click="closeCostDialog">
+						<text class="btn-text">取消</text>
+					</view>
+					<view class="action-btn confirm-btn" @click="updateActualCost" :class="{ disabled: updating }">
+						<text class="btn-text">{{ updating ? '保存中...' : '保存' }}</text>
+					</view>
+				</view>
+			</view>
+		</uni-popup>
 	</view>
 </template>
 
@@ -396,7 +441,14 @@ const {
 // 组件本地状态
 const taskMenuPopup = ref(null)
 const commentPopup = ref(null)
+const costPopup = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
+
+// 实际花费编辑相关状态
+const costFormData = ref({
+	actual_cost: ''
+})
+const updating = ref(false)
 
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
@@ -546,6 +598,59 @@ const closeCommentDialog = () => {
 // 权限检查包装方法
 const handleCanDeleteComment = (comment) => {
 	return canDeleteComment(comment, task.value)
+}
+
+// 编辑实际花费
+const editActualCost = () => {
+	costFormData.value.actual_cost = String(task.value.actual_cost || 0)
+	costPopup.value.open()
+}
+
+// 关闭实际花费编辑对话框
+const closeCostDialog = () => {
+	costPopup.value.close()
+	costFormData.value.actual_cost = ''
+}
+
+// 更新实际花费
+const updateActualCost = async () => {
+	const cost = parseInt(costFormData.value.actual_cost)
+	if (isNaN(cost) || cost < 0) {
+		uni.showToast({
+			title: '请输入有效的金额',
+			icon: 'error'
+		})
+		return
+	}
+
+	updating.value = true
+	try {
+		const todoBooksObj = uniCloud.importObject('todobook-co')
+		const result = await todoBooksObj.updateTodoItem(taskId, {
+			actual_cost: cost
+		})
+
+		if (result.code === 0) {
+			// 更新本地任务数据
+			task.value.actual_cost = cost
+			
+			uni.showToast({
+				title: '更新成功',
+				icon: 'success'
+			})
+			closeCostDialog()
+		} else {
+			throw new Error(result.message || '更新失败')
+		}
+	} catch (error) {
+		console.error('更新实际花费失败:', error)
+		uni.showToast({
+			title: error.message || '更新失败',
+			icon: 'error'
+		})
+	} finally {
+		updating.value = false
+	}
 }
 
 // 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return 或 defineExpose。

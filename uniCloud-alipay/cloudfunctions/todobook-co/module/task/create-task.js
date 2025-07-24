@@ -18,6 +18,7 @@ const { ERROR_CODES, PERMISSION_TYPE, TASK_STATUS, TASK_PRIORITY } = require('..
  * @param {string} itemData.parent_id 父任务ID
  * @param {string} itemData.priority 任务优先级
  * @param {Date} itemData.due_date 截止日期
+ * @param {number} itemData.budget 预算金额
  * @returns {Object} 响应结果
  */
 async function createTodoItem(itemData) {
@@ -31,7 +32,8 @@ async function createTodoItem(itemData) {
     priority = TASK_PRIORITY.MEDIUM,
     due_date = null,
     tags = [],
-    estimated_hours = 0
+    estimated_hours = 0,
+    budget = null
   } = itemData
   
   // 验证任务标题
@@ -65,12 +67,11 @@ async function createTodoItem(itemData) {
       level: parent_id ? 1 : 0,
       progress: 0,
       estimated_hours: typeof estimated_hours === 'number' ? estimated_hours : 0,
-      actual_hours: 0,
-      attachments: [],
+      budget: typeof budget === 'number' && budget >= 0 ? budget : null,
+      actual_cost: 0,
       comments: [],
       subtask_count: 0,
       completed_subtask_count: 0,
-      is_recurring: false,
       last_activity_at: now
     }
     

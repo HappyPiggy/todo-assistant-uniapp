@@ -71,13 +71,11 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
  *         level: "层级(0-2)",
  *         progress: "进度百分比",
  *         estimated_hours: "预估工时",
- *         actual_hours: "实际工时",
- *         attachments: "附件列表",
+ *         budget: "预算金额",
+ *         actual_cost: "实际花费",
  *         comments: "评论列表",
  *         subtask_count: "子任务数量",
  *         completed_subtask_count: "已完成子任务数量",
- *         is_recurring: "是否循环任务",
- *         recurrence_rule: "循环规则",
  *         last_activity_at: "最后活动时间"
  *       }
  *     ]

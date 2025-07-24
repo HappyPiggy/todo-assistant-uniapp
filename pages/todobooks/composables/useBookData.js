@@ -326,7 +326,6 @@ export function useBookData() {
         completedAt: task.completed_at,
         priority: task.priority,
         estimatedHours: task.estimated_hours || 0,
-        actualHours: task.actual_hours || 0,
         tags: task.tags || [],
         level: task.level || 0,
         index: index + 1
@@ -371,9 +370,6 @@ export function useBookData() {
     const totalEstimatedHours = allTasks.value.reduce((sum, task) => 
       sum + (task.estimated_hours || 0), 0
     )
-    const totalActualHours = allTasks.value.reduce((sum, task) => 
-      sum + (task.actual_hours || 0), 0
-    )
     
     return {
       total,
@@ -384,9 +380,7 @@ export function useBookData() {
       completionRate,
       avgCompletionDays,
       overdueTasks,
-      totalEstimatedHours,
-      totalActualHours,
-      hoursVariance: totalActualHours - totalEstimatedHours
+      totalEstimatedHours
     }
   })
   

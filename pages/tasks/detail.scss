@@ -704,3 +704,34 @@ page {
 	font-size: 26rpx;
 	color: #999999;
 }
+
+/* 可编辑属性值样式 */
+.attr-value-editable {
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	padding: 8rpx;
+	border-radius: 8rpx;
+	transition: background-color 0.2s;
+}
+
+.attr-value-editable:active {
+	background-color: #f0f0f0;
+}
+
+/* 实际花费编辑弹窗样式 */
+.cost-dialog {
+	width: 600rpx;
+	background-color: #ffffff;
+	border-radius: 16rpx;
+	overflow: hidden;
+}
+
+.cost-dialog .dialog-content {
+	padding: 30rpx;
+}
+
+.disabled {
+	opacity: 0.6;
+	pointer-events: none;
+}

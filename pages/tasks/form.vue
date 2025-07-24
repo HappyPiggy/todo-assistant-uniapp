@@ -59,6 +59,16 @@
 						:step="0.5">
 					</uni-easyinput>
 				</uni-forms-item>
+
+				<uni-forms-item name="budget" label="预算（元）">
+					<uni-easyinput 
+						v-model="formData.budget" 
+						type="number"
+						placeholder="任务预算金额（可选）"
+						:min="0"
+						:step="1">
+					</uni-easyinput>
+				</uni-forms-item>
 			</view>
 
 			<!-- 分类标签 -->
@@ -154,6 +164,7 @@ const formData = reactive({
 	priority: 'medium',
 	due_date: null,
 	estimated_hours: '',
+	budget: '',
 	tags: [],
 	parent_id: null
 })
@@ -264,6 +275,7 @@ const loadTaskData = async () => {
 				priority: task.priority || 'medium',
 				due_date: task.due_date || null,
 				estimated_hours: task.estimated_hours ? String(task.estimated_hours) : '',
+				budget: task.budget ? String(task.budget) : '',
 				tags: task.tags || [],
 				parent_id: task.parent_id || null
 			})
@@ -359,6 +371,13 @@ const submitTask = async () => {
 		taskData.estimated_hours = parseFloat(formData.estimated_hours)
 	} else if (isEditMode.value) {
 		taskData.estimated_hours = null
+	}
+
+	// 添加预算
+	if (formData.budget) {
+		taskData.budget = parseInt(formData.budget)
+	} else if (isEditMode.value) {
+		taskData.budget = null
 	}
 
 	if (isEditMode.value) {
