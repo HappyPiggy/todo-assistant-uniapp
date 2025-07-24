@@ -19,10 +19,10 @@
       :scroll-with-animation="false"
       :enhanced="true"
       :enable-flex="true"
-      :bounces="true"
-      :refresher-enabled="true"
+      :bounces="scrollConfig.bounces"
+      :refresher-enabled="scrollConfig.refresherEnabled"
       :refresher-triggered="refreshing"
-      :refresher-threshold="45"
+      :refresher-threshold="scrollConfig.refresherThreshold"
       :refresher-default-style="'black'"
       :scroll-top="scrollTop"
       @scroll="handleScroll"
@@ -202,6 +202,25 @@ const emit = defineEmits([
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 
+// 平台检测和滚动配置
+const scrollConfig = ref({
+  bounces: true, // 默认开启弹性效果
+  refresherEnabled: true, // 默认开启刷新
+  refresherThreshold: 45 // 默认刷新阈值
+})
+
+// 检测平台并调整配置
+uni.getSystemInfo({
+  success: (res) => {
+    // 安卓端关闭 bounces 以防止抖动
+    if (res.platform === 'android') {
+      scrollConfig.value.bounces = false
+      scrollConfig.value.refresherThreshold = 60 // 增加刷新阈值
+      console.log('VirtualTaskList: 检测到安卓平台，优化滚动配置')
+    }
+  }
+})
+
 // 获取全局评论缓存实例
 const commentCache = getGlobalCommentCache()
 
@@ -278,8 +297,6 @@ watch(visibleTasks, async (newVisibleTasks) => {
       unreadCountsCache.value[task._id] = unreadCount
     }
   }
-  
-  console.log("visibleTasks needLoadTasks", needLoadTasks.length)
 
   // 第二步：批量静默加载需要的评论数据
   if (needLoadTasks.length > 0) {
