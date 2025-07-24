@@ -208,15 +208,8 @@ const calculateVirtualListHeight = () => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
-  // 优化：只在特定情况下清理评论缓存，减少不必要的重新加载
   if (hasInitialized.value && virtualTaskListRef.value) {
-    // 只在从任务详情页返回时清理缓存，其他情况保持缓存
-    const pages = getCurrentPages()
-    const prevPage = pages[pages.length - 2]
-    if (prevPage && prevPage.route.includes('tasks/detail')) {
-      console.log('detail.vue onShow: 从任务详情页返回，清理评论缓存')
-      virtualTaskListRef.value.clearCommentCache()
-    }
+    virtualTaskListRef.value.clearCommentCache()
   }
 })
 

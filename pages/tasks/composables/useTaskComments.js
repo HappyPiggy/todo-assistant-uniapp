@@ -168,21 +168,11 @@ export function useTaskComments() {
 					icon: 'success'
 				})
 				
-				// 同步更新缓存
-				if (commentEditMode.value === 'edit') {
-					// 编辑评论：更新缓存中的评论
-					if (result.data && result.data.comment) {
-						commentCache.updateComment(taskId, commentFormData.commentId, result.data.comment)
-					}
-				} else {
-					// 添加评论：将新评论添加到缓存
-					if (result.data && result.data.comment) {
-						commentCache.addComment(taskId, result.data.comment)
-					}
-				}
+				// 清空当前任务的评论缓存，确保获取最新数据
+				commentCache.clearTaskCache(taskId)
 				
-				// 刷新评论列表（优先使用缓存）
-				await loadComments(taskId, true, true)
+				// 刷新评论列表（强制从服务器获取最新数据）
+				await loadComments(taskId, true, false)
 				resetCommentForm()
 				return true
 			} else {
@@ -226,11 +216,11 @@ export function useTaskComments() {
 									icon: 'success'
 								})
 								
-								// 同步更新缓存：删除评论
-								commentCache.deleteComment(taskId, comment._id)
+								// 清空当前任务的评论缓存，确保获取最新数据
+								commentCache.clearTaskCache(taskId)
 								
-								// 刷新评论列表（优先使用缓存）
-								await loadComments(taskId, true, true)
+								// 刷新评论列表（强制从服务器获取最新数据）
+								await loadComments(taskId, true, false)
 								resolve(true)
 							} else {
 								uni.showToast({
