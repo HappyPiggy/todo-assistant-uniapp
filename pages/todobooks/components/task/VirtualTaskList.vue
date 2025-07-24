@@ -100,7 +100,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
+import { defineProps, defineEmits, defineExpose, ref, computed, watch, nextTick } from 'vue'
 import { useVirtualList } from '@/pages/todobooks/composables/useVirtualList.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
@@ -450,10 +450,26 @@ const handleTagFilterChange = (tags) => {
 
 // 自定义滚动到顶部方法
 const customScrollToTop = () => {
-  // 设置程序化滚动位置
+  console.log('VirtualTaskList: customScrollToTop 被调用')
+  
+  // 方案1：先尝试直接设置
   scrollTop.value = 0
-  // 同时调用虚拟滚动的方法
-  return virtualScrollToTop()
+  
+  // 方案2：如果直接设置不生效，使用强制刷新
+  nextTick(() => {
+    // 强制触发scroll-view的更新
+    const currentValue = scrollTop.value
+    scrollTop.value = currentValue + 1
+    nextTick(() => {
+      scrollTop.value = 0
+      console.log('VirtualTaskList: scrollTop设置为0')
+    })
+  })
+  
+  // 同时调用虚拟滚动的方法以同步内部状态
+  virtualScrollToTop()
+  
+  return Promise.resolve()
 }
 
 // 清理评论缓存（供外部调用）
