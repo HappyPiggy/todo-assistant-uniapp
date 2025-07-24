@@ -1,6 +1,6 @@
 <template>
   <view class="book-form">
-    <uni-forms ref="formRef" :model="formData" :rules="rules" label-position="top">
+    <uni-forms ref="formRef" :model="localFormData" :rules="rules" label-position="top">
       <!-- 基本信息 -->
       <view class="form-section">
         <view class="section-header">
@@ -9,22 +9,20 @@
 
         <uni-forms-item name="title" label="项目册名称" required>
           <uni-easyinput 
-            v-model="formData.title" 
+            v-model="localFormData.title" 
             placeholder="请输入项目册名称"
             :clearable="true"
-            :maxlength="100"
-            @input="handleTitleChange">
+            :maxlength="100">
           </uni-easyinput>
         </uni-forms-item>
 
         <uni-forms-item name="description" label="项目描述">
           <uni-easyinput 
-            v-model="formData.description" 
+            v-model="localFormData.description" 
             type="textarea"
             placeholder="描述项目册的内容和目标（可选）"
             :maxlength="500"
-            :clearable="true"
-            @input="handleDescriptionChange">
+            :clearable="true">
           </uni-easyinput>
         </uni-forms-item>
       </view>
@@ -37,15 +35,13 @@
 
         <uni-forms-item name="color" label="主题颜色">
           <ColorPicker 
-            v-model:selectedColor="formData.color"
-            @change="handleColorChange" />
+            v-model:selectedColor="localFormData.color" />
         </uni-forms-item>
 
         <uni-forms-item name="icon" label="项目图标">
           <IconPicker 
-            v-model:selectedIcon="formData.icon"
-            :previewColor="formData.color"
-            @change="handleIconChange" />
+            v-model:selectedIcon="localFormData.icon"
+            :previewColor="localFormData.color" />
         </uni-forms-item>
       </view>
 
@@ -102,7 +98,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue'
+import { defineProps, defineEmits, computed, ref, watch } from 'vue'
 import ColorPicker from '@/pages/todobooks/components/book/ColorPicker.vue'
 import IconPicker from '@/pages/todobooks/components/book//IconPicker.vue'
 import BookPreview from '@/pages/todobooks/components/book//BookPreview.vue'
@@ -133,31 +129,36 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:formData', 'titleChange', 'descriptionChange', 'colorChange', 'iconChange', 'submit', 'cancel'])
+const emit = defineEmits(['submit', 'cancel'])
+
+// 内部表单数据副本
+const localFormData = ref({
+  title: '',
+  description: '',
+  color: '',
+  icon: ''
+})
+
+// 监听 props.formData 变化，同步到本地副本
+watch(() => props.formData, (newData) => {
+  if (newData) {
+    localFormData.value = {
+      title: newData.title || '',
+      description: newData.description || '',
+      color: newData.color || '',
+      icon: newData.icon || ''
+    }
+  }
+}, { immediate: true, deep: true })
 
 const rules = VALIDATION_RULES.BOOK_FORM
 
 const previewData = computed(() => {
-  if (!props.formData) {
-    return {
-      title: '项目册名称',
-      description: '项目描述',
-      color: '#007AFF',
-      icon: 'folder',
-      stats: {
-        total: 0,
-        completed: 0,
-        members: 1,
-        progress: 0
-      }
-    }
-  }
-  
   return {
-    title: props.formData.title || '项目册名称',
-    description: props.formData.description || '项目描述',
-    color: props.formData.color || '#007AFF',
-    icon: props.formData.icon || 'folder',
+    title: localFormData.value.title || '项目册名称',
+    description: localFormData.value.description || '项目描述',
+    color: localFormData.value.color || '#007AFF',
+    icon: localFormData.value.icon || 'folder',
     stats: {
       total: (props.statsData && props.statsData.item_count) || 0,
       completed: (props.statsData && props.statsData.completed_count) || 0,
@@ -167,40 +168,14 @@ const previewData = computed(() => {
   }
 })
 
-const handleTitleChange = (value) => {
-  emit('titleChange', value)
-}
-
-const handleDescriptionChange = (value) => {
-  emit('descriptionChange', value)
-}
-
-const handleColorChange = (color) => {
-  emit('colorChange', color)
-}
-
-const handleIconChange = (icon) => {
-  emit('iconChange', icon)
-}
-
 const handleSubmit = () => {
-  emit('submit', props.formData)
+  emit('submit', localFormData.value)
 }
 
 const handleCancel = () => {
   emit('cancel')
 }
 
-// 暴露表单验证方法
-defineExpose({
-  validate: () => {
-    return new Promise((resolve, reject) => {
-      // 这里需要访问uni-forms的validate方法
-      // 由于我们使用的是setup语法，需要通过ref获取
-      resolve(true) // 简化处理
-    })
-  }
-})
 </script>
 
 <style lang="scss" scoped>

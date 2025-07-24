@@ -25,7 +25,6 @@
       :mode="isEditMode ? 'edit' : 'create'"
       @submit="handleSubmit"
       @cancel="handleCancel"
-      @update:form-data="updateFormData"
     />
 
   </view>
@@ -83,6 +82,26 @@ const fillForm = (data) => {
   errors.value = {}
 }
 
+// 表单验证函数
+const validateForm = (data) => {
+  const newErrors = {}
+  
+  // 验证项目册名称
+  if (!data.title || data.title.trim() === '') {
+    newErrors.title = '项目册名称不能为空'
+  } else if (data.title.length > 100) {
+    newErrors.title = '项目册名称不能超过100个字符'
+  }
+  
+  // 验证描述（可选字段）
+  if (data.description && data.description.length > 500) {
+    newErrors.description = '项目描述不能超过500个字符'
+  }
+  
+  errors.value = newErrors
+  return Object.keys(newErrors).length === 0
+}
+
 // 计算统计数据
 const statsData = computed(() => {
   if (!isEditMode.value || !bookData.value) return null
@@ -124,10 +143,6 @@ const loadBookData = async () => {
   }
 }
 
-// 更新表单数据
-const updateFormData = (newData) => {
-  Object.assign(formData, newData)
-}
 
 // 事件处理
 const handleSubmit = async (data) => {
@@ -137,6 +152,18 @@ const handleSubmit = async (data) => {
     console.log('防止重复提交，直接返回')
     return
   }
+  
+  // 表单验证
+  if (!validateForm(data)) {
+    console.log('表单验证失败:', errors.value)
+    const errorMessages = Object.values(errors.value)
+    uni.showToast({
+      title: errorMessages[0] || '请检查输入信息',
+      icon: 'none'
+    })
+    return
+  }
+  console.log('表单验证通过')
   
   try {
     console.log('设置 submitting 为 true')
