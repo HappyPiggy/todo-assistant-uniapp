@@ -198,7 +198,6 @@ onMounted(() => {
 
   if (virtualTaskListRef.value) {
     virtualTaskListRef.value.clearCommentCache()
-    console.log("22222!!!!!!!!!!!!!!!!!!!")
   }
 })
 

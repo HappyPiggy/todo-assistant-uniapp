@@ -426,8 +426,8 @@ export function useTaskCommentCache(options = {}) {
         })
         
         await Promise.all(promises)
-        // console.log(`批量静默加载完成，处理了 ${currentBatch.length} 个任务`)
-      }, 100)
+         console.log(`批量静默加载完成，处理了 ${currentBatch.length} 个任务`)
+      }, 500)
       
       return false // 静默模式下不立即返回数据
     }

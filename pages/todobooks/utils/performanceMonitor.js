@@ -49,7 +49,7 @@ class PerformanceMonitor {
     
     // // 减少日志频率，避免在大量任务时产生过多日志
     if (type === 'network' || this.metrics.commentLoadRequests % 10 === 0) {
-      console.log(`💬 评论请求 - 类型: ${type}, 总请求数: ${this.metrics.commentLoadRequests}`)
+     // console.log(`💬 评论请求 - 类型: ${type}, 总请求数: ${this.metrics.commentLoadRequests}`)
     }
   }
 
