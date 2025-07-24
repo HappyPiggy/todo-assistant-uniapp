@@ -102,6 +102,12 @@ export function useTaskCommentCache(options = {}) {
       return null
     }
     
+    // 跳过临时任务ID（以temp_开头）
+    if (taskId.startsWith('temp_')) {
+      // console.log(`跳过临时任务 ${taskId} 的评论加载`)
+      return null
+    }
+    
     // 检查是否正在加载
     if (loadingTasks.value.has(taskId)) {
      // console.log(`⏳ getTaskComments: 任务 ${taskId} 正在加载中，跳过重复请求`)

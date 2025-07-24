@@ -223,6 +223,11 @@ watch(visibleTasks, async (newVisibleTasks) => {
   
   // 第一步：筛选需要加载的任务
   for (const task of newVisibleTasks) {
+    // 跳过临时任务（以temp_开头的ID）
+    if (task._id && task._id.startsWith('temp_')) {
+      continue
+    }
+    
     // 多重检查：已处理的任务 OR 已有缓存的任务 OR 正在加载的任务
     if (!loadedTaskIds.value.has(task._id) && 
         !commentCache.hasCached(task._id) && 
