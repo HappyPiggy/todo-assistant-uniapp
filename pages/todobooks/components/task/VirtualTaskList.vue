@@ -235,10 +235,11 @@ const {
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 监听可见任务变化，实现按需加载评论数据
+// 监听可见任务变化，实现按需加载评论数据（优化版：批量静默加载）
 watch(visibleTasks, async (newVisibleTasks) => {
-  console.log(`👀 VirtualTaskList: 可见任务变化，当前可见 ${newVisibleTasks.length} 个任务`)
+  const needLoadTasks = []
   
+  // 第一步：筛选需要加载的任务
   for (const task of newVisibleTasks) {
     // 多重检查：已处理的任务 OR 已有缓存的任务 OR 正在加载的任务
     if (!loadedTaskIds.value.has(task._id) && 
@@ -247,30 +248,35 @@ watch(visibleTasks, async (newVisibleTasks) => {
       
       // 标记为已处理，避免重复加载
       loadedTaskIds.value.add(task._id)
-      console.log(`🔄 VirtualTaskList: 开始处理任务 ${task._id} (${task.title?.substring(0, 20)}...)`)
+      needLoadTasks.push(task)
       
+      // 立即设置为0，避免显示undefined
+      unreadCountsCache.value[task._id] = 0
+    }
+    
+    // 对于已有缓存的任务，立即更新未读数
+    if (commentCache.hasCached(task._id)) {
+      const unreadCount = commentCache.getTaskUnreadCount(task._id, task, currentUserId.value, true)
+      unreadCountsCache.value[task._id] = unreadCount
+    }
+  }
+  
+  // 第二步：批量静默加载需要的评论数据
+  if (needLoadTasks.length > 0) {
+    
+    for (const task of needLoadTasks) {
       try {
-        // 使用智能加载：优先缓存，缓存不存在则异步加载
-        const hasImmediate = await commentCache.smartLoadComments(
+        // 使用智能加载的静默模式：不显示加载提示，批量合并请求
+        await commentCache.smartLoadComments(
           task._id, 
           props.tasks,
           (taskId, commentData) => {
             // 加载完成回调：更新未读数缓存
             const unreadCount = commentCache.getTaskUnreadCount(taskId, task, currentUserId.value, true)
             unreadCountsCache.value[taskId] = unreadCount
-            console.log(`任务 ${taskId} 评论按需加载完成，未读数量: ${unreadCount}`)
-          }
+          },
+          true // 启用静默模式
         )
-        
-        // 如果立即有可用数据，更新未读数
-        if (hasImmediate) {
-          const unreadCount = commentCache.getTaskUnreadCount(task._id, task, currentUserId.value, true)
-          unreadCountsCache.value[task._id] = unreadCount
-        } else {
-          // 暂时设置为0，等待异步加载完成
-          unreadCountsCache.value[task._id] = 0
-        }
-        
       } catch (error) {
         console.error(`任务 ${task._id} 评论加载失败:`, error)
         

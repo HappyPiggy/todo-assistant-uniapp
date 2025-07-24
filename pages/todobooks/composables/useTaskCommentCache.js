@@ -104,7 +104,7 @@ export function useTaskCommentCache(options = {}) {
     
     // 检查是否正在加载
     if (loadingTasks.value.has(taskId)) {
-      console.log(`⏳ getTaskComments: 任务 ${taskId} 正在加载中，跳过重复请求`)
+     // console.log(`⏳ getTaskComments: 任务 ${taskId} 正在加载中，跳过重复请求`)
       return null
     }
     
@@ -133,7 +133,7 @@ export function useTaskCommentCache(options = {}) {
     performanceMonitor.recordCommentRequest('network')
     
     try {
-      console.log(`🌐 [网络请求 #${stats.misses}] 开始加载任务 ${taskId} 的评论数据`)
+      //console.log(`🌐 [网络请求 #${stats.misses}] 开始加载任务 ${taskId} 的评论数据`)
     
     // 调试：记录调用栈前几层，帮助定位重复请求来源
     if (stats.misses > 55) {
@@ -156,7 +156,7 @@ export function useTaskCommentCache(options = {}) {
         cache.set(taskId, commentData)
         stats.size = cache.size
         
-        console.log(`任务 ${taskId} 评论数据加载成功，共 ${commentData.total} 条评论`)
+        //console.log(`任务 ${taskId} 评论数据加载成功，共 ${commentData.total} 条评论`)
         return commentData
       } else {
         console.error(`加载任务 ${taskId} 评论失败:`, result.message)
@@ -337,7 +337,7 @@ export function useTaskCommentCache(options = {}) {
     task.comments = cachedData.comments
     task.comment_count = cachedData.total
     
-    console.log(`同步缓存数据到task对象成功，任务 ${taskId}，评论数量 ${cachedData.total}`)
+    //console.log(`同步缓存数据到task对象成功，任务 ${taskId}，评论数量 ${cachedData.total}`)
     return true
   }
   
@@ -363,15 +363,20 @@ export function useTaskCommentCache(options = {}) {
     return syncCount
   }
   
+  // 批量加载队列和防抖计时器
+  let batchLoadTimer = null
+  const batchLoadQueue = new Set()
+  
   /**
    * 智能缓存检查和加载
    * 用于VirtualTaskList中的按需加载逻辑
    * @param {string} taskId 任务ID
    * @param {Array} allTasks 所有任务数组的引用
    * @param {Function} onLoadComplete 加载完成回调
+   * @param {boolean} silent 是否静默加载（不显示加载提示）
    * @returns {boolean} 是否立即有可用数据
    */
-  const smartLoadComments = async (taskId, allTasks, onLoadComplete = null) => {
+  const smartLoadComments = async (taskId, allTasks, onLoadComplete = null, silent = false) => {
     if (!taskId) return false
     
     // 检查缓存
@@ -382,11 +387,46 @@ export function useTaskCommentCache(options = {}) {
     
     // 检查是否正在加载，避免重复请求
     if (loadingTasks.value.has(taskId)) {
-      console.log(`smartLoadComments: 任务 ${taskId} 正在加载中，跳过重复请求`)
+      // console.log(`smartLoadComments: 任务 ${taskId} 正在加载中，跳过重复请求`)
       return false
     }
     
-    // 缓存不存在且未在加载，异步加载（启用防抖）
+    // 静默模式：批量加载，减少UI闪烁
+    if (silent) {
+      batchLoadQueue.add({ taskId, allTasks, onLoadComplete })
+      
+      // 防抖处理：100ms内的请求合并到一个批次
+      if (batchLoadTimer) {
+        clearTimeout(batchLoadTimer)
+      }
+      
+      batchLoadTimer = setTimeout(async () => {
+        const currentBatch = Array.from(batchLoadQueue)
+        batchLoadQueue.clear()
+        
+        // 并发处理批量请求，但不显示加载提示
+        const promises = currentBatch.map(async ({ taskId, allTasks, onLoadComplete }) => {
+          try {
+            const commentData = await getTaskComments(taskId, true) // 启用防抖
+            if (commentData) {
+              syncCacheToTask(taskId, allTasks)
+              if (typeof onLoadComplete === 'function') {
+                onLoadComplete(taskId, commentData)
+              }
+            }
+          } catch (error) {
+            console.error(`批量加载任务 ${taskId} 评论失败:`, error)
+          }
+        })
+        
+        await Promise.all(promises)
+        // console.log(`批量静默加载完成，处理了 ${currentBatch.length} 个任务`)
+      }, 100)
+      
+      return false // 静默模式下不立即返回数据
+    }
+    
+    // 非静默模式：立即加载（可能显示加载提示）
     try {
       const commentData = await getTaskComments(taskId, true) // 启用防抖
       if (commentData) {
