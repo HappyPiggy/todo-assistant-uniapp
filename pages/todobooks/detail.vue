@@ -16,34 +16,22 @@
     >
       <VirtualTaskList
         ref="virtualTaskListRef"
-        :tasks="filteredTasks"
+        :all-tasks="allTasks"
         :loading="tasksLoading"
         :error="tasksError"
-        :active-filter="activeFilter"
         :container-height="mainScrollHeight"
         :book-data="bookData"
         :overall-progress="overallProgress"
         :task-stats="taskStats"
         :member-count="memberCount"
-        :filter-tabs="filterTabs"
-        :available-tags="availableTags"
-        :selected-tags="selectedTags"
         :todorbook-id="bookId"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"
-        @status-toggle="toggleTaskStatus"
-        @menu-click="showTaskMenu"
-        @view-detail="viewTaskDetail"
-        @edit="editTask"
-        @delete="deleteTask"
-        @subtask-status-toggle="toggleSubtaskStatus"
-        @subtask-menu-click="showSubtaskMenu"
         @subtask-click="handleSubtaskClick"
+        @delete="deleteTask"
         @more-actions="handleMoreActions"
         @search-click="handleSearchClick"
-        @filter-change="setActiveFilter"
-        @tag-filter-change="setSelectedTags"
         @scroll="handleScroll"
       />
     </view>
@@ -129,34 +117,15 @@ const {
 } = useBookData()
 
 const {
-  tasks,
   loading: tasksLoading,
   error: tasksError,
-  activeFilter,
-  searchKeyword,
-  selectedTags,
-  filterTabs,
-  availableTags,
-  filteredTasks,
-  initializeTasks,
-  setActiveFilter,
-  setSearchKeyword,
-  setSelectedTags,
-  taskStats,
-  overallProgress,
-  toggleTaskStatus,
-  toggleSubtaskStatus,
   deleteTask: removeTask,
   updateTaskOptimistic,
   createTaskOptimistic
 } = useTaskData(null, allTasks)
 
-// 监听availableTags变化
-watch(availableTags, (newTags) => {
-}, { deep: true, immediate: true })
 
 // 组件本地状态
-const currentTask = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
 const virtualListHeight = ref(600) // 虚拟滚动容器高度
 const mainScrollHeight = ref(600) // 主滚动区域高度
@@ -171,12 +140,6 @@ onLoad(async (options) => {
     bookId = options.id
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
-    initializeTasks(allTasks.value)
-    
-    // 如果从列表页跳转过来，设置默认筛选为待办
-    if (options.filter === 'todo') {
-      setActiveFilter('todo')
-    }
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })
@@ -239,7 +202,6 @@ const refreshTasks = async () => {
   if (!bookId) return
   
   await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
-  await initializeTasks(allTasks.value)
 }
 
 // 搜索弹窗处理函数
@@ -331,6 +293,16 @@ const addTask = () => {
   })
 }
 
+const deleteTask = async (task) => {
+  try {
+    await removeTask(task._id)
+    await refreshTasks()
+    uni.showToast({ title: '删除成功', icon: 'success' })
+  } catch (error) {
+    uni.showToast({ title: '删除失败', icon: 'error' })
+  }
+}
+
 const handleTaskClick = (task) => {
   if (task.subtask_count > 0) {
     task.expanded = !task.expanded
@@ -341,48 +313,6 @@ const handleTaskClick = (task) => {
   }
 }
 
-const showTaskMenu = (task) => {
-  currentTask.value = task
-}
-
-const viewTaskDetail = (task) => {
-  uni.navigateTo({
-    url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`
-  })
-}
-
-const editTask = (task) => {
-  uni.navigateTo({
-    url: `/pages/tasks/form?id=${task._id}&bookId=${bookId}`
-  })
-}
-
-const deleteTask = async (task) => {
-  let content = '确定要删除这个任务吗？'
-  if (task.subtask_count > 0) {
-    content = `此任务包含 ${task.subtask_count} 个子任务，删除后所有子任务也将被删除。确定要继续吗？`
-  }
-  
-  uni.showModal({
-    title: '确认删除',
-    content: content,
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          await removeTask(task._id)
-          await refreshTasks()
-          uni.showToast({ title: '删除成功', icon: 'success' })
-        } catch (error) {
-          uni.showToast({ title: '删除失败', icon: 'error' })
-        }
-      }
-    }
-  })
-}
-
-const showSubtaskMenu = (subtask) => {
-  currentTask.value = subtask
-}
 
 const handleSubtaskClick = (subtask) => {
   uni.navigateTo({

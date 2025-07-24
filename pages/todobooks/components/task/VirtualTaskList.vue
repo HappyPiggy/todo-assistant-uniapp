@@ -48,7 +48,7 @@
       />
       
       <!-- 任务列表内容区域 -->
-      <view v-if="tasks.length === 0" class="empty-content">
+      <view v-if="filteredTasks.length === 0" class="empty-content">
         <EmptyState 
           :title="emptyText"
           :show-action="activeFilter === 'all'"
@@ -96,6 +96,7 @@
 <script setup>
 import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vue'
 import { useVirtualList } from '@/pages/todobooks/composables/useVirtualList.js'
+import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -107,7 +108,7 @@ import BookHeader from '@/pages/todobooks/components/book/BookHeader.vue'
 import TaskFilter from './TaskFilter.vue'
 
 const props = defineProps({
-  tasks: {
+  allTasks: {
     type: Array,
     default: () => []
   },
@@ -118,10 +119,6 @@ const props = defineProps({
   error: {
     type: String,
     default: null
-  },
-  activeFilter: {
-    type: String,
-    default: 'all'
   },
   containerHeight: {
     type: Number,
@@ -144,19 +141,6 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  // TaskFilter 相关属性
-  filterTabs: {
-    type: Array,
-    default: null
-  },
-  availableTags: {
-    type: Array,
-    default: () => []
-  },
-  selectedTags: {
-    type: Array,
-    default: () => []
-  },
   todorbookId: {
     type: String,
     required: true
@@ -167,26 +151,38 @@ const emit = defineEmits([
   'retry',
   'addTask',
   'taskClick',
-  'statusToggle',
-  'menuClick',
-  'viewDetail',
-  'edit',
   'delete',
-  'subtaskStatusToggle',
-  'subtaskMenuClick',
   'subtaskClick',
   // BookHeader 相关事件
   'moreActions',
   'searchClick',
-  // TaskFilter 相关事件
-  'filterChange',
-  'tagFilterChange',
   // 滚动事件
   'scroll'
 ])
 
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
+
+// 使用 useTaskData 管理筛选逻辑
+const {
+  activeFilter,
+  selectedTags,
+  filterTabs,
+  availableTags,
+  filteredTasks,
+  setActiveFilter,
+  setSelectedTags,
+  toggleTaskStatus,
+  toggleSubtaskStatus,
+  initializeTasks
+} = useTaskData(props.todorbookId, computed(() => props.allTasks))
+
+// 监听 allTasks 变化，初始化任务数据
+watch(() => props.allTasks, (newTasks) => {
+  if (newTasks && newTasks.length > 0) {
+    initializeTasks(newTasks)
+  }
+}, { immediate: true, deep: true })
 
 // 本地工具函数：获取任务未读评论数量
 const getUnreadCommentCount = (task) => {
@@ -208,7 +204,7 @@ const unreadCountsCache = ref({})
 const fixedHeaderHeight = computed(() => {
   let height = 0
   if (props.bookData) height += 200 // BookHeader 实际高度更大
-  if (props.filterTabs) height += 60 // TaskFilter 实际高度
+  if (filterTabs.value) height += 60 // TaskFilter 实际高度
   return height
 })
 
@@ -224,7 +220,7 @@ const {
   scrollToBottom,
   getDebugInfo,
   scrollTop: virtualScrollTop
-} = useVirtualList(computed(() => props.tasks), {
+} = useVirtualList(filteredTasks, {
   containerHeight: computed(() => props.containerHeight),
   estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
   overscan: 5, // 预渲动数量，上下各5个缓冲，提升滚动流畅度
@@ -258,7 +254,7 @@ const emptyText = computed(() => {
     todo: '没有待办任务',
     completed: '还没有完成的任务'
   }
-  return map[props.activeFilter] || '暂无数据'
+  return map[activeFilter.value] || '暂无数据'
 })
 
 // 滚动事件节流
@@ -297,7 +293,7 @@ const handleTaskClick = (task) => {
 }
 
 const handleStatusToggle = (task) => {
-  emit('statusToggle', task)
+  toggleTaskStatus(task)
 }
 
 const handleMenuClick = (task) => {
@@ -306,15 +302,32 @@ const handleMenuClick = (task) => {
 }
 
 const handleViewDetail = (task) => {
-  emit('viewDetail', task)
+  uni.navigateTo({
+    url: `/pages/tasks/detail?id=${task._id}&bookId=${props.todorbookId}`
+  })
 }
 
 const handleEdit = (task) => {
-  emit('edit', task)
+  uni.navigateTo({
+    url: `/pages/tasks/form?id=${task._id}&bookId=${props.todorbookId}`
+  })
 }
 
-const handleDelete = (task) => {
-  emit('delete', task)
+const handleDelete = async (task) => {
+  let content = '确定要删除这个任务吗？'
+  if (task.subtask_count > 0) {
+    content = `此任务包含 ${task.subtask_count} 个子任务，删除后所有子任务也将被删除。确定要继续吗？`
+  }
+  
+  uni.showModal({
+    title: '确认删除',
+    content: content,
+    success: async (res) => {
+      if (res.confirm) {
+        emit('delete', task)
+      }
+    }
+  })
 }
 
 const handleMenuCancel = () => {
@@ -322,7 +335,7 @@ const handleMenuCancel = () => {
 }
 
 const handleSubtaskStatusToggle = (subtask) => {
-  emit('subtaskStatusToggle', subtask)
+  toggleSubtaskStatus(subtask)
 }
 
 const handleSubtaskMenuClick = (subtask) => {
@@ -346,11 +359,11 @@ const handleSearchClick = () => {
 
 // TaskFilter 事件处理
 const handleFilterChange = (filter) => {
-  emit('filterChange', filter)
+  setActiveFilter(filter)
 }
 
 const handleTagFilterChange = (tags) => {
-  emit('tagFilterChange', tags)
+  setSelectedTags(tags)
 }
 
 // 自定义滚动到顶部方法
