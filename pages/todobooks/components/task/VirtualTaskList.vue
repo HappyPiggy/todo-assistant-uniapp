@@ -10,12 +10,19 @@
       @retry="handleRetry" />
     
     
-    <!-- 内容容器 - 使用页面级滚动 -->
-    <view
+    <!-- 虚拟滚动容器 -->
+    <scroll-view
       v-else
-      ref="contentRef"
-      class="content-container"
-      :style="{ minHeight: containerHeight + 'px' }">
+      ref="scrollViewRef"
+      class="virtual-scroll-container"
+      :scroll-y="true"
+      :scroll-with-animation="false"
+      :enhanced="true"
+      :enable-flex="true"
+      :bounces="false"
+      :scroll-top="scrollTop"
+      @scroll="handleScroll"
+      :style="{ height: containerHeight + 'px' }">
       
       <!-- 项目册头部信息 -->
       <BookHeader
@@ -72,7 +79,7 @@
         <!-- 下边距占位 -->
         <view :style="{ height: offsetBottom + 'px' }"></view>
       </view>
-    </view>
+    </scroll-view>
     
     <!-- 任务菜单弹窗 -->
     <TaskMenuPopup
@@ -174,7 +181,9 @@ const emit = defineEmits([
   'searchClick',
   // TaskFilter 相关事件
   'filterChange',
-  'tagFilterChange'
+  'tagFilterChange',
+  // 滚动事件
+  'scroll'
 ])
 
 const taskMenuPopup = ref(null)
@@ -207,15 +216,24 @@ const fixedHeaderHeight = computed(() => {
   return height
 })
 
-// 页面级滚动，不需要虚拟滚动
-const visibleTasks = computed(() => props.tasks)
-const offsetTop = ref(0)
-const offsetBottom = ref(0)
-
-// 简化滚动处理，直接显示所有任务
-const onScroll = () => {
-  // 页面级滚动时不需要特殊处理
-}
+// 使用虚拟滚动组合函数
+const {
+  visibleTasks,
+  offsetTop,
+  offsetBottom,
+  handleScroll: onScroll,
+  updateItemHeight,
+  scrollToIndex,
+  scrollToTop: virtualScrollToTop,
+  scrollToBottom,
+  getDebugInfo,
+  scrollTop: virtualScrollTop
+} = useVirtualList(computed(() => props.tasks), {
+  containerHeight: computed(() => props.containerHeight),
+  estimatedItemHeight: 90, // 预估任务卡片高度，包含间距和内边距
+  overscan: 5, // 预渲动数量，上下各5个缓冲，提升滚动流畅度
+  fixedHeaderHeight: fixedHeaderHeight
+})
 
 // 监听可见任务变化，实现按需加载评论数据（优化版：批量静默加载）
 watch(visibleTasks, async (newVisibleTasks) => {
@@ -304,8 +322,8 @@ const unreadCountsMap = computed(() => {
   return result
 })
 
-// 页面级滚动不需要 scrollTop
-const scrollTop = ref(0)
+// 直接使用虚拟滚动的 scrollTop
+const scrollTop = virtualScrollTop
 
 
 const emptyText = computed(() => {
@@ -317,9 +335,24 @@ const emptyText = computed(() => {
   return map[props.activeFilter] || '暂无数据'
 })
 
-// 页面级滚动处理 - 移除 emit，避免循环调用
-const handleScroll = (scrollTop) => {
-  // 不再向上传递滚动事件，避免循环调用
+// 滚动事件节流
+let scrollTimer = null
+
+// 处理滚动事件
+const handleScroll = (event) => {
+  const { scrollTop: newScrollTop } = event.detail
+  onScroll(event)
+  
+  // 节流处理滚动事件向外暴露
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+  scrollTimer = setTimeout(() => {
+    emit('scroll', {
+      scrollTop: newScrollTop,
+      detail: event.detail
+    })
+  }, 16) // 约60fps
 }
 
 // 简化版本不需要动态高度测量
@@ -396,11 +429,7 @@ const handleTagFilterChange = (tags) => {
 
 // 自定义滚动到顶部方法
 const customScrollToTop = () => {
-  uni.pageScrollTo({
-    scrollTop: 0,
-    duration: 300
-  })
-  return Promise.resolve()
+  return virtualScrollToTop()
 }
 
 // 清理评论缓存（供外部调用）
@@ -432,6 +461,8 @@ const clearTaskCommentCache = (taskId) => {
 // 暴露滚动控制方法和缓存管理方法
 defineExpose({
   scrollToTop: customScrollToTop,
+  scrollToBottom,
+  scrollToIndex,
   clearCommentCache,
   clearTaskCommentCache
 })
@@ -445,8 +476,9 @@ defineExpose({
   height: 100%;
 }
 
-.content-container {
+.virtual-scroll-container {
   width: 100%;
+  height: 100%;
 }
 
 

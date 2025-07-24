@@ -9,7 +9,7 @@
       :message="bookError"
       @retry="loadBookDetail" />
 
-    <!-- 任务列表（包含BookHeader和TaskFilter） -->
+    <!-- 虚拟滚动任务列表（包含BookHeader和TaskFilter） -->
     <view 
       v-if="!bookLoading && !bookError"
       class="task-list-wrapper"
@@ -44,6 +44,7 @@
         @search-click="handleSearchClick"
         @filter-change="setActiveFilter"
         @tag-filter-change="setSelectedTags"
+        @scroll="handleScroll"
       />
     </view>
 
@@ -103,7 +104,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { onLoad, onShow, onPullDownRefresh, onPageScroll } from '@dcloudio/uni-app'
+import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -236,11 +237,6 @@ onPullDownRefresh(async () => {
   }
 })
 
-// 监听页面滚动
-onPageScroll((event) => {
-  handlePageScroll(event.scrollTop)
-})
-
 // 页面卸载时清理
 onUnmounted(() => {
   // 移除事件监听
@@ -275,15 +271,11 @@ const handleSearchOverlayClose = () => {
   showSearchOverlay.value = false
 }
 
-// 页面滚动处理函数
-const handlePageScroll = (scrollTop) => {
+// 滚动处理函数
+const handleScroll = (event) => {
+  const scrollTop = event.detail.scrollTop
   // 当滚动超过200px时显示返回顶部按钮（大约滚动过BookHeader后）
   showBackToTop.value = scrollTop > 200
-}
-
-// 兼容旧的滚动处理函数 - 移除，避免循环调用
-const handleScroll = (event) => {
-  // 不再处理，因为现在使用页面级滚动
 }
 
 // 返回顶部函数（直接跳转，无动画）
@@ -442,7 +434,8 @@ const handleTaskParentChanged = async (eventData) => {
 
 /* 任务列表包装器 */
 .task-list-wrapper {
-  width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 操作弹窗 */
