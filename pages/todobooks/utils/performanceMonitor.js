@@ -23,7 +23,7 @@ class PerformanceMonitor {
     
     this.metrics.startTime = Date.now()
     this.metrics.pageName = pageName
-    console.log(`🚀 开始监控页面性能: ${pageName}`)
+    // console.log(`🚀 开始监控页面性能: ${pageName}`)
   }
 
   /**
@@ -33,7 +33,7 @@ class PerformanceMonitor {
     if (!this.isEnabled || !this.metrics.startTime) return
     
     this.metrics.pageLoadTime = Date.now() - this.metrics.startTime
-    console.log(`📊 页面加载耗时: ${this.metrics.pageLoadTime}ms`)
+    // console.log(`📊 页面加载耗时: ${this.metrics.pageLoadTime}ms`)
   }
 
   /**
@@ -47,10 +47,10 @@ class PerformanceMonitor {
       this.metrics.networkRequestCount++
     }
     
-    // 减少日志频率，避免在大量任务时产生过多日志
-    if (type === 'network' || this.metrics.commentLoadRequests % 10 === 0) {
-      console.log(`💬 评论请求 - 类型: ${type}, 总请求数: ${this.metrics.commentLoadRequests}`)
-    }
+    // // 减少日志频率，避免在大量任务时产生过多日志
+    // if (type === 'network' || this.metrics.commentLoadRequests % 10 === 0) {
+    //   console.log(`💬 评论请求 - 类型: ${type}, 总请求数: ${this.metrics.commentLoadRequests}`)
+    // }
   }
 
   /**
@@ -63,9 +63,9 @@ class PerformanceMonitor {
       this.metrics.cacheHitRate = cacheStats.hitRate
       
       // 减少日志频率，每10次更新才输出一次
-      if (this.metrics.commentLoadRequests % 10 === 0) {
-        console.log(`🎯 缓存命中率: ${this.metrics.cacheHitRate}`)
-      }
+      // if (this.metrics.commentLoadRequests % 10 === 0) {
+      //   console.log(`🎯 缓存命中率: ${this.metrics.cacheHitRate}`)
+      // }
     }
   }
 
