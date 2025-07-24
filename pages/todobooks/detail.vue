@@ -119,6 +119,8 @@ import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
 let bookId = null
+// 标记是否从list页面进入
+let fromListPage = false
 
 // 初始化组合式函数，此时不传入 bookId
 const {
@@ -172,6 +174,9 @@ onLoad(async (options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
     bookId = options.id
+    // 检查是否从list页面进入
+    fromListPage = options.from === 'list'
+    
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
     initializeTasks(allTasks.value)
@@ -195,10 +200,6 @@ onMounted(() => {
   uni.$on('task-updated', updateTaskOptimistic)
   uni.$on('task-created', createTaskOptimistic)
   uni.$on('task-parent-changed', handleTaskParentChanged)
-
-  if (virtualTaskListRef.value) {
-    virtualTaskListRef.value.clearCommentCache()
-  }
 })
 
 // 计算滚动区域高度
@@ -216,7 +217,15 @@ const calculateVirtualListHeight = () => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
-
+  // 只有从list页面进入时才清理缓存，且只在首次显示时执行
+  if (fromListPage && !hasInitialized.value) {
+    // 延迟执行，确保组件已完成渲染
+    setTimeout(() => {
+      if (virtualTaskListRef.value && virtualTaskListRef.value.clearCommentCache) {
+        virtualTaskListRef.value.clearCommentCache()
+      }
+    }, 500)
+  }
 })
 
 
