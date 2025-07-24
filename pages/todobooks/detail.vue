@@ -29,7 +29,9 @@
         :available-tags="availableTags"
         :selected-tags="selectedTags"
         :todorbook-id="bookId"
+        :refreshing="refreshing"
         @retry="refreshTasks"
+        @refresh="handleRefresh"
         @add-task="addTask"
         @task-click="handleTaskClick"
         @status-toggle="toggleTaskStatus"
@@ -104,7 +106,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -163,6 +165,7 @@ const mainScrollHeight = ref(600) // 主滚动区域高度
 const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const showBackToTop = ref(false) // 返回顶部按钮显示状态
 const virtualTaskListRef = ref(null) // VirtualTaskList 组件引用
+const refreshing = ref(false) // 下拉刷新状态
 
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
@@ -192,6 +195,11 @@ onMounted(() => {
   uni.$on('task-updated', updateTaskOptimistic)
   uni.$on('task-created', createTaskOptimistic)
   uni.$on('task-parent-changed', handleTaskParentChanged)
+
+  if (virtualTaskListRef.value) {
+    virtualTaskListRef.value.clearCommentCache()
+    console.log("22222!!!!!!!!!!!!!!!!!!!")
+  }
 })
 
 // 计算滚动区域高度
@@ -209,33 +217,11 @@ const calculateVirtualListHeight = () => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
-  if (hasInitialized.value && virtualTaskListRef.value) {
-    virtualTaskListRef.value.clearCommentCache()
-  }
+
 })
 
 
-// 下拉刷新
-onPullDownRefresh(async () => {
-  if (!bookId) {
-    uni.stopPullDownRefresh()
-    return
-  }
-  
-  try {
-    // 下拉刷新时清理评论缓存，确保获取最新数据
-    if (virtualTaskListRef.value) {
-      console.log('detail.vue onPullDownRefresh: 清理评论缓存')
-      virtualTaskListRef.value.clearCommentCache()
-    }
-    
-    await refreshTasks()
-  } catch (error) {
-    console.error('下拉刷新失败:', error)
-  } finally {
-    uni.stopPullDownRefresh()
-  }
-})
+
 
 // 页面卸载时清理
 onUnmounted(() => {
@@ -251,6 +237,31 @@ const refreshTasks = async () => {
   
   await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
   await initializeTasks(allTasks.value)
+}
+
+// 处理下拉刷新
+const handleRefresh = async () => {
+  if (!bookId) return
+  
+  refreshing.value = true
+  
+  try {
+    // 清理评论缓存，确保获取最新数据
+    if (virtualTaskListRef.value) {
+      console.log('detail.vue handleRefresh: 清理评论缓存')
+      virtualTaskListRef.value.clearCommentCache()
+    }
+    
+    await refreshTasks()
+  } catch (error) {
+    console.error('下拉刷新失败:', error)
+    uni.showToast({
+      title: '刷新失败，请重试',
+      icon: 'none'
+    })
+  } finally {
+    refreshing.value = false
+  }
 }
 
 // 搜索弹窗处理函数

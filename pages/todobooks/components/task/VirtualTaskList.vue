@@ -19,9 +19,15 @@
       :scroll-with-animation="false"
       :enhanced="true"
       :enable-flex="true"
-      :bounces="false"
+      :bounces="true"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      :refresher-threshold="45"
+      :refresher-default-style="'black'"
       :scroll-top="scrollTop"
       @scroll="handleScroll"
+      @refresherrefresh="handleRefresh"
+      @refresherrestore="handleRefreshRestore"
       :style="{ height: containerHeight + 'px' }">
       
       <!-- 项目册头部信息 -->
@@ -161,6 +167,11 @@ const props = defineProps({
   todorbookId: {
     type: String,
     required: true
+  },
+  // 下拉刷新相关属性
+  refreshing: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -183,7 +194,9 @@ const emit = defineEmits([
   'filterChange',
   'tagFilterChange',
   // 滚动事件
-  'scroll'
+  'scroll',
+  // 下拉刷新事件
+  'refresh'
 ])
 
 const taskMenuPopup = ref(null)
@@ -266,6 +279,8 @@ watch(visibleTasks, async (newVisibleTasks) => {
     }
   }
   
+  console.log("visibleTasks needLoadTasks", needLoadTasks.length)
+
   // 第二步：批量静默加载需要的评论数据
   if (needLoadTasks.length > 0) {
     
@@ -456,6 +471,16 @@ const clearTaskCommentCache = (taskId) => {
   delete unreadCountsCache.value[taskId]
   
   console.log(`VirtualTaskList: 已清理任务 ${taskId} 的评论缓存`)
+}
+
+// 下拉刷新事件处理
+const handleRefresh = () => {
+  console.log('VirtualTaskList: 下拉刷新触发')
+  emit('refresh')
+}
+
+const handleRefreshRestore = () => {
+  console.log('VirtualTaskList: 下拉刷新完成')
 }
 
 // 暴露滚动控制方法和缓存管理方法

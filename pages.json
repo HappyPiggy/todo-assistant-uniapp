@@ -41,8 +41,7 @@
     {
         "path": "pages/todobooks/detail",
         "style": {
-            "navigationBarTitleText": "项目册详情",
-            "enablePullDownRefresh": true
+            "navigationBarTitleText": "项目册详情"
         }
     },
     {
