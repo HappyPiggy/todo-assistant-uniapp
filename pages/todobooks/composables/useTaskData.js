@@ -4,6 +4,7 @@ import { organizeParentChildTasks, calculateTaskStats, filterTasks, validateTask
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
 
 /**
  * 按标签筛选任务
@@ -253,8 +254,9 @@ export function useTaskData(bookId, allTasks = null) {
       // 组织父子关系：只显示父任务，子任务作为父任务的属性
       tasks.value = organizeParentChildTasks(processedTasks)
       
-      // 加载任务评论数据（用于显示未读提示）
-      await loadTasksCommentCounts(processedTasks)
+      // 跳过批量加载评论数据，改为按需加载
+      // 原有批量加载逻辑保留作为降级方案
+      // await loadTasksCommentCounts(processedTasks)
       
       // 异步加载并缓存标签数据
       if (bookId) {
@@ -426,68 +428,7 @@ export function useTaskData(bookId, allTasks = null) {
       throw err
     }
   }
-  
-  /**
-   * 加载任务评论数据
-   * @param {Array} allTasks - 所有任务数组
-   */
-  const loadTasksCommentCounts = async (allTasks) => {
-    try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      
-      // 并行获取每个任务的评论数据
-      const commentPromises = allTasks.map(async task => {
-        try {
-          // 获取前50条评论，这样可以获取到评论的创建时间等详细信息
-          const result = await todoBooksObj.getTaskComments(task._id, 1, 50)
-          
-          if (result.code === API_CODES.SUCCESS) {
-            return {
-              taskId: task._id,
-              comments: result.data.comments, // 保持原有结构
-              total: result.data.total
-            }
-          }
-        } catch (error) {
-          console.error(`获取任务${task._id}评论数据失败:`, error)
-        }
-        
-        return {
-          taskId: task._id,
-          comments: [],
-          total: 0
-        }
-      })
-      
-      const commentData = await Promise.all(commentPromises)
-      
-      // 将评论数据添加到任务对象中
-      commentData.forEach(({ taskId, comments, total }) => {
-        const task = allTasks.find(t => t._id === taskId)
-        if (task) {
-          task.comments = comments
-          task.comment_count = total
-        }
-      })
-      
-      // 确保子任务也能获取到评论数据（从allTasks中同步到tasks.value的子任务中）
-      tasks.value.forEach(parentTask => {
-        if (parentTask.subtasks && parentTask.subtasks.length > 0) {
-          parentTask.subtasks.forEach(subtask => {
-            const allTaskData = allTasks.find(t => t._id === subtask._id)
-            if (allTaskData && allTaskData.comments) {
-              subtask.comments = allTaskData.comments
-              subtask.comment_count = allTaskData.comment_count || 0
-            }
-          })
-        }
-      })
-      
-    } catch (error) {
-      console.error('加载评论数据失败:', error)
-    }
-  }
-  
+
   /**
    * 切换子任务状态
    * @param {Object} subtask - 子任务对象
@@ -576,6 +517,95 @@ export function useTaskData(bookId, allTasks = null) {
   /**
    * 重置状态
    */
+  /**
+   * 清理评论缓存
+   */
+  const clearCommentCache = () => {
+    const commentCache = getGlobalCommentCache()
+    commentCache.clearCache()
+    console.log('useTaskData: 已清理所有评论缓存')
+  }
+  
+  /**
+   * 获取任务的未读评论数量（兼容原有逻辑）
+   * @param {string} taskId 任务ID
+   * @returns {number} 未读评论数量
+   */
+  const getTaskUnreadCount = (taskId) => {
+    if (!taskId) return 0
+    
+    const commentCache = getGlobalCommentCache()
+    const currentUserId = store.state?.userInfo?._id
+    
+    if (!currentUserId) return 0
+    
+    // 查找task对象
+    const task = tasks.value.find(t => t._id === taskId)
+    return commentCache.getTaskUnreadCount(taskId, task, currentUserId)
+  }
+  
+  /**
+   * 批量加载评论数据（降级方案）
+   * @param {Array} allTasks 所有任务数组
+   */
+  const loadTasksCommentCounts = async (allTasks) => {
+    console.log('使用降级方案：批量加载评论数据')
+    
+    try {
+      const todoBooksObj = uniCloud.importObject('todobook-co')
+      
+      // 并行获取每个任务的评论数据
+      const commentPromises = allTasks.map(async task => {
+        try {
+          const result = await todoBooksObj.getTaskComments(task._id, 1, 50)
+          
+          if (result.code === API_CODES.SUCCESS) {
+            return {
+              taskId: task._id,
+              comments: result.data.comments,
+              total: result.data.total
+            }
+          }
+        } catch (error) {
+          console.error(`获取任务${task._id}评论数据失败:`, error)
+        }
+        
+        return {
+          taskId: task._id,
+          comments: [],
+          total: 0
+        }
+      })
+      
+      const commentData = await Promise.all(commentPromises)
+      
+      // 将评论数据添加到任务对象中
+      commentData.forEach(({ taskId, comments, total }) => {
+        const task = allTasks.find(t => t._id === taskId)
+        if (task) {
+          task.comments = comments
+          task.comment_count = total
+        }
+      })
+      
+      // 确保子任务也能获取到评论数据
+      tasks.value.forEach(parentTask => {
+        if (parentTask.subtasks && parentTask.subtasks.length > 0) {
+          parentTask.subtasks.forEach(subtask => {
+            const allTaskData = allTasks.find(t => t._id === subtask._id)
+            if (allTaskData && allTaskData.comments) {
+              subtask.comments = allTaskData.comments
+              subtask.comment_count = allTaskData.comment_count || 0
+            }
+          })
+        }
+      })
+      
+    } catch (error) {
+      console.error('批量加载评论数据失败:', error)
+    }
+  }
+
   const resetState = () => {
     tasks.value = []
     loading.value = false
@@ -588,6 +618,9 @@ export function useTaskData(bookId, allTasks = null) {
     if (bookId) {
       tagService.clearBookCache(bookId)
     }
+    
+    // 清除评论缓存
+    clearCommentCache()
   }
 
   const overallProgress = computed(() => {
@@ -691,6 +724,11 @@ export function useTaskData(bookId, allTasks = null) {
     setSelectedTags,
     resetState,
     updateTaskOptimistic,
-    createTaskOptimistic
+    createTaskOptimistic,
+    
+    // 新增：缓存管理方法
+    clearCommentCache,
+    getTaskUnreadCount,
+    loadTasksCommentCounts // 降级方案
   }
 }

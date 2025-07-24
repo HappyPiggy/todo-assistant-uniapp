@@ -208,7 +208,11 @@ const calculateVirtualListHeight = () => {
 
 // 页面再次显示时触发（例如从下一页返回）
 onShow(() => {
-  // 不再需要全量刷新，保留为空或用于其他逻辑
+  // 清理评论缓存，确保数据新鲜度
+  if (hasInitialized.value && virtualTaskListRef.value) {
+    console.log('detail.vue onShow: 清理评论缓存')
+    virtualTaskListRef.value.clearCommentCache()
+  }
 })
 
 
@@ -218,7 +222,14 @@ onPullDownRefresh(async () => {
     uni.stopPullDownRefresh()
     return
   }
+  
   try {
+    // 清理评论缓存，确保获取最新数据
+    if (virtualTaskListRef.value) {
+      console.log('detail.vue onPullDownRefresh: 清理评论缓存')
+      virtualTaskListRef.value.clearCommentCache()
+    }
+    
     await refreshTasks()
   } catch (error) {
     console.error('下拉刷新失败:', error)

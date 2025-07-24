@@ -98,6 +98,7 @@ import { defineProps, defineEmits, defineExpose, ref, computed, watch } from 'vu
 import { useVirtualList } from '@/pages/todobooks/composables/useVirtualList.js'
 import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { currentUserId } from '@/store/storage.js'
+import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import EmptyState from '@/pages/todobooks/components/common/EmptyState.vue'
@@ -188,7 +189,10 @@ const emit = defineEmits([
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 
-// 本地工具函数：获取任务未读评论数量
+// 获取全局评论缓存实例
+const commentCache = getGlobalCommentCache()
+
+// 本地工具函数：获取任务未读评论数量（兼容原有逻辑）
 const getUnreadCommentCount = (task) => {
   try {
     if (!task || !task.comments) return 0
@@ -201,7 +205,7 @@ const getUnreadCommentCount = (task) => {
 
 // 已加载过未读数的任务ID集合
 const loadedTaskIds = ref(new Set())
-// 未读数缓存
+// 未读数缓存（保持兼容性）
 const unreadCountsCache = ref({})
 
 // 计算固定头部高度
@@ -231,21 +235,80 @@ const {
   fixedHeaderHeight: fixedHeaderHeight
 })
 
-// 监听可见任务变化，为首次可见的任务加载未读数
-watch(visibleTasks, (newVisibleTasks) => {
-  newVisibleTasks.forEach(task => {
-    if (!loadedTaskIds.value.has(task._id)) {
-      // 首次可见，调用加载函数
+// 监听可见任务变化，实现按需加载评论数据
+watch(visibleTasks, async (newVisibleTasks) => {
+  console.log(`👀 VirtualTaskList: 可见任务变化，当前可见 ${newVisibleTasks.length} 个任务`)
+  
+  for (const task of newVisibleTasks) {
+    // 多重检查：已处理的任务 OR 已有缓存的任务 OR 正在加载的任务
+    if (!loadedTaskIds.value.has(task._id) && 
+        !commentCache.hasCached(task._id) && 
+        !commentCache.loadingTasks.value.has(task._id)) {
+      
+      // 标记为已处理，避免重复加载
       loadedTaskIds.value.add(task._id)
-      const count = getUnreadCommentCount(task)
-      unreadCountsCache.value[task._id] = count
+      console.log(`🔄 VirtualTaskList: 开始处理任务 ${task._id} (${task.title?.substring(0, 20)}...)`)
+      
+      try {
+        // 使用智能加载：优先缓存，缓存不存在则异步加载
+        const hasImmediate = await commentCache.smartLoadComments(
+          task._id, 
+          props.tasks,
+          (taskId, commentData) => {
+            // 加载完成回调：更新未读数缓存
+            const unreadCount = commentCache.getTaskUnreadCount(taskId, task, currentUserId.value, true)
+            unreadCountsCache.value[taskId] = unreadCount
+            console.log(`任务 ${taskId} 评论按需加载完成，未读数量: ${unreadCount}`)
+          }
+        )
+        
+        // 如果立即有可用数据，更新未读数
+        if (hasImmediate) {
+          const unreadCount = commentCache.getTaskUnreadCount(task._id, task, currentUserId.value, true)
+          unreadCountsCache.value[task._id] = unreadCount
+        } else {
+          // 暂时设置为0，等待异步加载完成
+          unreadCountsCache.value[task._id] = 0
+        }
+        
+      } catch (error) {
+        console.error(`任务 ${task._id} 评论加载失败:`, error)
+        
+        // 降级处理：使用原有逻辑
+        if (task.comments) {
+          const count = getUnreadCommentCount(task)
+          unreadCountsCache.value[task._id] = count
+        } else {
+          unreadCountsCache.value[task._id] = 0
+        }
+      }
     }
-  })
+  }
 }, { immediate: true, deep: true })
 
-// 用于模板的未读数映射
+// 优化的未读数映射计算 - 修复递归问题
 const unreadCountsMap = computed(() => {
-  return unreadCountsCache.value
+  const result = {}
+  
+  // 遍历所有可见任务
+  visibleTasks.value.forEach(task => {
+    const taskId = task._id
+    
+    // 优先使用本地缓存的未读数（避免重复计算）
+    if (unreadCountsCache.value[taskId] !== undefined) {
+      result[taskId] = unreadCountsCache.value[taskId]
+    }
+    // 回退到原有逻辑（如果任务已有评论数据）
+    else if (task.comments) {
+      result[taskId] = getUnreadCommentCount(task)
+    }
+    // 默认为0
+    else {
+      result[taskId] = 0
+    }
+  })
+  
+  return result
 })
 
 // 直接使用虚拟滚动的 scrollTop
@@ -358,12 +421,39 @@ const customScrollToTop = () => {
   return virtualScrollToTop()
 }
 
+// 清理评论缓存（供外部调用）
+const clearCommentCache = () => {
+  // 清理全局缓存
+  commentCache.clearCache()
+  
+  // 清理本地状态
+  loadedTaskIds.value.clear()
+  unreadCountsCache.value = {}
+  
+  console.log('VirtualTaskList: 已清理所有评论缓存')
+}
 
-// 暴露滚动控制方法
+// 清理指定任务的缓存
+const clearTaskCommentCache = (taskId) => {
+  if (!taskId) return
+  
+  // 清理全局缓存
+  commentCache.clearTaskCache(taskId)
+  
+  // 清理本地状态
+  loadedTaskIds.value.delete(taskId)
+  delete unreadCountsCache.value[taskId]
+  
+  console.log(`VirtualTaskList: 已清理任务 ${taskId} 的评论缓存`)
+}
+
+// 暴露滚动控制方法和缓存管理方法
 defineExpose({
   scrollToTop: customScrollToTop,
   scrollToBottom,
-  scrollToIndex
+  scrollToIndex,
+  clearCommentCache,
+  clearTaskCommentCache
 })
 </script>
 

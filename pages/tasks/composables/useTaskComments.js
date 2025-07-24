@@ -1,5 +1,6 @@
 import { ref, reactive } from 'vue'
 import { markCommentIdsAsRead, extractCommentIds } from '@/utils/commentUtils.js'
+import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
 
 /**
  * @description 任务评论相关功能的组合式函数
@@ -21,6 +22,9 @@ export function useTaskComments() {
 		parentCommentId: null
 	})
 	const currentUser = ref(null)
+	
+	// 获取全局评论缓存实例
+	const commentCache = getGlobalCommentCache()
 
 	/**
 	 * @description 获取当前登录的用户信息
@@ -39,11 +43,35 @@ export function useTaskComments() {
 	 * @description 加载指定任务的评论列表
 	 * @param {string} taskId - 任务的唯一标识符
 	 * @param {boolean} [refresh=true] - 是否刷新列表（true）或加载更多（false）
+	 * @param {boolean} [useCache=true] - 是否优先使用缓存
 	 * @returns {Promise<void>}
 	 */
-	const loadComments = async (taskId, refresh = true) => {
+	const loadComments = async (taskId, refresh = true, useCache = true) => {
 		if (commentsLoading.value) return
 		
+		// 优先检查缓存（仅在刷新且允许使用缓存时）
+		if (refresh && useCache) {
+			const cachedData = commentCache.getCachedComments(taskId)
+			if (cachedData) {
+				console.log(`使用缓存数据加载任务 ${taskId} 的评论，共 ${cachedData.total} 条`)
+				
+				// 使用缓存数据，避免网络请求
+				comments.value = cachedData.comments || []
+				commentsData.total = cachedData.total || 0
+				commentsData.page = 1
+				commentsData.pageSize = Math.max(20, cachedData.comments?.length || 20)
+				commentsData.hasMore = cachedData.comments?.length < cachedData.total
+				
+				// 自动标记为已读
+				setTimeout(() => {
+					markTaskAsRead(taskId)
+				}, 1000)
+				
+				return
+			}
+		}
+		
+		// 缓存不存在或需要强制刷新时，调用云函数
 		commentsLoading.value = true
 		
 		if (refresh) {
@@ -52,6 +80,8 @@ export function useTaskComments() {
 		}
 		
 		try {
+			console.log(`从云函数加载任务 ${taskId} 的评论数据`)
+			
 			const todoBooksObj = uniCloud.importObject('todobook-co')
 			const result = await todoBooksObj.getTaskComments(
 				taskId, 
@@ -70,6 +100,13 @@ export function useTaskComments() {
 				commentsData.page = result.data.page
 				commentsData.pageSize = result.data.pageSize
 				commentsData.hasMore = result.data.hasMore
+				
+				// 更新缓存（仅在刷新时）
+				if (refresh && result.data.comments) {
+					// 通过调用getTaskComments来更新缓存（会自动缓存）
+					// 注意：这里不重复缓存，因为详情页直接调用云函数获取数据
+					console.log(`任务 ${taskId} 评论数据已从云函数加载`)
+				}
 				
 			} else {
 				console.error('加载评论失败:', result.message)
@@ -131,7 +168,21 @@ export function useTaskComments() {
 					icon: 'success'
 				})
 				
-				loadComments(taskId)
+				// 同步更新缓存
+				if (commentEditMode.value === 'edit') {
+					// 编辑评论：更新缓存中的评论
+					if (result.data && result.data.comment) {
+						commentCache.updateComment(taskId, commentFormData.commentId, result.data.comment)
+					}
+				} else {
+					// 添加评论：将新评论添加到缓存
+					if (result.data && result.data.comment) {
+						commentCache.addComment(taskId, result.data.comment)
+					}
+				}
+				
+				// 刷新评论列表（优先使用缓存）
+				await loadComments(taskId, true, true)
 				resetCommentForm()
 				return true
 			} else {
@@ -175,7 +226,11 @@ export function useTaskComments() {
 									icon: 'success'
 								})
 								
-								loadComments(taskId)
+								// 同步更新缓存：删除评论
+								commentCache.deleteComment(taskId, comment._id)
+								
+								// 刷新评论列表（优先使用缓存）
+								await loadComments(taskId, true, true)
 								resolve(true)
 							} else {
 								uni.showToast({
