@@ -80,13 +80,35 @@ async function updateTodoItem(taskId, updateData) {
       finalUpdateData.completed_at = null
     }
 
+    // 处理父任务变更
+    const oldParentId = task.parent_id
+    const newParentId = finalUpdateData.parent_id
+    const parentChanged = oldParentId !== newParentId
+
     // 执行更新
     const updateRes = await db.collection('todoitems').doc(taskId).update(finalUpdateData)
 
     if (updateRes.updated === 1) {
-      // 如果是父任务状态变更，需要更新子任务统计
-      if (finalUpdateData.status && task.parent_id) {
-        await updateParentTaskProgress.call(this, task.parent_id)
+      // 如果父任务发生变更，需要更新旧父任务和新父任务的子任务计数
+      if (parentChanged) {
+        // 更新旧父任务的子任务计数
+        if (oldParentId) {
+          await updateParentTaskProgress.call(this, oldParentId)
+        }
+        // 更新新父任务的子任务计数
+        if (newParentId) {
+          await updateParentTaskProgress.call(this, newParentId)
+        }
+      }
+      
+      // 如果是状态变更且有父任务，需要更新父任务统计（但避免与父任务变更重复更新）
+      if (finalUpdateData.status && !parentChanged) {
+        if (task.parent_id) {
+          await updateParentTaskProgress.call(this, task.parent_id)
+        }
+        if (newParentId && newParentId !== task.parent_id) {
+          await updateParentTaskProgress.call(this, newParentId)
+        }
       }
 
       // 如果当前任务有子任务，且状态变更为完成，也需要更新子任务

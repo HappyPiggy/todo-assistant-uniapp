@@ -190,6 +190,7 @@ onMounted(() => {
   // 注册事件监听
   uni.$on('task-updated', updateTaskOptimistic)
   uni.$on('task-created', createTaskOptimistic)
+  uni.$on('task-parent-changed', handleTaskParentChanged)
 })
 
 // 计算滚动区域高度
@@ -252,6 +253,7 @@ onUnmounted(() => {
   // 移除事件监听
   uni.$off('task-updated', updateTaskOptimistic)
   uni.$off('task-created', createTaskOptimistic)
+  uni.$off('task-parent-changed', handleTaskParentChanged)
 })
 
 // 刷新任务数据
@@ -414,6 +416,16 @@ const handleSubtaskClick = (subtask) => {
   })
 }
 
+// 处理任务父任务变更事件
+const handleTaskParentChanged = async (eventData) => {
+  console.log('handleTaskParentChanged: 收到父任务变更事件', JSON.stringify(eventData, null, 2))
+  
+  // 确保事件是针对当前项目册的
+  if (eventData.bookId === bookId) {
+    console.log('handleTaskParentChanged: 父任务变更涉及当前项目册，刷新任务列表')
+    await refreshTasks()
+  }
+}
 
 // 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return。
 </script>

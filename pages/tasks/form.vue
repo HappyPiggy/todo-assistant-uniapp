@@ -314,7 +314,8 @@ const loadParentTasks = async () => {
 	try {
 		// 使用云对象获取可用的父任务
 		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.getTodoBookDetail(bookId)
+		const result = await todoBooksObj.getTodoBookDetail(bookId,  { includeTasks:      
+			true })
 		
 		if (result.code === 0 && result.data.tasks) {
 			// 筛选出可作为父任务的任务
@@ -380,6 +381,9 @@ const submitTask = async () => {
 		taskData.budget = null
 	}
 
+	// 检测是否有父任务
+	const hasParentTask = !!(formData.parent_id || (isEditMode.value && originalData.value?.parent_id))
+	
 	if (isEditMode.value) {
 		// 编辑模式：发出更新事件
 		uni.$emit('task-updated', { ...originalData.value, ...taskData, _id: taskId });
@@ -387,6 +391,11 @@ const submitTask = async () => {
 		// 创建模式：发出创建事件
 		taskData.todobook_id = bookId;
 		uni.$emit('task-created', taskData);
+	}
+	
+	// 如果有父任务，需要触发刷新
+	if (hasParentTask) {
+		uni.$emit('task-parent-changed', { taskId: isEditMode.value ? taskId : null, bookId })
 	}
 	
 	// 无论成功与否，都直接返回
