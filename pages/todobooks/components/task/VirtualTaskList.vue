@@ -202,23 +202,11 @@ const emit = defineEmits([
 const taskMenuPopup = ref(null)
 const currentTask = ref(null)
 
-// 平台检测和滚动配置
+// 滚动配置：直接关闭 bounces 以解决抖动问题
 const scrollConfig = ref({
-  bounces: true, // 默认开启弹性效果
-  refresherEnabled: true, // 默认开启刷新
-  refresherThreshold: 45 // 默认刷新阈值
-})
-
-// 检测平台并调整配置
-uni.getSystemInfo({
-  success: (res) => {
-    // 安卓端关闭 bounces 以防止抖动
-    if (res.platform === 'android') {
-      scrollConfig.value.bounces = false
-      scrollConfig.value.refresherThreshold = 60 // 增加刷新阈值
-      console.log('VirtualTaskList: 检测到安卓平台，优化滚动配置')
-    }
-  }
+  bounces: false, // 关闭弹性效果，防止抖动
+  refresherEnabled: true, // 保持刷新功能
+  refresherThreshold: 45 // 刷新阈值
 })
 
 // 获取全局评论缓存实例
@@ -354,8 +342,9 @@ const unreadCountsMap = computed(() => {
   return result
 })
 
-// 直接使用虚拟滚动的 scrollTop
-const scrollTop = virtualScrollTop
+// 独立的滚动位置管理，用于程序化滚动（如 scrollToTop）
+// 不直接绑定 virtualScrollTop 以避免滚动冲突
+const scrollTop = ref(0)
 
 
 const emptyText = computed(() => {
@@ -461,6 +450,9 @@ const handleTagFilterChange = (tags) => {
 
 // 自定义滚动到顶部方法
 const customScrollToTop = () => {
+  // 设置程序化滚动位置
+  scrollTop.value = 0
+  // 同时调用虚拟滚动的方法
   return virtualScrollToTop()
 }
 
