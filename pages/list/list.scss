@@ -314,3 +314,18 @@ page {
 	bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
 /* #endif */
+
+.book-title-line {
+	flex-direction: row;
+	align-items: center;
+}
+
+.pin-icon {
+	margin-right: 10rpx;
+}
+
+.pin-text {
+	color: #ff9900;
+	font-weight: 500;
+	margin-right: 10rpx;
+}

@@ -1,6 +1,5 @@
 /**
  * 性能监控工具
- * 用于监控任务评论加载优化的效果
  */
 
 class PerformanceMonitor {

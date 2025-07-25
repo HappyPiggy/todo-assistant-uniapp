@@ -72,6 +72,7 @@
             :key="task._id"
             :task="task"
             :variant="'card'"
+            :is-pinned="isPinned(task._id)"
             :unreadCommentCount="unreadCountsMap[task._id]"
             @click="handleTaskClick"
             @statusToggle="handleStatusToggle"
@@ -91,9 +92,11 @@
     <TaskMenuPopup
       ref="taskMenuPopup"
       :current-task="currentTask"
+      :is-pinned="isPinned(currentTask?._id)"
       @view-detail="handleViewDetail"
       @edit="handleEdit"
       @delete="handleDelete"
+      @toggle-pin="handleTogglePin"
       @cancel="handleMenuCancel"
     />
   </view>
@@ -172,6 +175,15 @@ const props = defineProps({
   refreshing: {
     type: Boolean,
     default: false
+  },
+  // 置顶功能相关
+  isPinned: {
+    type: Function,
+    default: () => false
+  },
+  togglePin: {
+    type: Function,
+    default: () => {}
   }
 })
 
@@ -410,6 +422,10 @@ const handleEdit = (task) => {
 
 const handleDelete = (task) => {
   emit('delete', task)
+}
+
+const handleTogglePin = (task) => {
+  props.togglePin(task._id)
 }
 
 const handleMenuCancel = () => {

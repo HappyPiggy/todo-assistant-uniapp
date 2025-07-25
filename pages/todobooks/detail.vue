@@ -16,7 +16,7 @@
     >
       <VirtualTaskList
         ref="virtualTaskListRef"
-        :tasks="filteredTasks"
+        :tasks="sortedAndPinnedTasks"
         :loading="tasksLoading"
         :error="tasksError"
         :active-filter="activeFilter"
@@ -30,6 +30,8 @@
         :selected-tags="selectedTags"
         :todorbook-id="bookId"
         :refreshing="refreshing"
+        :is-pinned="isPinned"
+        :toggle-pin="togglePin"
         @retry="refreshTasks"
         @refresh="handleRefresh"
         @add-task="addTask"
@@ -116,6 +118,7 @@ import BackToTopButton from '@/pages/todobooks/components/common/BackToTopButton
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
+import { usePinning } from '@/composables/usePinning.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
 let bookId = null
@@ -154,6 +157,14 @@ const {
   updateTaskOptimistic,
   createTaskOptimistic
 } = useTaskData(null, allTasks)
+
+// 置顶功能
+const { 
+  sortedItems: sortedAndPinnedTasks, 
+  isPinned, 
+  togglePin, 
+  refreshPinnedIds 
+} = usePinning('tasks', filteredTasks)
 
 // 监听availableTags变化
 watch(availableTags, (newTags) => {
@@ -243,6 +254,7 @@ onUnmounted(() => {
 const refreshTasks = async () => {
   if (!bookId) return
   
+  refreshPinnedIds() // 刷新置顶状态
   await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
   await initializeTasks(allTasks.value)
 }

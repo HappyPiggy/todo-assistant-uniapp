@@ -75,14 +75,12 @@ This is a modern task management application built with **uni-app + Vue 3 + uniC
 │   ├── ucenter/ucenter.vue  # User center
 │   ├── todobooks/           # TodoBook pages
 │   │   ├── detail.vue       # TodoBook details
-│   │   ├── create.vue       # Create TodoBook
-│   │   ├── edit.vue         # Edit TodoBook
-│   │   └── members.vue      # Member management
+│   │   ├── form.vue         # Create/Edit TodoBook
+│   │   ├── members.vue      # Member management
+│   │   └── statistics.vue   # TodoBook statistics
 │   ├── tasks/               # Task pages
 │   │   ├── detail.vue       # Task details
-│   │   └── create.vue       # Create task
-│   ├── statistics/          # Statistics pages
-│   │   └── overview.vue     # Data overview
+│   │   └── form.vue         # Create/Edit task
 │   └── debug/debug.vue      # Database debugging page
 ├── store/                   # State management
 │   ├── index.js            # Main state management file

@@ -35,7 +35,7 @@
 			<!-- 项目册卡片列表 -->
 			<view v-else class="todobooks-list">
 				<view 
-					v-for="book in todoBooks" 
+					v-for="book in sortedTodoBooks" 
 					:key="book._id" 
 					class="todobook-card"
 					@click="openTodoBook(book)">
@@ -45,7 +45,16 @@
 							<uni-icons color="#ffffff" size="24" :type="book.icon" />
 						</view>
 						<view class="book-info">
-							<text class="book-title">{{ book.title }}</text>
+							<view class="book-title-line">
+								<uni-icons 
+									v-if="isPinned(book._id)" 
+									color="#FF6B6B" 
+									size="16" 
+									type="star-filled" 
+									class="pin-icon"
+								/>
+								<text class="book-title">{{ book.title }}</text>
+							</view>
 							<text class="book-description" v-if="book.description">{{ book.description }}</text>
 						</view>
 						<view class="book-actions" @click.stop="showBookActions(book)">
@@ -104,6 +113,14 @@
 				</view>
 				<scroll-view scroll-y class="action-scroll">
 					<view class="action-list">
+					<view class="action-item" @click="handlePinTodoBook">
+						<uni-icons 
+							:color="isPinned(currentBook?._id) ? '#FF6B6B' : '#007AFF'" 
+							size="20" 
+							:type="isPinned(currentBook?._id) ? 'star-filled' : 'star'" 
+						/>
+						<text class="action-text">{{ isPinned(currentBook?._id) ? '取消置顶' : '置顶' }}</text>
+					</view>
 					<view class="action-item" @click="handleEditTodoBook">
 						<uni-icons color="#007AFF" size="20" type="compose" />
 						<text class="action-text">编辑</text>
@@ -146,6 +163,7 @@ import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
+import { usePinning } from '@/composables/usePinning.js'
 
 // 使用 todobook 操作组合式函数
 const { 
@@ -163,6 +181,9 @@ const searchTimer = ref(null)
 const loadMoreStatus = ref('more')
 const currentBook = ref(null)
 const actionPopupRef = ref(null)
+
+// 置顶功能
+const { sortedItems: sortedTodoBooks, isPinned, togglePin, refreshPinnedIds } = usePinning('todobooks', todoBooks)
 
 // 计算属性
 const hasLogin = computed(() => store.hasLogin)
@@ -295,6 +316,9 @@ const onUserSwitched = (newUserId) => {
 	loading.value = false
 	error.value = null
 	
+	// 刷新置顶ids
+	refreshPinnedIds()
+	
 	// 如果新用户已登录，重新加载数据
 	if (newUserId && hasLogin.value) {
 		setTimeout(() => {
@@ -306,6 +330,7 @@ const onUserSwitched = (newUserId) => {
 // 注册下拉刷新生命周期
 onPullDownRefresh(() => {
 	console.log('触发下拉刷新')
+	refreshPinnedIds() // 刷新置顶状态
 	refreshTodoBooks(true)
 })
 
@@ -331,6 +356,13 @@ const showBookActions = (book) => {
 const hideActionSheet = () => {
 	actionPopupRef.value?.close()
 	currentBook.value = null
+}
+
+const handlePinTodoBook = () => {
+	if (currentBook.value?._id) {
+		togglePin(currentBook.value._id)
+	}
+	hideActionSheet()
 }
 
 // 处理各种操作

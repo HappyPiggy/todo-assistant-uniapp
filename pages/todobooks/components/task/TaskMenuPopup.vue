@@ -10,6 +10,14 @@
         <text class="menu-title">{{ currentTask && currentTask.title ? currentTask.title : '任务操作' }}</text>
       </view>
       <view class="menu-list">
+        <view class="menu-item" @click="handleTogglePin">
+          <uni-icons 
+            :color="isPinned ? '#FF6B6B' : '#007AFF'" 
+            size="20" 
+            :type="isPinned ? 'star-filled' : 'star'" 
+          />
+          <text class="menu-text">{{ isPinned ? '取消置顶' : '置顶任务' }}</text>
+        </view>
         <view class="menu-item" @click="handleViewDetail">
           <uni-icons color="#007AFF" size="20" type="eye" />
           <text class="menu-text">查看详情</text>
@@ -38,13 +46,17 @@ const props = defineProps({
     type: Object,
     default: null
   },
+  isPinned: {
+    type: Boolean,
+    default: false
+  },
   maskClosable: {
     type: Boolean,
     default: true
   }
 })
 
-const emit = defineEmits(['viewDetail', 'edit', 'delete', 'cancel'])
+const emit = defineEmits(['viewDetail', 'edit', 'delete', 'toggle-pin', 'cancel'])
 
 const popup = ref(null)
 
@@ -63,6 +75,11 @@ const handleViewDetail = () => {
 
 const handleEdit = () => {
   emit('edit', props.currentTask)
+  close()
+}
+
+const handleTogglePin = () => {
+  emit('toggle-pin', props.currentTask)
   close()
 }
 

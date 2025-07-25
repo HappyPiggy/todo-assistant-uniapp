@@ -30,6 +30,13 @@
         <!-- 任务内容 -->
         <view class="task-content">
           <view class="title-row">
+            <uni-icons 
+              v-if="isPinned" 
+              color="#FF6B6B" 
+              size="14" 
+              type="star-filled" 
+              class="pin-icon"
+            />
             <text class="task-title" :class="{ completed: task.status === 'completed' }">
               {{ task.title }}
             </text>
@@ -165,6 +172,10 @@ const props = defineProps({
   unreadCommentCount: {
     type: Number,
     default: undefined
+  },
+  isPinned: {
+    type: Boolean,
+    default: false
   },
 })
 
@@ -388,6 +399,17 @@ const getTagColor = (tag) => {
   margin-right: $margin-sm;
   margin-top: 2rpx;
   flex-shrink: 0;
+}
+
+.pin-icon {
+  margin-right: 8rpx;
+}
+
+.pin-text {
+	color: #ff9900;
+	font-weight: 500;
+	margin-right: 8rpx;
+	font-size: $font-size-sm;
 }
 
 .task-content {
