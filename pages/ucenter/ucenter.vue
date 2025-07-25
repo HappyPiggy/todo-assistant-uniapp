@@ -49,6 +49,8 @@
 				<uni-list class="card-list">
 					<uni-list-item title="数据统计" link @click="toStatistics" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
+					<uni-list-item title="分享管理" link @click="toShareManagement" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
+					</uni-list-item>
 					<uni-list-item title="应用设置" link to="/pages/ucenter/settings/settings" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
 					<uni-list-item title="关于应用" link @click="toAbout" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
@@ -115,6 +117,11 @@
 			},
 			toStatistics() {
 				//todo
+			},
+			toShareManagement() {
+				uni.navigateTo({
+					url: '/pages/settings/share-management'
+				})
 			},
 			toAbout() {
 				uni.navigateTo({

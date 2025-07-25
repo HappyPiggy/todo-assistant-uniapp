@@ -104,6 +104,19 @@
 			"forceDefaultValue": {
 				"$env": "now"
 			}
+		},
+		"is_share_template": {
+			"bsonType": "bool",
+			"default": false,
+			"description": "是否为分享模板"
+		},
+		"template_creator_id": {
+			"bsonType": "string",
+			"description": "模板创建者ID（仅分享模板使用）"
+		},
+		"template_created_at": {
+			"bsonType": "timestamp",
+			"description": "模板创建时间（仅分享模板使用）"
 		}
 	}
 }

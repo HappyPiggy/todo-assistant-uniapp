@@ -33,6 +33,14 @@ const {
   deleteTaskComment
 } = require('./module/comments/index')
 
+const {
+  createShare,
+  deleteShare,
+  getMyShares,
+  importByCode,
+  getSharePreview
+} = require('./module/share/index')
+
 module.exports = {
   _before: async function () {
     const token = this.getUniIdToken();  
@@ -97,5 +105,41 @@ module.exports = {
    */
   async deleteTaskComment(commentId) {
     return await deleteTaskComment.call(this, { commentId })
+  },
+
+  // 分享管理接口
+  /**
+   * 创建分享
+   */
+  async createShare(todBookId, includeComments = false) {
+    return await createShare.call(this, { todBookId, includeComments })
+  },
+
+  /**
+   * 删除分享
+   */
+  async deleteShare(shareId) {
+    return await deleteShare.call(this, { shareId })
+  },
+
+  /**
+   * 获取我的分享列表
+   */
+  async getMyShares() {
+    return await getMyShares.call(this)
+  },
+
+  /**
+   * 通过分享码导入项目册
+   */
+  async importByCode(shareCode) {
+    return await importByCode.call(this, { shareCode })
+  },
+
+  /**
+   * 获取分享预览
+   */
+  async getSharePreview(shareCode) {
+    return await getSharePreview.call(this, { shareCode })
   }
 }

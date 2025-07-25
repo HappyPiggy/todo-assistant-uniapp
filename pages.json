@@ -86,6 +86,13 @@
         "style": {
             "navigationBarTitleText": "数据库调试"
         }
+    },
+    {
+        "path": "pages/settings/share-management",
+        "style": {
+            "navigationBarTitleText": "分享管理",
+            "navigationStyle": "custom"
+        }
     }
 ],
 	"globalStyle": {

@@ -75,34 +75,12 @@
     />
 
     <!-- 操作弹窗 -->
-    <uni-popup ref="actionPopupRef" type="bottom" background-color="#ffffff" :safe-area="true">
-      <view class="action-sheet">
-        <view class="action-header">
-          <text class="action-title">{{ bookData?.title }}</text>
-        </view>
-        <scroll-view scroll-y class="action-scroll">
-          <view class="action-list">
-            <view class="action-item" @click="handleEditTodoBook">
-              <uni-icons color="#007AFF" size="20" type="compose" />
-              <text class="action-text">编辑</text>
-            </view>
-            <view class="action-item" @click="handleMembers">
-              <uni-icons color="#28a745" size="20" type="staff" />
-              <text class="action-text">成员管理</text>
-            </view>
-            <view class="action-item" @click="handleShowStatistics">
-              <uni-icons color="#17a2b8" size="20" type="bars" />
-              <text class="action-text">数据统计</text>
-            </view>
-          </view>
-        </scroll-view>
-        <view class="action-cancel" @click="hideActionSheet">
-          <text class="cancel-text">取消</text>
-        </view>
-        <!-- 底部占位空间，确保不被tab栏遮挡 -->
-        <view class="bottom-spacer"></view>
-      </view>
-    </uni-popup>
+    <TodoBookActionSheet
+      ref="actionSheetRef"
+      :book-data="bookData"
+      page-type="detail"
+      @action-completed="handleActionCompleted"
+    />
   </view>
 </template>
 
@@ -115,6 +93,7 @@ import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
 import BackToTopButton from '@/pages/todobooks/components/common/BackToTopButton.vue'
+import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
@@ -335,36 +314,20 @@ const scrollToTop = () => {
 
 
 // 弹窗相关数据
-const actionPopupRef = ref(null)
+const actionSheetRef = ref(null)
 
 const handleMoreActions = () => {
-  actionPopupRef.value?.open()
+  actionSheetRef.value?.open()
 }
 
-const hideActionSheet = () => {
-  actionPopupRef.value?.close()
-}
-
-// 处理各种操作
-const handleEditTodoBook = () => {
-  hideActionSheet()
-  uni.navigateTo({
-    url: `/pages/todobooks/form?id=${bookId}`
-  })
-}
-
-const handleMembers = () => {
-  hideActionSheet()
-  uni.navigateTo({
-    url: `/pages/todobooks/members?id=${bookId}&bookData=${encodeURIComponent(JSON.stringify(bookData.value))}`
-  })
-}
-
-const handleShowStatistics = () => {
-  hideActionSheet()
-  uni.navigateTo({
-    url: `/pages/todobooks/statistics?id=${bookId}`
-  })
+// 处理操作完成事件
+const handleActionCompleted = (result) => {
+  console.log('操作完成:', result)
+  
+  // 对于删除操作，需要返回上一页
+  if (result.type === 'delete' && result.success) {
+    uni.navigateBack()
+  }
 }
 
 const addTask = () => {
@@ -469,84 +432,6 @@ const handleTaskParentChanged = async (eventData) => {
   min-height: 0;
 }
 
-/* 操作弹窗 */
-.action-sheet {
-  background-color: #ffffff;
-  border-radius: 20rpx 20rpx 0 0;
-  padding-bottom: 40rpx;
-  /* #ifndef APP-NVUE */
-  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
-  z-index: 9999;
-  position: relative;
-  /* #endif */
-}
-
-.action-header {
-  padding: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
-  align-items: center;
-}
-
-.action-scroll {
-  max-height: 60vh;
-  flex: 1;
-}
-
-.action-title {
-  font-size: 32rpx;
-  color: #333333;
-  font-weight: 500;
-}
-
-.action-list {
-  padding: 0 20rpx;
-}
-
-.action-item {
-  flex-direction: row;
-  align-items: center;
-  padding: 24rpx 20rpx;
-  border-radius: 12rpx;
-  margin: 8rpx 0;
-}
-
-.action-item:active {
-  background-color: #f8f8f8;
-}
-
-.action-text {
-  font-size: 30rpx;
-  color: #333333;
-  margin-left: 16rpx;
-}
-
-.action-cancel {
-  margin: 20rpx;
-  margin-bottom: 60rpx;
-  padding: 24rpx;
-  background-color: #f8f8f8;
-  border-radius: 16rpx;
-  align-items: center;
-  /* #ifndef APP-NVUE */
-  margin-bottom: calc(60rpx + env(safe-area-inset-bottom));
-  /* #endif */
-}
-
-.action-cancel:active {
-  background-color: #e8e8e8;
-}
-
-.cancel-text {
-  font-size: 30rpx;
-  color: #666666;
-}
-
-.bottom-spacer {
-  height: 120rpx;
-  /* #ifndef APP-NVUE */
-  height: calc(120rpx + env(safe-area-inset-bottom));
-  /* #endif */
-}
 
 /* 浮动添加按钮 */
 .fab-container {

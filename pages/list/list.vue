@@ -106,54 +106,15 @@
 		</view>
 
 		<!-- 操作弹窗 -->
-		<uni-popup ref="actionPopupRef" type="bottom" background-color="#ffffff" :safe-area="true">
-			<view class="action-sheet">
-				<view class="action-header">
-					<text class="action-title">{{ currentBook?.title }}</text>
-				</view>
-				<scroll-view scroll-y class="action-scroll">
-					<view class="action-list">
-					<view class="action-item" @click="handlePinTodoBook">
-						<uni-icons 
-							:color="isPinned(currentBook?._id) ? '#FF6B6B' : '#007AFF'" 
-							size="20" 
-							:type="isPinned(currentBook?._id) ? 'star-filled' : 'star'" 
-						/>
-						<text class="action-text">{{ isPinned(currentBook?._id) ? '取消置顶' : '置顶' }}</text>
-					</view>
-					<view class="action-item" @click="handleEditTodoBook">
-						<uni-icons color="#007AFF" size="20" type="compose" />
-						<text class="action-text">编辑</text>
-					</view>
-					<view class="action-item" @click="handleMembers">
-						<uni-icons color="#28a745" size="20" type="staff" />
-						<text class="action-text">成员管理</text>
-					</view>
-					<view class="action-item" @click="handleShowStatistics">
-						<uni-icons color="#17a2b8" size="20" type="bars" />
-						<text class="action-text">数据统计</text>
-					</view>
-					<view class="action-item" @click="handleExportTasks">
-						<uni-icons color="#6c757d" size="20" type="download" />
-						<text class="action-text">导出任务</text>
-					</view>
-					<view class="action-item" @click="handleArchiveTodoBook">
-						<uni-icons color="#ffc107" size="20" type="folder-add" />
-						<text class="action-text">归档</text>
-					</view>
-					<view class="action-item danger" @click="handleDeleteTodoBook">
-						<uni-icons color="#FF4757" size="20" type="trash" />
-						<text class="action-text">删除</text>
-					</view>
-					</view>
-				</scroll-view>
-				<view class="action-cancel" @click="hideActionSheet">
-					<text class="cancel-text">取消</text>
-				</view>
-				<!-- 底部占位空间，确保不被tab栏遮挡 -->
-				<view class="bottom-spacer"></view>
-			</view>
-		</uni-popup>
+		<TodoBookActionSheet
+			ref="actionSheetRef"
+			:book-data="currentBook"
+			:show-pin="true"
+			:show-archive="true"
+			:show-delete="true"
+			page-type="list"
+			@action-completed="handleActionCompleted"
+		/>
 	</view>
 </template>
 
@@ -164,12 +125,11 @@ import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
 import { usePinning } from '@/composables/usePinning.js'
+import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
 
 // 使用 todobook 操作组合式函数
 const { 
-	loadTodoBooks,
-	archiveTodoBook,
-	deleteTodoBook
+	loadTodoBooks
 } = useBookData()
 
 // 页面响应式数据
@@ -180,7 +140,7 @@ const searchKeyword = ref('')
 const searchTimer = ref(null)
 const loadMoreStatus = ref('more')
 const currentBook = ref(null)
-const actionPopupRef = ref(null)
+const actionSheetRef = ref(null)
 
 // 置顶功能
 const { sortedItems: sortedTodoBooks, isPinned, togglePin, refreshPinnedIds } = usePinning('todobooks', todoBooks)
@@ -350,130 +310,17 @@ const createTodoBook = () => {
 // 操作弹窗相关方法
 const showBookActions = (book) => {
 	currentBook.value = book
-	actionPopupRef.value?.open()
+	actionSheetRef.value?.open()
 }
 
-const hideActionSheet = () => {
-	actionPopupRef.value?.close()
-	currentBook.value = null
-}
-
-const handlePinTodoBook = () => {
-	if (currentBook.value?._id) {
-		togglePin(currentBook.value._id)
-	}
-	hideActionSheet()
-}
-
-// 处理各种操作
-const handleEditTodoBook = () => {
-	const bookId = currentBook.value?._id
-	hideActionSheet()
-	if (bookId) {
-		uni.navigateTo({
-			url: `/pages/todobooks/form?id=${bookId}`
-		})
-	}
-}
-
-const handleMembers = () => {
-	const bookId = currentBook.value?._id
-	if (bookId) {
-		uni.navigateTo({
-			url: `/pages/todobooks/members?id=${bookId}&bookData=${encodeURIComponent(JSON.stringify(currentBook.value))}`
-		})
-	}
-	hideActionSheet()
-}
-
-const handleShowStatistics = () => {
-	const bookId = currentBook.value?._id
-	if (bookId) {
-		uni.navigateTo({
-			url: `/pages/todobooks/statistics?id=${bookId}`
-		})
-	}
-	hideActionSheet()
-}
-
-const handleExportTasks = () => {
-	hideActionSheet()
-	uni.showToast({
-		title: '功能开发中',
-		icon: 'none'
-	})
-}
-
-const handleArchiveTodoBook = async () => {
-	// 先保存要归档的项目册引用
-	const bookToArchive = currentBook.value
-	hideActionSheet()
+// 处理操作完成事件
+const handleActionCompleted = (result) => {
+	console.log('操作完成:', result)
 	
-	uni.showModal({
-		title: '确认归档',
-		content: '归档后的项目册将移动到归档列表中，确定要归档吗？',
-		success: async (res) => {
-			if (res.confirm) {
-				try {
-					await archiveTodoBook(bookToArchive._id)
-					
-					uni.showToast({
-						title: '归档成功',
-						icon: 'success'
-					})
-					
-					// 刷新列表
-					refreshTodoBooks(false)
-				} catch (err) {
-					console.error('归档失败:', err)
-					uni.showToast({
-						title: err.message || '归档失败',
-						icon: 'error'
-					})
-				}
-			}
-		}
-	})
-}
-
-const handleDeleteTodoBook = async () => {
-	// 先保存要删除的项目册引用
-	const bookToDelete = currentBook.value
-	hideActionSheet()
-	
-	uni.showModal({
-		title: '确认删除',
-		content: '删除后无法恢复，确定要删除这个项目册吗？',
-		confirmColor: '#FF4757',
-		success: async (res) => {
-			if (res.confirm) {
-				try {
-					uni.showLoading({
-						title: '删除中...'
-					})
-					
-					await deleteTodoBook(bookToDelete._id)
-					
-					uni.hideLoading()
-					
-					uni.showToast({
-						title: '删除成功',
-						icon: 'success'
-					})
-					
-					// 刷新列表
-					refreshTodoBooks(false)
-				} catch (err) {
-					uni.hideLoading()
-					console.error('删除失败:', err)
-					uni.showToast({
-						title: err.message || '删除失败',
-						icon: 'error'
-					})
-				}
-			}
-		}
-	})
+	// 如果是需要刷新列表的操作
+	if (['archive', 'delete'].includes(result.type) && result.success) {
+		refreshTodoBooks(false)
+	}
 }
 </script>
 

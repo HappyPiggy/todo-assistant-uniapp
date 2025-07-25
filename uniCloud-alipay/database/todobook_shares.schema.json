@@ -1,0 +1,61 @@
+{
+	"bsonType": "object",
+	"required": ["share_code", "creator_id", "shared_todobook_id", "created_at"],
+	"permission": {
+		"read": "auth.uid != null",
+		"create": "auth.uid != null && doc.creator_id == auth.uid",
+		"update": "auth.uid != null && doc.creator_id == auth.uid",
+		"delete": "auth.uid != null && doc.creator_id == auth.uid",
+		"count": "auth.uid != null"
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"share_code": {
+			"bsonType": "string",
+			"pattern": "^[A-Za-z0-9]{6}$",
+			"description": "6位分享码",
+			"title": "分享码"
+		},
+		"creator_id": {
+			"bsonType": "string",
+			"description": "分享者用户ID",
+			"forceDefaultValue": {
+				"$env": "uid"
+			},
+			"title": "分享者ID"
+		},
+		"shared_todobook_id": {
+			"bsonType": "string",
+			"description": "云端分享模板项目册ID（包含完整的项目册信息）",
+			"title": "分享模板项目册ID"
+		},
+		"include_comments": {
+			"bsonType": "bool",
+			"default": false,
+			"description": "是否包含评论",
+			"title": "包含评论"
+		},
+		"share_count": {
+			"bsonType": "int",
+			"minimum": 0,
+			"default": 0,
+			"description": "被导入次数",
+			"title": "导入次数"
+		},
+		"created_at": {
+			"bsonType": "timestamp",
+			"description": "分享创建时间",
+			"forceDefaultValue": {
+				"$env": "now"
+			},
+			"title": "创建时间"
+		},
+		"last_import_at": {
+			"bsonType": "timestamp",
+			"description": "最后导入时间",
+			"title": "最后导入时间"
+		}
+	}
+}
