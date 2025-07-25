@@ -59,14 +59,14 @@
       <!-- 底部占位空间，确保不被tab栏遮挡 -->
       <view class="bottom-spacer"></view>
     </view>
-
-    <!-- 分享对话框 -->
-    <ShareDialog 
-      ref="shareDialogRef"
-      :todo-bok-id="bookData?._id"
-      :todo-bok-data="bookData"
-    />
   </uni-popup>
+
+  <!-- 分享对话框 -->
+  <ShareDialog 
+    ref="shareDialogRef"
+    :todo-bok-id="bookData?._id"
+    :todo-bok-data="bookData"
+  />
 </template>
 
 <script setup>
@@ -174,8 +174,16 @@ const handleStatisticsAction = () => {
 
 const handleShareAction = () => {
   close()
-  console.log("handleShareAction")
-  shareDialogRef.value?.open()
+  if (shareDialogRef.value) {
+        shareDialogRef.value.open()
+      } 
+  else {
+        console.error("ShareDialog组件引用为空，无法打开分享对话框")
+        uni.showToast({
+          title: "分享功能暂时无法使用",
+          icon: "none"
+        })
+      }
 }
 
 const handleArchiveAction = async () => {
