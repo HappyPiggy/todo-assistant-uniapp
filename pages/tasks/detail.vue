@@ -473,6 +473,8 @@ onLoad(async (options) => {
 // onMounted 在 onLoad 之后执行，适合用来标记页面已完成首次渲染
 onMounted(() => {
 	hasInitialized.value = true
+	// 注册任务更新事件监听
+	uni.$on('task-updated', handleTaskUpdated)
 })
 
 // 停留1秒后标记已读的定时器
@@ -507,8 +509,33 @@ onHide(() => {
 	}
 })
 
+// 处理任务更新事件
+const handleTaskUpdated = async (updatedTask) => {
+	console.log('任务详情页面收到task-updated事件:', JSON.stringify(updatedTask, null, 2))
+	if (updatedTask._id === taskId) {
+		console.log('更新的是当前任务，调用云函数更新')
+		try {
+			const todoBooksObj = uniCloud.importObject('todobook-co')
+			const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
+			if (result.code === 0) {
+				console.log('任务更新成功，刷新详情')
+				await refreshTaskDetail()
+				uni.showToast({ title: '保存成功', icon: 'success' })
+			} else {
+				throw new Error(result.message)
+			}
+		} catch (error) {
+			console.error('任务更新失败:', error)
+			uni.showToast({ title: error.message || '保存失败', icon: 'error' })
+		}
+	}
+}
+
+
 // 页面卸载时清理资源
 onUnmounted(() => {
+	// 移除事件监听
+	uni.$off('task-updated', handleTaskUpdated)
 	// 可以在这里清理一些资源，如定时器等
 })
 

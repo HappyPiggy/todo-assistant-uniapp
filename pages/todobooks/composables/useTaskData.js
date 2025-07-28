@@ -665,7 +665,23 @@ export function useTaskData(bookId, allTasks = null) {
    */
   const updateTaskOptimistic = async (updatedTask) => {
     const taskIndex = tasks.value.findIndex(t => t._id === updatedTask._id)
-    if (taskIndex === -1) return
+    
+    if (taskIndex === -1) {
+      // 子任务可能不在当前页面的tasks列表中，但仍需要更新数据库
+      try {
+        const todoBooksObj = uniCloud.importObject('todobook-co')
+        const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
+        
+        if (result.code !== 0) {
+          throw new Error(result.message)
+        }
+        uni.showToast({ title: '保存成功', icon: 'success' })
+      } catch (error) {
+        console.error('任务更新失败:', error)
+        uni.showToast({ title: error.message || '保存失败', icon: 'error' })
+      }
+      return
+    }
 
     const originalTask = JSON.parse(JSON.stringify(tasks.value[taskIndex]))
     
@@ -675,11 +691,13 @@ export function useTaskData(bookId, allTasks = null) {
     try {
       const todoBooksObj = uniCloud.importObject('todobook-co')
       const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
+      
       if (result.code !== 0) {
         throw new Error(result.message)
       }
       uni.showToast({ title: '保存成功', icon: 'success' })
     } catch (error) {
+      console.error('任务更新失败:', error)
       // 回滚
       Object.assign(tasks.value[taskIndex], originalTask)
       uni.showToast({ title: error.message || '保存失败', icon: 'error' })

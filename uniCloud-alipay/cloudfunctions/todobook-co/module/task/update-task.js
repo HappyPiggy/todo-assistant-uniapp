@@ -80,13 +80,41 @@ async function updateTodoItem(taskId, updateData) {
       finalUpdateData.completed_at = null
     }
 
-    // 处理父任务变更
+    // 处理父任务变更 - 需要在分离字段之前检测
     const oldParentId = task.parent_id
     const newParentId = finalUpdateData.parent_id
     const parentChanged = oldParentId !== newParentId
 
-    // 执行更新
-    const updateRes = await db.collection('todoitems').doc(taskId).update(finalUpdateData)
+    // 处理parent_id的特殊清空需求
+    let updateRes
+    const needToUnsetParentId = finalUpdateData.parent_id === null && task.parent_id !== null && task.parent_id !== undefined
+    
+    if (needToUnsetParentId) {
+      // 如果需要清空parent_id，使用组合操作
+      const setData = {}
+      Object.keys(finalUpdateData).forEach(key => {
+        if (key !== '_id' && key !== 'parent_id' && finalUpdateData[key] !== null) {
+          setData[key] = finalUpdateData[key]
+        }
+      })
+      
+      const updateOperation = {
+        $set: setData,
+        $unset: { parent_id: true }
+      }
+      
+      updateRes = await db.collection('todoitems').doc(taskId).update(updateOperation)
+    } else {
+      // 正常更新逻辑，过滤掉null值和_id字段
+      const cleanUpdateData = {}
+      Object.keys(finalUpdateData).forEach(key => {
+        if (key !== '_id' && finalUpdateData[key] !== null) {
+          cleanUpdateData[key] = finalUpdateData[key]
+        }
+      })
+      
+      updateRes = await db.collection('todoitems').doc(taskId).update(cleanUpdateData)
+    }
 
     if (updateRes.updated === 1) {
       // 如果父任务发生变更，需要更新旧父任务和新父任务的子任务计数
