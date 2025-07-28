@@ -329,9 +329,14 @@ const showBookActions = (book) => {
 const handleActionCompleted = (result) => {
 	console.log('操作完成:', result)
 	
-	// 如果是需要刷新列表的操作
-	if (['archive', 'delete'].includes(result.type) && result.success) {
-		refreshTodoBooks(false)
+	// 如果是需要刷新列表的操作，包括置顶操作
+	if (['archive', 'delete', 'pin'].includes(result.type) && result.success) {
+		// 置顶操作只需要刷新置顶状态，不需要重新加载数据
+		if (result.type === 'pin') {
+			refreshPinnedIds()
+		} else {
+			refreshTodoBooks(false)
+		}
 	}
 }
 </script>
