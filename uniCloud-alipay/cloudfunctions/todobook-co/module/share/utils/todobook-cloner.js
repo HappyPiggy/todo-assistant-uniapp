@@ -93,6 +93,76 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     
     let taskCount = 0
     const taskIdMapping = new Map() // 记录原任务ID到新任务ID的映射
+    const userAnonymizeMapping = new Map() // 用户匿名化映射
+    let anonymousUserCounter = 0 // 匿名用户计数器
+    
+    // 辅助函数：获取匿名用户ID
+    const getAnonymousUserId = (originalUserId) => {
+      if (!userAnonymizeMapping.has(originalUserId)) {
+        anonymousUserCounter++
+        const anonymousId = `anonymous_user_${String.fromCharCode(64 + anonymousUserCounter)}` // A, B, C...
+        userAnonymizeMapping.set(originalUserId, anonymousId)
+      }
+      return userAnonymizeMapping.get(originalUserId)
+    }
+    
+    // 辅助函数：更新评论ID以匹配新任务ID
+    const updateCommentIds = (comments, newTaskId) => {
+      if (!comments || !Array.isArray(comments)) return []
+      
+      const commentIdMapping = new Map() // 记录旧评论ID到新评论ID的映射
+      
+      // 第一轮：生成新的评论ID并建立映射关系
+      const updatedComments = comments.map(comment => {
+        const updatedComment = { ...comment }
+        
+        // 从原评论ID中提取时间戳和随机字符串部分
+        const commentParts = comment._id.split('_')
+        if (commentParts.length >= 3) {
+          const timestamp = commentParts[1]
+          const random = commentParts[2]
+          const newCommentId = `${newTaskId}_${timestamp}_${random}`
+          
+          // 记录映射关系
+          commentIdMapping.set(comment._id, newCommentId)
+          updatedComment._id = newCommentId
+          
+          console.log(`🔍 [评论ID更新] ${comment._id} -> ${newCommentId}`)
+        }
+        
+        return updatedComment
+      })
+      
+      // 第二轮：更新reply_to字段中的评论ID引用
+      return updatedComments.map(comment => {
+        if (comment.reply_to && commentIdMapping.has(comment.reply_to)) {
+          comment.reply_to = commentIdMapping.get(comment.reply_to)
+          console.log(`🔍 [回复关系更新] reply_to: ${comment.reply_to}`)
+        }
+        return comment
+      })
+    }
+    
+    // 辅助函数：匿名化评论数组
+    const anonymizeComments = (comments) => {
+      if (!comments || !Array.isArray(comments)) return []
+      
+      return comments.map(comment => {
+        const anonymizedComment = { ...comment }
+        // 匿名化主评论的用户ID
+        anonymizedComment.user_id = getAnonymousUserId(comment.user_id)
+        
+        // 匿名化回复中的用户ID
+        if (comment.replies && Array.isArray(comment.replies)) {
+          anonymizedComment.replies = comment.replies.map(reply => ({
+            ...reply,
+            user_id: getAnonymousUserId(reply.user_id)
+          }))
+        }
+        
+        return anonymizedComment
+      })
+    }
     
     for (const originalTask of tasksResult.data) {
       const newTaskData = {
@@ -113,16 +183,53 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
         completed_at: null,
         // 如果是分享模板，设置模板创建者
         creator_id: isTemplate ? templateCreatorId : newCreatorId,
-        // 处理评论：如果需要包含评论则复制，否则设为空数组
-        comments: includeComments ? (originalTask.comments || []) : []
+        // 处理评论：如果需要包含评论则复制，对于分享模板进行匿名化处理
+        comments: (() => {
+          console.log(`🔍 [评论处理调试] 任务 ${originalTask._id} (${originalTask.title})`)
+          console.log(`🔍 [评论处理调试] includeComments: ${includeComments}`)
+          console.log(`🔍 [评论处理调试] isTemplate: ${isTemplate}`)
+          console.log(`🔍 [评论处理调试] 原始评论数量: ${(originalTask.comments || []).length}`)
+          
+          if (!includeComments) {
+            console.log(`🔍 [评论处理调试] 不包含评论，返回空数组`)
+            return []
+          }
+          
+          if (isTemplate) {
+            console.log(`🔍 [评论处理调试] 是分享模板，进行匿名化处理`)
+            const anonymizedComments = anonymizeComments(originalTask.comments || [])
+            console.log(`🔍 [评论处理调试] 匿名化后评论数量: ${anonymizedComments.length}`)
+            if (anonymizedComments.length > 0) {
+              console.log(`🔍 [评论处理调试] 第一条匿名化评论用户ID: ${anonymizedComments[0].user_id}`)
+            }
+            return anonymizedComments
+          } else {
+            console.log(`🔍 [评论处理调试] 不是分享模板，直接复制评论`)
+            return originalTask.comments || []
+          }
+        })()
       }
       
       const newTaskResult = await taskCollection.add(newTaskData)
-      taskIdMapping.set(originalTask._id, newTaskResult.id)
+      const newTaskId = newTaskResult.id
+      taskIdMapping.set(originalTask._id, newTaskId)
       taskCount++
       
       // 调试信息：记录任务克隆
-      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskResult.id} (${originalTask.title})`)
+      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskId} (${originalTask.title})`)
+      
+      // 如果包含评论，需要更新评论ID以匹配新任务ID
+      if (includeComments && newTaskData.comments && newTaskData.comments.length > 0) {
+        console.log(`🔍 [评论ID修复] 开始更新任务 ${newTaskId} 的评论ID`)
+        const updatedComments = updateCommentIds(newTaskData.comments, newTaskId)
+        
+        // 更新数据库中的评论
+        await taskCollection.doc(newTaskId).update({
+          comments: updatedComments
+        })
+        
+        console.log(`🔍 [评论ID修复] 任务 ${newTaskId} 的评论ID更新完成，共更新 ${updatedComments.length} 条评论`)
+      }
     }
     
     // 4. 更新任务的parent_id关系

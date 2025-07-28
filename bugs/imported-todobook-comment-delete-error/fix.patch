@@ -1,0 +1,127 @@
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js b/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
+index abc123..def456 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
+@@ -106,6 +106,32 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
+       return userAnonymizeMapping.get(originalUserId)
+     }
+     
++    // 辅助函数：更新评论ID以匹配新任务ID
++    const updateCommentIds = (comments, newTaskId) => {
++      if (!comments || !Array.isArray(comments)) return []
++      
++      const commentIdMapping = new Map() // 记录旧评论ID到新评论ID的映射
++      
++      // 第一轮：生成新的评论ID并建立映射关系
++      const updatedComments = comments.map(comment => {
++        const updatedComment = { ...comment }
++        
++        // 从原评论ID中提取时间戳和随机字符串部分
++        const commentParts = comment._id.split('_')
++        if (commentParts.length >= 3) {
++          const timestamp = commentParts[1]
++          const random = commentParts[2]
++          const newCommentId = `${newTaskId}_${timestamp}_${random}`
++          
++          // 记录映射关系
++          commentIdMapping.set(comment._id, newCommentId)
++          updatedComment._id = newCommentId
++          
++          console.log(`🔍 [评论ID更新] ${comment._id} -> ${newCommentId}`)
++        }
++        
++        return updatedComment
++      })
++      
++      // 第二轮：更新reply_to字段中的评论ID引用
++      return updatedComments.map(comment => {
++        if (comment.reply_to && commentIdMapping.has(comment.reply_to)) {
++          comment.reply_to = commentIdMapping.get(comment.reply_to)
++          console.log(`🔍 [回复关系更新] reply_to: ${comment.reply_to}`)
++        }
++        return comment
++      })
++    }
++    
+     // 辅助函数：匿名化评论数组
+     const anonymizeComments = (comments) => {
+       if (!comments || !Array.isArray(comments)) return []
+@@ -175,9 +201,20 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
+       }
+       
+       const newTaskResult = await taskCollection.add(newTaskData)
+-      taskIdMapping.set(originalTask._id, newTaskResult.id)
++      const newTaskId = newTaskResult.id
++      taskIdMapping.set(originalTask._id, newTaskId)
+       taskCount++
+       
+-      // 调试信息：记录任务克隆
+-      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskResult.id} (${originalTask.title})`)
++      // 调试信息：记录任务克隆
++      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskId} (${originalTask.title})`)
++      
++      // 如果包含评论，需要更新评论ID以匹配新任务ID
++      if (includeComments && newTaskData.comments && newTaskData.comments.length > 0) {
++        console.log(`🔍 [评论ID修复] 开始更新任务 ${newTaskId} 的评论ID`)
++        const updatedComments = updateCommentIds(newTaskData.comments, newTaskId)
++        
++        // 更新数据库中的评论
++        await taskCollection.doc(newTaskId).update({
++          comments: updatedComments
++        })
++        
++        console.log(`🔍 [评论ID修复] 任务 ${newTaskId} 的评论ID更新完成，共更新 ${updatedComments.length} 条评论`)
++      }
+     }
+     
+     // 4. 更新任务的parent_id关系
+
+--- /dev/null
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/scripts/fix-imported-comment-ids.js
+@@ -0,0 +1,180 @@
++/**
++ * 修复已导入TodoBook中的评论ID问题
++ * 这个脚本用于修复已经导入但评论ID没有正确更新的TodoBook
++ */
++
++/**
++ * 修复已导入TodoBook的评论ID
++ * @param {object} db - 数据库对象
++ * @returns {Promise<object>} 修复结果统计
++ */
++async function fixImportedCommentIds(db) {
++  // ... [脚本内容] ...
++}
++
++/**
++ * 验证修复结果
++ * @param {object} db - 数据库对象
++ * @returns {Promise<object>} 验证结果
++ */
++async function verifyFixResults(db) {
++  // ... [验证逻辑] ...
++}
++
++module.exports = {
++  fixImportedCommentIds,
++  verifyFixResults
++}
+
+--- /dev/null
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/scripts/test-comment-id-fix.js
+@@ -0,0 +1,120 @@
++/**
++ * 测试评论ID修复逻辑
++ * 这个脚本用于测试updateCommentIds函数的正确性
++ */
++
++/**
++ * 测试updateCommentIds函数
++ */
++function testUpdateCommentIds() {
++  // ... [测试逻辑] ...
++}
++
++module.exports = {
++  testUpdateCommentIds
++}

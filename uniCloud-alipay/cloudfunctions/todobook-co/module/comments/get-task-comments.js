@@ -70,25 +70,34 @@ async function getTaskComments(params) {
         
         // 为评论添加用户信息
         activeComments.forEach(comment => {
-          const user = userMap[comment.user_id]
-          if (user) {
-            // 优先级：昵称 > 用户名 > 手机号脱敏 > 邮箱前缀 > 默认值
-            let displayName = '用户'
-            if (user.nickname && user.nickname.trim()) {
-              displayName = user.nickname.trim()
-            } else if (user.username && user.username.trim()) {
-              displayName = user.username.trim()
-            } else if (user.mobile) {
-              displayName = user.mobile.substring(0, 3) + '****' + user.mobile.substring(7)
-            } else if (user.email) {
-              displayName = user.email.split('@')[0]
-            }
-            
-            comment.user_nickname = displayName
-            comment.user_avatar = user.avatar_file || ''
+          // 检查是否为匿名用户ID
+          if (comment.user_id && comment.user_id.startsWith('anonymous_user_')) {
+            // 匿名用户处理
+            const userLetter = comment.user_id.split('_')[2] // 提取字母部分
+            comment.user_nickname = `用户${userLetter}`
+            comment.user_avatar = '' // 匿名用户不显示头像
           } else {
-            comment.user_nickname = '用户'
-            comment.user_avatar = ''
+            // 真实用户处理
+            const user = userMap[comment.user_id]
+            if (user) {
+              // 优先级：昵称 > 用户名 > 手机号脱敏 > 邮箱前缀 > 默认值
+              let displayName = '用户'
+              if (user.nickname && user.nickname.trim()) {
+                displayName = user.nickname.trim()
+              } else if (user.username && user.username.trim()) {
+                displayName = user.username.trim()
+              } else if (user.mobile) {
+                displayName = user.mobile.substring(0, 3) + '****' + user.mobile.substring(7)
+              } else if (user.email) {
+                displayName = user.email.split('@')[0]
+              }
+              
+              comment.user_nickname = displayName
+              comment.user_avatar = user.avatar_file || ''
+            } else {
+              comment.user_nickname = '用户'
+              comment.user_avatar = ''
+            }
           }
           
           // 确保有唯一ID

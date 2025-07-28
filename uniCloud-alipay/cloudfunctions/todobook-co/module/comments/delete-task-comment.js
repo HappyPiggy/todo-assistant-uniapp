@@ -47,17 +47,55 @@ async function deleteTaskComment(params) {
     
     const comment = comments[commentIndex]
     
+    console.log(`🔍 [删除评论调试] 开始权限检查`)
+    console.log(`🔍 [删除评论调试] 评论ID: ${commentId}`)
+    console.log(`🔍 [删除评论调试] 当前用户ID: ${uid}`)
+    console.log(`🔍 [删除评论调试] 评论用户ID: ${comment.user_id}`)
+    console.log(`🔍 [删除评论调试] 任务ID: ${taskId}`)
+    console.log(`🔍 [删除评论调试] 项目册ID: ${task.todobook_id}`)
+    // 检查项目册是否为导入项目册
+    const bookResult = await db.collection('todobooks').doc(task.todobook_id).get()
+    const todobook = bookResult.data.length > 0 ? bookResult.data[0] : null
+    const isImportedBook = todobook && todobook.imported_from_share_id
+    
+    console.log(`🔍 [删除评论调试] 项目册是否为导入: ${isImportedBook ? '是' : '否'}`)
+    if (isImportedBook) {
+      console.log(`🔍 [删除评论调试] 导入来源分享ID: ${todobook.imported_from_share_id}`)
+    }
+    console.log(`🔍 [删除评论调试] 评论用户ID是否为匿名: ${comment.user_id && comment.user_id.startsWith('anonymous_user_') ? '是' : '否'}`)
+    
     // 检查权限：评论作者或项目册创建者可以删除
     let canDelete = false
-    if (comment.user_id === uid) {
-      canDelete = true
-    } else {
+    
+    // 如果是匿名用户的评论，只有项目册创建者可以删除
+    if (comment.user_id && comment.user_id.startsWith('anonymous_user_')) {
+      console.log(`🔍 [删除评论调试] 检测到匿名用户评论，检查项目册创建者权限`)
       // 检查是否是项目册创建者
       const creatorCheckResult = await checkIsCreator(this, uid, task.todobook_id)
+      console.log(`🔍 [删除评论调试] 创建者检查结果:`, JSON.stringify(creatorCheckResult, null, 2))
       if (creatorCheckResult.success && creatorCheckResult.isCreator) {
+        console.log(`🔍 [删除评论调试] 用户是项目册创建者，允许删除`)
         canDelete = true
+      } else {
+        console.log(`🔍 [删除评论调试] 用户不是项目册创建者，拒绝删除`)
+      }
+    } else if (comment.user_id === uid) {
+      console.log(`🔍 [删除评论调试] 用户是评论作者，允许删除`)
+      canDelete = true
+    } else {
+      console.log(`🔍 [删除评论调试] 用户不是评论作者，检查项目册创建者权限`)
+      // 检查是否是项目册创建者
+      const creatorCheckResult = await checkIsCreator(this, uid, task.todobook_id)
+      console.log(`🔍 [删除评论调试] 创建者检查结果:`, JSON.stringify(creatorCheckResult, null, 2))
+      if (creatorCheckResult.success && creatorCheckResult.isCreator) {
+        console.log(`🔍 [删除评论调试] 用户是项目册创建者，允许删除`)
+        canDelete = true
+      } else {
+        console.log(`🔍 [删除评论调试] 用户不是项目册创建者，拒绝删除`)
       }
     }
+    
+    console.log(`🔍 [删除评论调试] 最终权限检查结果: ${canDelete}`)
     
     if (!canDelete) {
       return createErrorResponse(ERROR_CODES.FORBIDDEN, '无权限删除此评论')

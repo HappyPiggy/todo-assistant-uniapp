@@ -216,7 +216,7 @@
 										<text class="action-text">回复</text>
 									</view>
 									<view 
-										v-if="canEditComment(comment)" 
+										v-if="canEditComment(comment, task)" 
 										class="action-btn" 
 										@click="editComment(comment)">
 										<text class="action-text">编辑</text>
@@ -257,7 +257,7 @@
 									<!-- 回复操作 -->
 									<view class="comment-actions">
 										<view 
-											v-if="canEditComment(reply)" 
+											v-if="canEditComment(reply, task)" 
 											class="action-btn" 
 											@click="editComment(reply)">
 											<text class="action-text">编辑</text>

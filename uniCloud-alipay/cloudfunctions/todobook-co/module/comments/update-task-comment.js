@@ -56,8 +56,22 @@ async function updateTaskComment(params) {
     
     const comment = comments[commentIndex]
     
-    // 检查权限：只有评论作者可以编辑
-    if (comment.user_id !== uid) {
+    // 检查权限：评论作者或项目册创建者可以编辑
+    let canEdit = false
+    
+    // 如果是匿名用户的评论，只有项目册创建者可以编辑
+    if (comment.user_id && comment.user_id.startsWith('anonymous_user_')) {
+      // 检查是否是项目册创建者
+      const { checkIsCreator } = require('../../lib/utils/permission')
+      const creatorCheckResult = await checkIsCreator(this, uid, task.todobook_id)
+      if (creatorCheckResult.success && creatorCheckResult.isCreator) {
+        canEdit = true
+      }
+    } else if (comment.user_id === uid) {
+      canEdit = true
+    }
+    
+    if (!canEdit) {
       return createErrorResponse(ERROR_CODES.FORBIDDEN, '无权限编辑此评论')
     }
     

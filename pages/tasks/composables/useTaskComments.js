@@ -311,10 +311,19 @@ export function useTaskComments() {
 	/**
 	 * @description 检查当前用户是否可以编辑指定评论
 	 * @param {object} comment - 评论对象
+	 * @param {object} task - 任务对象，用于判断是否为项目册创建者
 	 * @returns {boolean} - 如果可以编辑返回 true，否则返回 false
 	 */
-	const canEditComment = (comment) => {
-		return currentUser.value && comment.user_id === currentUser.value.uid
+	const canEditComment = (comment, task) => {
+		if (!currentUser.value) return false
+		
+		// 如果是匿名用户的评论，只有项目册创建者可以编辑
+		if (comment.user_id && comment.user_id.startsWith('anonymous_user_')) {
+			return task && task.todobook_creator_id === currentUser.value.uid
+		}
+		
+		// 普通评论只有作者可以编辑
+		return comment.user_id === currentUser.value.uid
 	}
 
 	/**
@@ -326,6 +335,12 @@ export function useTaskComments() {
 	const canDeleteComment = (comment, task) => {
 		if (!currentUser.value) return false
 		
+		// 如果是匿名用户的评论，只有项目册创建者可以删除
+		if (comment.user_id && comment.user_id.startsWith('anonymous_user_')) {
+			return task && task.todobook_creator_id === currentUser.value.uid
+		}
+		
+		// 普通评论：作者或项目册创建者都可以删除
 		if (comment.user_id === currentUser.value.uid) {
 			return true
 		}

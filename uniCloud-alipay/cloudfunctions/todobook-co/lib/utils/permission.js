@@ -123,13 +123,23 @@ async function checkIsCreator(context, userId, todoBookId) {
   const db = context.db
   
   try {
+    console.log(`🔍 [创建者检查调试] 开始检查用户 ${userId} 是否为项目册 ${todoBookId} 的创建者`)
+    
     const bookResult = await db.collection('todobooks')
       .where({ _id: todoBookId, creator_id: userId })
       .get()
     
+    console.log(`🔍 [创建者检查调试] 查询结果数量: ${bookResult.data.length}`)
+    if (bookResult.data.length > 0) {
+      console.log(`🔍 [创建者检查调试] 项目册信息:`, JSON.stringify(bookResult.data[0], null, 2))
+    }
+    
+    const isCreator = bookResult.data.length > 0
+    console.log(`🔍 [创建者检查调试] 最终结果: ${isCreator}`)
+    
     return {
       success: true,
-      isCreator: bookResult.data.length > 0
+      isCreator: isCreator
     }
   } catch (error) {
     console.error('创建者检查失败:', error)
