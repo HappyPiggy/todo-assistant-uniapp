@@ -6,6 +6,8 @@ import { TASK_CONSTANTS } from './constants.js'
  * @returns {Array} 组织后的父任务数组（包含子任务）
  */
 export function organizeParentChildTasks(allTasks) {
+  console.log(`🔍 [taskUtils调试] 开始组织 ${allTasks.length} 个任务的父子关系`)
+  
   // 创建任务映射
   const taskMap = {}
   allTasks.forEach(task => {
@@ -28,15 +30,27 @@ export function organizeParentChildTasks(allTasks) {
     }
   })
   
+  console.log(`🔍 [taskUtils调试] 分离结果: 父任务 ${parentTasks.length}个, 子任务 ${childTasks.length}个`)
+  
   // 将子任务关联到父任务
+  let successfullyLinked = 0
+  let failedToLink = 0
+  
   childTasks.forEach(childTask => {
     const parentTask = taskMap[childTask.parent_id]
     if (parentTask) {
       parentTask.subtasks.push(taskMap[childTask._id])
+      successfullyLinked++
+      console.log(`🔍 [taskUtils调试] 成功关联: 子任务 ${childTask._id} (${childTask.title}) -> 父任务 ${childTask.parent_id}`)
+    } else {
+      failedToLink++
+      console.error(`🔍 [taskUtils调试] 关联失败: 子任务 ${childTask._id} (${childTask.title}) 找不到父任务 ${childTask.parent_id}`)
     }
   })
   
-  // 对子任务进行排序
+  console.log(`🔍 [taskUtils调试] 关联结果: 成功 ${successfullyLinked}个, 失败 ${failedToLink}个`)
+  
+  // 对子任务进行排序，并更新父任务的子任务计数
   parentTasks.forEach(parent => {
     if (parent.subtasks.length > 0) {
       parent.subtasks.sort((a, b) => {
@@ -46,6 +60,16 @@ export function organizeParentChildTasks(allTasks) {
         }
         return new Date(a.created_at) - new Date(b.created_at)
       })
+      
+      // 更新父任务的子任务计数和完成计数
+      parent.subtask_count = parent.subtasks.length
+      parent.completed_subtask_count = parent.subtasks.filter(subtask => subtask.status === 'completed').length
+      
+      console.log(`🔍 [taskUtils调试] 更新父任务 ${parent._id} 子任务计数: ${parent.subtask_count}, 完成计数: ${parent.completed_subtask_count}`)
+    } else {
+      // 确保没有子任务的父任务计数为0
+      parent.subtask_count = 0
+      parent.completed_subtask_count = 0
     }
   })
   

@@ -243,16 +243,46 @@ export function useTaskData(bookId, allTasks = null) {
         return
       }
       
+      // 调试信息：分析接收到的任务数据
+      console.log(`🔍 [前端调试] 接收到任务数据总数: ${tasks.value.length}`)
+      const receivedParentTasks = tasks.value.filter(task => !task.parent_id)
+      const receivedChildTasks = tasks.value.filter(task => task.parent_id)
+      console.log(`🔍 [前端调试] 父任务: ${receivedParentTasks.length}个, 子任务: ${receivedChildTasks.length}个`)
+      
+      if (receivedChildTasks.length > 0) {
+        console.log('🔍 [前端调试] 子任务父子关系:')
+        receivedChildTasks.forEach(child => {
+          console.log(`  - 子任务 ${child._id} (${child.title}) -> 父任务 ${child.parent_id}`)
+        })
+      }
+      
       // 处理任务数据，确保格式正确
       const processedTasks = tasks.value.map(task => ({
         ...task,
         tags: Array.isArray(task.tags) ? task.tags : [],
-        expanded: false,
+        expanded: false, // 默认收起状态
         subtasks: []
       }))
       
       // 组织父子关系：只显示父任务，子任务作为父任务的属性
+      console.log('🔍 [前端调试] 开始组织父子关系...')
       tasks.value = organizeParentChildTasks(processedTasks)
+      
+      // 调试信息：验证组织后的结果
+      console.log(`🔍 [前端调试] 组织后的父任务数量: ${tasks.value.length}`)
+      let totalSubtasksCount = 0
+      tasks.value.forEach(parentTask => {
+        if (parentTask.subtasks && parentTask.subtasks.length > 0) {
+          console.log(`🔍 [前端调试] 父任务 ${parentTask._id} (${parentTask.title}) 包含 ${parentTask.subtasks.length} 个子任务`)
+          totalSubtasksCount += parentTask.subtasks.length
+        }
+      })
+      console.log(`🔍 [前端调试] 总计子任务数量: ${totalSubtasksCount}`)
+      
+      // 验证修复结果：现在用户可以点击有子任务的父任务来展开查看子任务
+      if (totalSubtasksCount > 0) {
+        console.log('🔍 [前端调试] 子任务数据组织完成，用户可以点击父任务展开查看子任务')
+      }
       
       // 跳过批量加载评论数据，改为按需加载
       // 原有批量加载逻辑保留作为降级方案

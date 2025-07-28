@@ -77,6 +77,20 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       todobook_id: originalBookId
     }).orderBy('sort_order', 'asc').get()
     
+    // 调试信息：分析原始任务结构
+    console.log(`🔍 [克隆调试] 原项目册 ${originalBookId} 总任务数: ${tasksResult.data.length}`)
+    const parentTasks = tasksResult.data.filter(task => !task.parent_id)
+    const childTasks = tasksResult.data.filter(task => task.parent_id)
+    console.log(`🔍 [克隆调试] 父任务数: ${parentTasks.length}, 子任务数: ${childTasks.length}`)
+    
+    // 打印父子关系映射
+    if (childTasks.length > 0) {
+      console.log('🔍 [克隆调试] 子任务父子关系:')
+      childTasks.forEach(child => {
+        console.log(`  - 子任务 ${child._id} (${child.title}) -> 父任务 ${child.parent_id}`)
+      })
+    }
+    
     let taskCount = 0
     const taskIdMapping = new Map() // 记录原任务ID到新任务ID的映射
     
@@ -106,9 +120,15 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       const newTaskResult = await taskCollection.add(newTaskData)
       taskIdMapping.set(originalTask._id, newTaskResult.id)
       taskCount++
+      
+      // 调试信息：记录任务克隆
+      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskResult.id} (${originalTask.title})`)
     }
     
     // 4. 更新任务的parent_id关系
+    console.log('🔍 [克隆调试] 开始更新父子关系...')
+    let parentChildUpdateCount = 0
+    
     for (const [originalTaskId, newTaskId] of taskIdMapping) {
       const originalTaskResult = await taskCollection.where({
         todobook_id: originalBookId,
@@ -122,8 +142,30 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
           await taskCollection.doc(newTaskId).update({
             parent_id: newParentId
           })
+          
+          // 调试信息：记录父子关系更新
+          console.log(`🔍 [克隆调试] 更新父子关系: 任务 ${newTaskId} 的父任务设为 ${newParentId}`)
+          parentChildUpdateCount++
         }
       }
+    }
+    
+    console.log(`🔍 [克隆调试] 父子关系更新完成，共更新 ${parentChildUpdateCount} 个子任务`)
+    
+    // 验证最终结果
+    const finalTasksResult = await taskCollection.where({
+      todobook_id: newBookId
+    }).get()
+    
+    const finalParentTasks = finalTasksResult.data.filter(task => !task.parent_id)
+    const finalChildTasks = finalTasksResult.data.filter(task => task.parent_id)
+    console.log(`🔍 [克隆调试] 克隆结果验证 - 新项目册 ${newBookId}: 父任务 ${finalParentTasks.length}个, 子任务 ${finalChildTasks.length}个`)
+    
+    if (finalChildTasks.length > 0) {
+      console.log('🔍 [克隆调试] 新项目册子任务关系:')
+      finalChildTasks.forEach(child => {
+        console.log(`  - 子任务 ${child._id} (${child.title}) -> 父任务 ${child.parent_id}`)
+      })
     }
     
     // 5. 评论已在任务克隆时处理完毕
