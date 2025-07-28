@@ -1,0 +1,13 @@
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js b/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
+index 5411a75..1bd5220 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js
+@@ -178,7 +178,7 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
+     
+     // 7. 为导入的项目册创建成员记录（如果是用户导入，不是分享模板）
+     if (!isTemplate && newCreatorId) {
+-      const { MEMBER_ROLE, PERMISSION_TYPE } = require('../../common/constants')
++      const { MEMBER_ROLE, PERMISSION_TYPE } = require('../../../common/constants')
+       const now = new Date()
+       
+       await db.collection('todobook_members').add({

@@ -132,14 +132,14 @@ module.exports = {
   /**
    * 通过分享码导入项目册
    */
-  async importByCode(shareCode) {
-    return await importByCode.call(this, { shareCode })
+  async importByCode(shareCode, allowDuplicate = false) {
+    return await importByCode.call(this, shareCode, allowDuplicate)
   },
 
   /**
    * 获取分享预览
    */
   async getSharePreview(shareCode) {
-    return await getSharePreview.call(this, { shareCode })
+    return await getSharePreview.call(this, shareCode)
   }
 }

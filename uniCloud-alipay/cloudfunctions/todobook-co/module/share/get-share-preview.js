@@ -2,7 +2,7 @@
  * 获取分享预览信息
  */
 
-module.exports = async function getSharePreview({ shareCode }) {
+module.exports = async function getSharePreview(shareCode) {
   try {
     const db = this.db
     

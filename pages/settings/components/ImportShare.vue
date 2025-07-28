@@ -186,7 +186,56 @@ const handleImport = async () => {
     
   } catch (error) {
     console.error('导入失败:', error)
+    
+    // 如果是重复导入错误，显示确认对话框
+    if (error.code === 1005) {
+      await showDuplicateImportDialog(error.data.existingBook)
+    }
   }
+}
+
+const showDuplicateImportDialog = async (existingBook) => {
+  return new Promise((resolve) => {
+    const formatDate = (dateStr) => {
+      const date = new Date(dateStr)
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+    
+    uni.showModal({
+      title: '重复导入提醒',
+      content: `您已在 ${formatDate(existingBook.created_at)} 导入过项目册"${existingBook.title}"。\n\n是否仍要创建一个新的副本？`,
+      confirmText: '仍要导入',
+      cancelText: '取消',
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            // 允许重复导入
+            await importByShareCode(shareCode.value, { allowDuplicate: true })
+            
+            // 通知父组件导入成功
+            emit('import-success')
+            
+            // 清理状态
+            clearPreview()
+            shareCode.value = ''
+            
+            resolve(true)
+          } catch (duplicateError) {
+            console.error('重复导入失败:', duplicateError)
+            resolve(false)
+          }
+        } else {
+          resolve(false)
+        }
+      }
+    })
+  })
 }
 
 const clearPreview = () => {

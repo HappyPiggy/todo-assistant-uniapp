@@ -178,7 +178,7 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     
     // 7. 为导入的项目册创建成员记录（如果是用户导入，不是分享模板）
     if (!isTemplate && newCreatorId) {
-      const { MEMBER_ROLE, PERMISSION_TYPE } = require('../../common/constants')
+      const { MEMBER_ROLE, PERMISSION_TYPE } = require('../../../common/constants')
       const now = new Date()
       
       await db.collection('todobook_members').add({

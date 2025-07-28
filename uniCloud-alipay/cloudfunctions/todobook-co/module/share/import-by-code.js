@@ -4,7 +4,8 @@
 
 const { cloneTodoBook } = require('./utils/todobook-cloner')
 
-module.exports = async function importByCode({ shareCode }) {
+module.exports = async function importByCode(shareCode, allowDuplicate = false) {
+  
   try {
     const db = this.db
     const userId = this.uid
@@ -57,12 +58,37 @@ module.exports = async function importByCode({ shareCode }) {
       }
     }
     
-    // 5. 克隆分享模板为新项目册
+    // 5. 检查是否已经导入过该分享（如果不允许重复）
+    if (!allowDuplicate) {
+      const existingImports = await bookCollection.where({
+        creator_id: userId,
+        imported_from_share_id: shareRecord._id
+      }).get()
+      
+      if (existingImports.data.length > 0) {
+        const existingBook = existingImports.data[0]
+        return {
+          code: 1005,
+          message: '您已经导入过这个分享项目册',
+          data: {
+            existingBook: {
+              id: existingBook._id,
+              title: existingBook.title,
+              created_at: existingBook.created_at
+            },
+            allowDuplicate: true
+          }
+        }
+      }
+    }
+    
+    // 6. 克隆分享模板为新项目册
+    const titleSuffix = allowDuplicate ? '（来自分享）' : '（来自分享）'
     const newBookId = await cloneTodoBook(db, sharedTodoBookId, {
       includeComments: shareRecord.include_comments,
       isTemplate: false,
       newCreatorId: userId,
-      titleSuffix: '（来自分享）'
+      titleSuffix: titleSuffix
     })
     
     // 验证克隆结果的数据完整性
@@ -98,7 +124,12 @@ module.exports = async function importByCode({ shareCode }) {
       console.error('🔍 [导入验证] 验证导入结果时出错:', verifyError)
     }
     
-    // 6. 更新分享统计
+    // 7. 为导入的项目册添加来源标记
+    await bookCollection.doc(newBookId).update({
+      imported_from_share_id: shareRecord._id
+    })
+    
+    // 8. 更新分享统计
     await shareCollection.doc(shareRecord._id).update({
       share_count: db.command.inc(1),
       last_import_at: new Date()

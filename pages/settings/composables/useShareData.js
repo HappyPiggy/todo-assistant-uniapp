@@ -100,15 +100,18 @@ export function useShareData() {
   /**
    * 通过分享码导入项目册
    * @param {string} shareCode - 分享码
+   * @param {Object} options - 导入选项
+   * @param {boolean} options.allowDuplicate - 是否允许重复导入
    * @returns {Promise<Object>} 导入结果
    */
-  const importByShareCode = async (shareCode) => {
+  const importByShareCode = async (shareCode, options = {}) => {
+    const { allowDuplicate = false } = options
     importLoading.value = true
     error.value = null
     
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.importByCode(shareCode)
+      const result = await todoBookCo.importByCode(shareCode, allowDuplicate)
       
       if (result.code === 0) {
         // 导入成功后重新加载项目册列表并触发更新事件
@@ -130,16 +133,27 @@ export function useShareData() {
           icon: 'success'
         })
         return result.data
+      } else if (result.code === 1005) {
+        // 重复导入的特殊处理
+        const duplicateError = new Error(result.message)
+        duplicateError.code = 1005
+        duplicateError.data = result.data
+        throw duplicateError
       } else {
         throw new Error(result.message)
       }
     } catch (err) {
       console.error('导入分享失败:', err)
       error.value = err.message
-      uni.showToast({
-        title: err.message,
-        icon: 'none'
-      })
+      
+      // 对于重复导入错误，不显示toast，由调用方处理
+      if (err.code !== 1005) {
+        uni.showToast({
+          title: err.message,
+          icon: 'none'
+        })
+      }
+      
       throw err
     } finally {
       importLoading.value = false

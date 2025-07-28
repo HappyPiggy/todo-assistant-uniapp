@@ -117,6 +117,10 @@
 		"template_created_at": {
 			"bsonType": "timestamp",
 			"description": "模板创建时间（仅分享模板使用）"
+		},
+		"imported_from_share_id": {
+			"bsonType": "string",
+			"description": "导入来源分享记录ID（用于防止重复导入）"
 		}
 	}
 }
