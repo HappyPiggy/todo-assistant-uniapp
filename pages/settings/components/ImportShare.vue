@@ -3,7 +3,7 @@
     <!-- 输入区域 -->
     <view class="input-section">
       <view class="input-container">
-        <text class="input-label">请输入6位分享码</text>
+        <text class="input-label">请输入6位分享码（支持大小写）</text>
         <input 
           class="share-code-input"
           v-model="shareCode"
@@ -139,7 +139,7 @@ const handleInput = (e) => {
 
 const validateShareCode = () => {
   if (shareCode.value && !isValidShareCode.value) {
-    inputError.value = '请输入6位字母数字组合'
+    inputError.value = '请输入6位字母和数字组合'
   } else {
     inputError.value = ''
   }
@@ -235,7 +235,17 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .import-share {
-  padding: 20px;
+  padding: 16rpx 20rpx; // 使用rpx单位，在小屏幕上减少padding
+  // 防止组件溢出
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  
+  // 小屏幕适配
+  @media (max-width: 375px) {
+    padding: 12rpx 16rpx;
+  }
 }
 
 .input-section {
@@ -254,15 +264,20 @@ onMounted(() => {
     .share-code-input {
       width: 100%;
       height: 48px;
-      padding: 0 16px;
-      font-size: 18px;
+      padding: 0 8px; // 进一步减少水平内边距防止溢出
+      font-size: 15px; // 进一步减小字体
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
       font-weight: 600;
-      letter-spacing: 2px;
+      letter-spacing: 0.5px; // 进一步减小字符间距
       text-align: center;
       border: 2px solid #e9ecef;
       border-radius: 8px;
       background-color: #ffffff;
+      box-sizing: border-box;
+      // 防止内容溢出
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
       
       &:focus {
         border-color: #007AFF;
@@ -273,6 +288,20 @@ onMounted(() => {
         color: #cccccc;
         font-weight: normal;
         letter-spacing: normal;
+      }
+      
+      // 小屏幕适配
+      @media (max-width: 375px) {
+        font-size: 13px;
+        letter-spacing: 0.2px;
+        padding: 0 6px;
+      }
+      
+      // 超小屏幕适配
+      @media (max-width: 320px) {
+        font-size: 12px;
+        letter-spacing: 0px;
+        padding: 0 4px;
       }
     }
     
@@ -453,6 +482,11 @@ onMounted(() => {
 }
 
 .history-section {
+  // 防止历史记录区域溢出
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
   .history-header {
     display: flex;
     align-items: center;
@@ -468,23 +502,42 @@ onMounted(() => {
   .history-codes {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px; // 进一步减小间距防止溢出
+    // 防止历史记录溢出
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
     
     .history-code {
-      padding: 8px 12px;
+      padding: 6px 10px; // 减小内边距
       background-color: #f8f9fa;
       border: 1px solid #e9ecef;
       border-radius: 6px;
+      max-width: calc(45% - 2px); // 更严格的最大宽度限制，防止溢出
+      box-sizing: border-box;
       
       &:active {
         background-color: #e9ecef;
       }
       
       .code-text {
-        font-size: 14px;
+        font-size: 13px; // 减小字体
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         color: #007AFF;
         font-weight: 500;
+        word-break: break-all;
+        overflow-wrap: break-word;
+      }
+      
+      // 小屏幕适配
+      @media (max-width: 375px) {
+        padding: 4px 8px;
+        max-width: calc(33.33% - 4px);
+        
+        .code-text {
+          font-size: 12px;
+        }
       }
     }
   }

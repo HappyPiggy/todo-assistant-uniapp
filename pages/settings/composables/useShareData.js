@@ -75,6 +75,9 @@ export function useShareData() {
    * 加载我的分享列表
    */
   const loadMyShares = async () => {
+    shareLoading.value = true
+    error.value = null
+    
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
       const result = await todoBookCo.getMyShares()
@@ -88,6 +91,9 @@ export function useShareData() {
       console.error('加载分享列表失败:', err)
       error.value = err.message
       myShares.value = []
+      throw err
+    } finally {
+      shareLoading.value = false
     }
   }
 
@@ -105,8 +111,20 @@ export function useShareData() {
       const result = await todoBookCo.importByCode(shareCode)
       
       if (result.code === 0) {
-        // 触发项目册列表更新
-        uni.$emit('todobooks-updated')
+        // 导入成功后重新加载项目册列表并触发更新事件
+        // 使用 useBookData 的方法确保数据正确更新
+        const { useBookData } = await import('@/pages/todobooks/composables/useBookData.js')
+        const { refreshTodoBooks } = useBookData()
+        
+        try {
+          // 重新加载最新的项目册列表
+          await refreshTodoBooks()
+        } catch (refreshError) {
+          console.error('刷新项目册列表失败:', refreshError)
+          // 即使刷新失败，也触发一个空数组事件，防止前端接收到 undefined
+          uni.$emit('todobooks-updated', [])
+        }
+        
         uni.showToast({
           title: '导入成功',
           icon: 'success'

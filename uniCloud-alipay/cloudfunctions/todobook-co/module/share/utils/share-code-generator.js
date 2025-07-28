@@ -7,7 +7,7 @@
  * @returns {string} 6位字母数字组合
  */
 function generateShareCode() {
-  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   let result = ''
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
@@ -27,9 +27,12 @@ async function generateUniqueShareCode(db, maxRetries = 10) {
   for (let i = 0; i < maxRetries; i++) {
     const shareCode = generateShareCode()
     
-    // 检查分享码是否已存在
+    // 检查分享码是否已存在 (不区分大小写)
     const existingShare = await shareCollection.where({
-      share_code: shareCode
+      share_code: db.RegExp({
+        regexp: '^' + shareCode + '$',
+        options: 'i'
+      })
     }).get()
     
     if (existingShare.data.length === 0) {

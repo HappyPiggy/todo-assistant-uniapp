@@ -54,6 +54,11 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       last_activity_at: new Date()
     }
     
+    // 如果是分享模板，记录原始项目册ID用于重复分享检查
+    if (isTemplate) {
+      newBookData.original_todobook_id = originalBookId
+    }
+    
     // 设置创建者
     if (isTemplate && templateCreatorId) {
       newBookData.template_creator_id = templateCreatorId
@@ -93,7 +98,9 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
         // 清除完成相关时间戳
         completed_at: null,
         // 如果是分享模板，设置模板创建者
-        creator_id: isTemplate ? templateCreatorId : newCreatorId
+        creator_id: isTemplate ? templateCreatorId : newCreatorId,
+        // 处理评论：如果需要包含评论则复制，否则设为空数组
+        comments: includeComments ? (originalTask.comments || []) : []
       }
       
       const newTaskResult = await taskCollection.add(newTaskData)
@@ -119,40 +126,35 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       }
     }
     
-    // 5. 克隆评论（如果需要）
-    if (includeComments) {
-      const commentCollection = db.collection('todoitems_comments')
-      const commentsResult = await commentCollection.where({
-        todobook_id: originalBookId
-      }).get()
-      
-      for (const originalComment of commentsResult.data) {
-        if (taskIdMapping.has(originalComment.task_id)) {
-          const newTaskId = taskIdMapping.get(originalComment.task_id)
-          const newCommentData = {
-            todobook_id: newBookId,
-            task_id: newTaskId,
-            content: originalComment.content,
-            created_at: new Date(),
-            updated_at: new Date(),
-            creator_id: isTemplate ? templateCreatorId : newCreatorId
-          }
-          
-          if (originalComment.parent_comment_id) {
-            // 对于嵌套评论，这里简化处理，暂不处理parent关系
-            // 实际项目中可能需要更复杂的映射逻辑
-          }
-          
-          await commentCollection.add(newCommentData)
-        }
-      }
-    }
+    // 5. 评论已在任务克隆时处理完毕
     
     // 6. 更新项目册任务计数
     await bookCollection.doc(newBookId).update({
       item_count: taskCount,
       completed_count: 0
     })
+    
+    // 7. 为导入的项目册创建成员记录（如果是用户导入，不是分享模板）
+    if (!isTemplate && newCreatorId) {
+      const { MEMBER_ROLE, PERMISSION_TYPE } = require('../../common/constants')
+      const now = new Date()
+      
+      await db.collection('todobook_members').add({
+        todobook_id: newBookId,
+        user_id: newCreatorId,
+        role: MEMBER_ROLE.OWNER,
+        permissions: [
+          PERMISSION_TYPE.READ, 
+          PERMISSION_TYPE.WRITE, 
+          PERMISSION_TYPE.DELETE, 
+          PERMISSION_TYPE.MANAGE_MEMBERS, 
+          PERMISSION_TYPE.MANAGE_SETTINGS
+        ],
+        joined_at: now,
+        last_access_at: now,
+        is_active: true
+      })
+    }
     
     return newBookId
     

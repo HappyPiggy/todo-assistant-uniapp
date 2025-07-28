@@ -1,0 +1,39 @@
+diff --git a/uniCloud-alipay/database/db_init.json b/uniCloud-alipay/database/db_init.json
+index 0d33412..7a39eee 100644
+--- a/uniCloud-alipay/database/db_init.json
++++ b/uniCloud-alipay/database/db_init.json
+@@ -192,6 +192,34 @@
+           }
+         }
+       ]
++    },
++    {
++      "collectionName": "todobook_shares",
++      "indexes": [
++        {
++          "IndexName": "creator_id",
++          "MgoKeySchema": {
++            "MgoIndexKeys": [{
++              "Name": "creator_id",
++              "Direction": "1"
++            }, {
++              "Name": "created_at",
++              "Direction": "-1"
++            }],
++            "MgoIsUnique": false
++          }
++        },
++        {
++          "IndexName": "share_code",
++          "MgoKeySchema": {
++            "MgoIndexKeys": [{
++              "Name": "share_code",
++              "Direction": "1"
++            }],
++            "MgoIsUnique": true
++          }
++        }
++      ]
+     }
+   ],
+   "functions": []

@@ -26,30 +26,50 @@ module.exports = async function createShare({ todBookId, includeComments = false
     
     const originalBook = bookResult.data[0]
     
-    // 2. 检查用户分享数量限制（最多2个）
+    // 2. 检查该项目册是否已经被分享过
     const shareCollection = db.collection('todobook_shares')
-    const userSharesResult = await shareCollection.where({
+    const existingShareResult = await shareCollection.where({
       creator_id: userId
-    }).count()
+    }).get()
     
-    if (userSharesResult.total >= 2) {
+    // 检查是否有同一项目册的分享
+    for (const share of existingShareResult.data) {
+      // 获取已分享的项目册信息，检查是否为同一原始项目册
+      const sharedBookResult = await bookCollection.where({
+        _id: share.shared_todobook_id
+      }).get()
+      
+      if (sharedBookResult.data.length > 0) {
+        const sharedBook = sharedBookResult.data[0]
+        // 如果是从同一原始项目册创建的分享模板，则不允许重复分享
+        if (sharedBook.original_todobook_id === todBookId) {
+          return {
+            code: 1003,
+            message: '已分享此项目册，无法再次分享。请先删除已有分享。'
+          }
+        }
+      }
+    }
+    
+    // 3. 检查用户分享数量限制（最多2个）
+    if (existingShareResult.total >= 2) {
       return {
         code: 1002,
         message: '最多只能同时分享2个项目册，请先删除现有分享'
       }
     }
     
-    // 3. 生成唯一分享码
+    // 4. 生成唯一分享码
     const shareCode = await generateUniqueShareCode(db)
     
-    // 4. 创建分享模板项目册
+    // 5. 创建分享模板项目册
     const sharedBookId = await cloneTodoBook(db, todBookId, {
       includeComments,
       isTemplate: true,
       templateCreatorId: userId
     })
     
-    // 5. 创建分享记录
+    // 6. 创建分享记录
     const shareData = {
       share_code: shareCode,
       creator_id: userId,

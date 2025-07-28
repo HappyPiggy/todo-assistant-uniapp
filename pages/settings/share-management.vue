@@ -78,7 +78,10 @@ import ImportShare from './components/ImportShare.vue'
 import { useShareData } from './composables/useShareData.js'
 
 // 组合式函数
-const { myShares, loading, loadMyShares } = useShareData()
+const { myShares, shareLoading, loadMyShares } = useShareData()
+
+// 使用shareLoading作为加载状态
+const loading = shareLoading
 
 // 响应式数据
 const scrollHeight = ref(0)
@@ -86,9 +89,12 @@ const scrollHeight = ref(0)
 // 计算属性
 const computedScrollHeight = computed(() => {
   const systemInfo = uni.getSystemInfoSync()
-  const navBarHeight = 44 // 导航栏高度
+  // 获取更准确的导航栏高度
   const statusBarHeight = systemInfo.statusBarHeight || 0
-  return systemInfo.windowHeight - navBarHeight - statusBarHeight
+  const navBarHeight = 44 + statusBarHeight // uni-nav-bar的实际高度包含状态栏
+  const safeAreaBottom = systemInfo.safeAreaInsets?.bottom || 0
+  
+  return systemInfo.windowHeight - navBarHeight - safeAreaBottom
 })
 
 // 方法
@@ -101,12 +107,22 @@ const loadShares = async () => {
     await loadMyShares()
   } catch (error) {
     console.error('加载分享列表失败:', error)
+    uni.showToast({
+      title: '加载失败',
+      icon: 'none'
+    })
   }
 }
 
 const handleDeleteShare = async (shareId) => {
-  // ShareList组件内部已处理删除逻辑和列表刷新
+  // 删除成功后重新加载分享列表
   console.log('分享已删除:', shareId)
+  
+  try {
+    await loadShares()
+  } catch (error) {
+    console.error('刷新分享列表失败:', error)
+  }
 }
 
 const handleImportSuccess = () => {
@@ -123,18 +139,28 @@ const handleImportSuccess = () => {
   }, 1500)
 }
 
+// 更新高度的方法
+const updateScrollHeight = () => {
+  scrollHeight.value = computedScrollHeight.value
+}
+
 // 生命周期
 onLoad(() => {
-  scrollHeight.value = computedScrollHeight.value
+  updateScrollHeight()
 })
 
 onShow(() => {
-  // 每次显示页面时刷新数据
+  // 每次显示页面时刷新数据和高度
+  updateScrollHeight()
   loadShares()
 })
 
 onMounted(() => {
   loadShares()
+  // 监听窗口大小变化
+  uni.onWindowResize(() => {
+    updateScrollHeight()
+  })
 })
 </script>
 
@@ -142,36 +168,77 @@ onMounted(() => {
 .share-management {
   background-color: #f8f9fa;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  // 防止整个页面溢出
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .content-scroll {
-  padding: 16px;
+  padding: 12rpx 16rpx; // 使用rpx单位，小屏幕上减少padding
+  flex: 1;
+  // 防止内容区域溢出
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  
+  // 小屏幕适配
+  @media (max-width: 375px) {
+    padding: 8rpx 12rpx;
+  }
+  
+  // 超小屏幕适配
+  @media (max-width: 320px) {
+    padding: 6rpx 10rpx;
+  }
 }
 
 .section {
-  margin-bottom: 20px;
+  margin-bottom: 16rpx; // 使用rpx单位，减少间距
   
   &:last-child {
     margin-bottom: 0;
+  }
+  
+  // 小屏幕适配
+  @media (max-width: 375px) {
+    margin-bottom: 12rpx;
   }
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10rpx; // 使用rpx单位，减少间距
+  flex-wrap: wrap; // 允许换行，防止在小屏幕上溢出
   
   .section-title {
-    font-size: 18px;
+    font-size: 16px; // 减小字体
     font-weight: 600;
     color: #333333;
-    margin-left: 8px;
+    margin-left: 6px; // 减小间距
+    flex-shrink: 0;
+    
+    // 小屏幕适配
+    @media (max-width: 375px) {
+      font-size: 15px;
+    }
   }
   
   .share-count {
-    font-size: 14px;
+    font-size: 13px; // 减小字体
     color: #666666;
-    margin-left: 8px;
+    margin-left: 6px; // 减小间距
+    flex-shrink: 0;
+    
+    // 小屏幕适配
+    @media (max-width: 375px) {
+      font-size: 12px;
+    }
   }
 }
 
@@ -180,6 +247,10 @@ onMounted(() => {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  // 防止section内容溢出
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .help-content {

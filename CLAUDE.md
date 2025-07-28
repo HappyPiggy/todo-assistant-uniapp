@@ -6,11 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a modern task management application built with **uni-app + Vue 3 + uniCloud**, supporting hierarchical task management and real-time cloud synchronization. The application uses a B/S architecture and supports multi-platform deployment (H5, mini-programs, native apps).
 
-## 工作流
-
-1.当用户提出新需求时，请遵守此文档./spec_workflow.md的工作流
-2.当用户提出bug修复时，请遵守此文档./bug_workflow.md的工作流
-
 ## Tech Stack
 
 ### Frontend Architecture

@@ -7,17 +7,20 @@ module.exports = async function getSharePreview({ shareCode }) {
     const db = this.db
     
     // 1. 验证分享码格式
-    if (!/^[A-Za-z0-9]{6}$/.test(shareCode)) {
+    if (!/^[A-Z0-9]{6}$/.test(shareCode)) {
       return {
         code: 1001,
-        message: '请输入正确格式的分享码'
+        message: '请输入正确格式的分享码（6位大写字母+数字）'
       }
     }
     
-    // 2. 查找分享记录
+    // 2. 查找分享记录 (不区分大小写)
     const shareCollection = db.collection('todobook_shares')
     const shareResult = await shareCollection.where({
-      share_code: shareCode
+      share_code: db.RegExp({
+        regexp: '^' + shareCode.toUpperCase() + '$',
+        options: 'i'
+      })
     }).get()
     
     if (shareResult.data.length === 0) {

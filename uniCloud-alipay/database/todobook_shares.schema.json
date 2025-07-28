@@ -14,8 +14,8 @@
 		},
 		"share_code": {
 			"bsonType": "string",
-			"pattern": "^[A-Za-z0-9]{6}$",
-			"description": "6位分享码",
+			"pattern": "^[A-Z0-9]{6}$",
+			"description": "6位分享码（大写字母+数字）",
 			"title": "分享码"
 		},
 		"creator_id": {

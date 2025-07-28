@@ -263,7 +263,19 @@ const onSearchConfirm = () => {
 // 事件处理方法
 const onCacheUpdated = (updatedBooks) => {
 	console.log('更新前页面数据条数:', todoBooks.value.length)
-	todoBooks.value = updatedBooks
+	
+	// 参数验证和防护：确保 updatedBooks 是有效数组
+	if (Array.isArray(updatedBooks)) {
+		todoBooks.value = updatedBooks
+		console.log('更新后页面数据条数:', updatedBooks.length)
+	} else {
+		console.warn('onCacheUpdated 接收到无效参数:', updatedBooks, '，保持当前数据不变')
+		// 如果接收到无效参数，重新加载数据
+		if (hasLogin.value) {
+			console.log('重新加载项目册数据...')
+			loadTodoBooksOptimized()
+		}
+	}
 	loadMoreStatus.value = 'noMore'
 }
 

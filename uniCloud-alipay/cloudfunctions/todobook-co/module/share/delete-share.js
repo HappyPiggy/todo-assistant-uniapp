@@ -27,20 +27,26 @@ module.exports = async function deleteShare({ shareId }) {
     // 2. 删除云端分享模板项目册及相关数据
     const bookCollection = db.collection('todobooks')
     const taskCollection = db.collection('todoitems')
-    const commentCollection = db.collection('todoitems_comments')
     
-    // 删除分享模板项目册的所有评论
-    await commentCollection.where({
-      todobook_id: sharedTodoBookId
-    }).remove()
+    // 注意：评论存储在任务文档的comments数组中，会随任务一起删除
     
     // 删除分享模板项目册的所有任务
-    await taskCollection.where({
-      todobook_id: sharedTodoBookId
-    }).remove()
+    try {
+      await taskCollection.where({
+        todobook_id: sharedTodoBookId
+      }).remove()
+    } catch (error) {
+      // 如果任务集合不存在或没有相关任务，忽略错误
+      console.log('删除任务时遇到错误（可忽略）:', error.message)
+    }
     
     // 删除分享模板项目册
-    await bookCollection.doc(sharedTodoBookId).remove()
+    try {
+      await bookCollection.doc(sharedTodoBookId).remove()
+    } catch (error) {
+      // 如果项目册不存在，忽略错误
+      console.log('删除项目册时遇到错误（可忽略）:', error.message)
+    }
     
     // 3. 删除分享记录
     await shareCollection.doc(shareId).remove()
