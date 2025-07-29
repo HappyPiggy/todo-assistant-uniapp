@@ -33,7 +33,7 @@
         :is-pinned="isPinned"
         :toggle-pin="togglePin"
         :is-archived="isArchived"
-        :can-edit="canEdit.value"
+        :can-edit="canEdit"
         @retry="refreshTasks"
         @refresh="handleRefresh"
         @add-task="addTask"
@@ -61,7 +61,7 @@
     />
 
     <!-- 浮动创建任务按钮 -->
-    <view v-if="canEdit.value" class="fab-container">
+    <view v-if="canEdit" class="fab-container">
       <view class="fab-button" @click="addTask">
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
@@ -162,7 +162,9 @@ const isArchived = computed(() => {
 
 // 编辑权限检查
 const canEdit = computed(() => {
-  return !isArchived.value && bookData.value
+  const result = !isArchived.value && bookData.value
+  console.log('canEdit计算:', { isArchived: isArchived.value, bookData: !!bookData.value, result })
+  return result
 })
 
 // 组件本地状态
