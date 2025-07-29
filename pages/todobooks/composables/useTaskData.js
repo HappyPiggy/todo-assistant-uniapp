@@ -112,7 +112,7 @@ function searchTasks(tasks, keyword) {
  * @param {Object} allTasks - 所有任务数据的响应式引用
  * @returns {Object} 任务数据和操作方法
  */
-export function useTaskData(bookId, allTasks = null) {
+export function useTaskData(bookId, allTasks = null, bookData = null) {
   // 响应式数据
   const tasks = ref([])
   const loading = ref(false)
@@ -312,7 +312,7 @@ export function useTaskData(bookId, allTasks = null) {
    */
   const toggleTaskStatus = async (task) => {
     // 检查归档状态权限
-    if (bookData.value?.is_archived) {
+    if (bookData?.value?.is_archived) {
       uni.showToast({
         title: '归档项目册中的任务不能修改状态',
         icon: 'none'
@@ -474,7 +474,7 @@ export function useTaskData(bookId, allTasks = null) {
    */
   const toggleSubtaskStatus = async (subtask) => {
     // 检查归档状态权限
-    if (bookData.value?.is_archived) {
+    if (bookData?.value?.is_archived) {
       uni.showToast({
         title: '归档项目册中的任务不能修改状态',
         icon: 'none'

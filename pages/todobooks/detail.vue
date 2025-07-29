@@ -141,7 +141,7 @@ const {
   deleteTask: removeTask,
   updateTaskOptimistic,
   createTaskOptimistic
-} = useTaskData(null, allTasks)
+} = useTaskData(null, allTasks, bookData)
 
 // 置顶功能
 const { 
