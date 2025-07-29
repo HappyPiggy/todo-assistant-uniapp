@@ -234,7 +234,6 @@ const hasUnreadComments = computed(() => {
 const commentDisplayText = computed(() => {
   try {
     const count = commentCount.value
-    console.log("!!!!", count)
     return count > 0 ? `${count}条评论` : ''
   } catch (error) {
     console.error('格式化评论显示文本失败:', error)

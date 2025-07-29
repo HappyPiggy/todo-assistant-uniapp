@@ -52,7 +52,10 @@
                 "dSYMs" : false
             },
             /* ios打包配置 */
-            "sdkConfigs" : {}
+            "sdkConfigs" : {},
+            "splashscreen" : {
+                "useOriginalMsgbox" : true
+            }
         }
     },
     /* SDK配置 */
@@ -60,7 +63,7 @@
     /* 快应用特有相关 */
     "mp-weixin" : {
         /* 小程序特有相关 */
-        "appid" : "wx09b6ac8a448e9851",
+        "appid" : "wx522ce7083ca5127e",
         "setting" : {
             "urlCheck" : false
         },
