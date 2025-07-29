@@ -1,286 +1,285 @@
-# Design Document - 任务评论显示改进功能
+# Design Document
 
 ## Overview
 
-本设计旨在改进TodoBook详情页面中任务评论的显示方式，将当前的"未读消息有n条"提示改进为：1) 常驻显示评论总数；2) 使用简洁的红点提示未读状态。该设计基于现有的VirtualTaskList组件和评论系统，通过优化数据结构和UI组件来实现需求。
+本设计文档描述了如何改进TodoBook详情页面中任务评论的显示方式。设计基于现有的TaskItem组件架构，通过最小化修改实现从"未读消息有n条"文本提示改进为：1) 常驻显示评论总数；2) 使用简洁的红点提示未读状态。
+
+设计遵循"最大化复用现有代码"的原则，主要在现有的`.comment-hint`区域内进行布局调整，复用现有的数据获取和缓存机制。
 
 ## Architecture
 
-### 整体架构概述
+### 系统架构模式
+
+采用现有的分层架构模式，无需新增组件或服务：
 
 ```mermaid
-graph TB
-    A[VirtualTaskList.vue] --> B[TaskItem.vue]
-    B --> C[CommentDisplay.vue 新组件]
-    C --> D[评论数据缓存系统]
-    D --> E[todobook-co 云函数]
+graph TD
+    A[VirtualTaskList] --> B[TaskItem Component]
+    B --> C[.comment-hint Display Area]
+    C --> D[Comments Count Display]
+    C --> E[Unread Indicator]
     
-    F[useTaskCommentCache] --> D
-    G[unreadCountsCache] --> C
-    H[commentCache] --> D
+    F[Task Data] --> G[task.comments.length]
+    H[Comment Cache] --> I[getTaskUnreadCount()]
+    
+    G --> D
+    I --> E
+    
+    J[User Interaction] --> K[markTaskAsRead()]
+    K --> L[Update Local Storage]
+    L --> E
 ```
 
 ### 数据流架构
 
-1. **数据获取层**：云函数接口提供评论数据和统计信息
-2. **缓存管理层**：现有的LRU缓存系统和新增的统计缓存
-3. **组件渲染层**：新的CommentDisplay组件负责评论信息的展示
-4. **状态管理层**：本地存储用户阅读状态
+复用现有的三层数据获取策略：
+
+1. **缓存层**: 使用现有的 `useTaskCommentCache` 机制
+2. **任务数据层**: 直接访问 `task.comments.length`
+3. **本地存储层**: 复用现有的已读状态管理
 
 ## Components and Interfaces
 
-### 1. 新增组件：CommentDisplay.vue
+### 核心组件修改
 
-**功能**：专门负责任务评论信息的显示
+#### TaskItem.vue 组件修改
 
-**Props接口**：
-```typescript
-interface CommentDisplayProps {
-  taskId: string           // 任务ID
-  commentCount: number     // 评论总数
-  hasUnread: boolean      // 是否有未读评论
-  variant: 'card' | 'item' // 显示变体
-  size: 'normal' | 'small' // 尺寸规格
-}
-```
+**修改位置**: 现有的 `.comment-hint` 区域（第62-67行和第126-129行）
 
-**模板结构**：
+**修改策略**:
+- 保持现有的样式类和布局框架
+- 调整内部元素的组织方式
+- 复用现有的props和事件处理
+
+**新的组件接口**:
 ```vue
-<template>
-  <view v-if="commentCount > 0" class="comment-display" :class="[
-    `comment-display--${variant}`,
-    `comment-display--${size}`,
-    { 'comment-display--has-unread': hasUnread }
-  ]">
-    <!-- 评论图标 -->
-    <uni-icons 
-      :color="iconColor" 
-      :size="iconSize" 
-      type="chatbubble" 
-    />
-    
-    <!-- 评论数量文本 -->
-    <text class="comment-count">{{ commentCount }}条评论</text>
-    
-    <!-- 未读红点提示 -->
-    <view v-if="hasUnread" class="unread-dot"></view>
-  </view>
-</template>
+<TaskItem
+  :task="task"
+  :variant="'card'|'item'"
+  :unreadCommentCount="unreadCount"  // 现有prop，用于红点显示判断
+  @click="handleTaskClick"
+/>
 ```
 
-### 2. 修改组件：TaskItem.vue
-
-**变更内容**：
-- 移除现有的comment-hint相关代码
-- 在适当位置引入CommentDisplay组件
-- 传递必要的props数据
-
-**集成位置**：
-- Card模式：在task-meta区域替换原有的comment-hint
-- Item模式：在task-content区域替换原有的comment-hint
-
-### 3. 增强VirtualTaskList.vue
-
-**新增数据结构**：
+**内部计算属性**:
 ```javascript
-// 评论统计缓存
-const commentStatsCache = ref({})
+// 新增计算属性
+const commentCount = computed(() => {
+  return props.task?.comments?.length || 0
+})
 
-// 评论统计计算
-const commentStatsMap = computed(() => {
-  const result = {}
-  
-  visibleTasks.value.forEach(task => {
-    const taskId = task._id
-    const cached = commentStatsCache.value[taskId]
-    
-    result[taskId] = {
-      total: cached?.total || 0,
-      hasUnread: cached?.hasUnread || false
-    }
-  })
-  
-  return result
+const hasUnreadComments = computed(() => {
+  return props.unreadCommentCount > 0
 })
 ```
 
+### UI组件设计
+
+#### 评论显示区域布局
+
+**Card模式布局**:
+```
+┌─────────────────────────────┐
+│ [💬] X条评论 [🔴]           │  ← meta-left区域
+└─────────────────────────────┘
+```
+
+**Item模式布局**:
+```
+┌─────────────────────────────┐
+│ 任务内容                     │
+│ [💬] X条评论 [🔴]           │  ← 任务内容下方
+└─────────────────────────────┘
+```
+
+#### 视觉元素规范
+
+**评论总数显示**:
+- 文字: `${commentCount}条评论`
+- 字体: `$font-size-xs` (22rpx)
+- 颜色: `$text-tertiary` (#999999)
+- 图标: `uni-icons` chatbubble，尺寸与现有保持一致
+
+**未读提示器**:
+- 形状: 圆形红点
+- 尺寸: 16rpx × 16rpx
+- 颜色: `$warning-color` (#ff9800)
+- 位置: 评论文字右侧，间距8rpx
+
 ## Data Models
 
-### 1. 评论统计数据模型
+### 数据结构使用
 
-```typescript
-interface CommentStats {
-  taskId: string      // 任务ID
-  total: number       // 评论总数
-  hasUnread: boolean  // 是否有未读
-  lastUpdated: number // 最后更新时间戳
-}
-
-interface CommentStatsCache {
-  [taskId: string]: CommentStats
-}
-```
-
-### 2. 本地评论统计计算
-
-**基于现有数据的统计逻辑**：
-
-```typescript
-interface CommentStatsCalculator {
-  // 计算评论总数（包含回复）
-  calculateTotal(comments: Comment[]): number
-  
-  // 计算是否有未读评论
-  calculateHasUnread(comments: Comment[], lastViewTime: number, currentUserId: string): boolean
+#### Task数据模型
+```javascript
+// 复用现有的task数据结构
+{
+  _id: "task_id",
+  title: "任务标题",
+  comments: [              // 直接使用现有comments数组
+    {
+      _id: "comment_id",
+      user_id: "user_id",
+      content: "评论内容",
+      created_at: "2024-01-01T00:00:00Z",
+      replies: []
+    }
+  ]
 }
 ```
 
-**统计实现逻辑**：
-1. 基于现有的评论缓存数据进行本地计算
-2. 遍历评论数组统计总数（包含回复）
-3. 根据用户最后查看时间和评论创建时间判断未读状态
-4. 排除用户自己的评论和已删除的评论
-
-### 3. 本地缓存数据结构
-
-```typescript
-interface CommentViewRecord {
-  [taskId: string]: number  // 任务ID -> 最后查看时间戳
+#### 缓存数据模型
+```javascript
+// 复用现有的缓存数据结构
+{
+  taskId: {
+    comments: [...],        // 评论数据
+    total: 10,             // 评论总数
+    lastUpdateTime: 1640995200000,
+    unreadCount: 2         // 通过calculateUnreadCount计算
+  }
 }
+```
 
-// 存储在uni.storage中的键名
-const COMMENT_VIEW_RECORDS_KEY = 'comment_view_records'
+#### 已读状态数据模型
+```javascript
+// 复用现有的本地存储结构
+{
+  "task_comment_read_records": {
+    "task_id": {
+      "comment_id": 1640995200000  // 已读时间戳
+    }
+  }
+}
 ```
 
 ## Error Handling
 
-### 1. 网络请求错误处理
+### 数据获取错误处理
 
+#### 评论总数获取失败
 ```javascript
-async function loadCommentStats(taskIds) {
+const commentCount = computed(() => {
   try {
-    const result = await uniCloud.callFunction({
-      name: 'todobook-co',
-      data: {
-        action: 'getTaskCommentStats',
-        taskIds
-      }
-    })
-    return result.result
+    return props.task?.comments?.length || 0
   } catch (error) {
-    console.error('加载评论统计失败:', error)
-    // 返回默认数据，不阻塞UI渲染
-    return {
-      success: true,
-      data: taskIds.map(id => ({
-        taskId: id,
-        total: 0,
-        hasUnread: false
-      }))
-    }
+    console.error('获取评论总数失败:', error)
+    return 0  // 默认值，不影响UI显示
   }
-}
+})
 ```
 
-### 2. 数据异常处理
+#### 未读状态检查失败
+```javascript
+const hasUnreadComments = computed(() => {
+  try {
+    return (props.unreadCommentCount || 0) > 0
+  } catch (error) {
+    console.error('检查未读状态失败:', error)
+    return false  // 默认为无未读，避免误导用户
+  }
+})
+```
 
-- **缺失数据**：使用默认值（total: 0, hasUnread: false）
-- **过期缓存**：设置缓存过期时间，自动清理过期数据
-- **存储异常**：使用try-catch包装存储操作，失败时不影响功能
+### 缓存错误处理
 
-### 3. UI容错设计
+复用现有的 `useTaskCommentCache` 错误处理机制：
+- 缓存读取失败时回退到任务数据
+- 网络请求失败时使用本地缓存数据
+- 本地存储异常时不显示未读提示
 
-- 当评论数据加载失败时，显示默认状态
-- 评论数量为0时，隐藏整个CommentDisplay组件
-- 网络异常时，保持上次缓存的显示状态
+### UI渲染错误处理
+
+```vue
+<template>
+  <!-- 使用v-if进行条件渲染，避免渲染错误 -->
+  <view v-if="shouldShowCommentInfo" class="comment-hint">
+    <uni-icons :color="iconColor" :size="iconSize" type="chatbubble" />
+    <text class="comment-count">{{ commentDisplayText }}</text>
+    <view v-if="hasUnreadComments" class="unread-dot"></view>
+  </view>
+</template>
+```
 
 ## Testing Strategy
 
-### 1. 单元测试
+### 单元测试策略
 
-**CommentDisplay组件测试**：
-- Props传递正确性验证
-- 不同variant和size的渲染测试
-- 未读状态的视觉提示测试
-- 边界条件测试（commentCount = 0, 1, 大数值）
+#### 组件逻辑测试
+- 测试评论总数计算的正确性
+- 测试未读状态判断逻辑
+- 测试错误边界情况处理
 
-**数据处理函数测试**：
-- commentStatsMap计算逻辑测试
-- 缓存更新机制测试
-- 错误处理逻辑测试
+#### 数据处理测试
+- 测试空评论数组的处理
+- 测试undefined/null数据的安全访问
+- 测试缓存数据与实际数据的一致性
 
-### 2. 集成测试
+### 集成测试策略
 
-**VirtualTaskList集成测试**：
-- 评论统计数据与TaskItem的正确传递
-- 虚拟滚动时的数据更新测试
-- 缓存命中与网络请求的协调测试
+#### 用户交互测试
+- 测试点击任务后未读状态的清除
+- 测试评论添加后总数的实时更新
+- 测试不同模式下的UI渲染
 
-**云函数接口测试**：
-- getTaskCommentStats接口的功能测试
-- 批量获取的性能测试
-- 权限控制测试
+#### 性能测试
+- 测试大量任务列表的渲染性能
+- 测试频繁滚动时的计算性能
+- 测试缓存机制的有效性
 
-### 3. 端到端测试
+### 视觉回归测试
+- 对比新旧UI的视觉效果
+- 测试不同屏幕尺寸下的显示效果
+- 验证与现有设计系统的一致性
 
-**用户交互测试**：
-- 任务列表中评论信息的正确显示
-- 查看评论后未读状态的更新
-- 添加新评论后数量的实时更新
-- 不同屏幕尺寸下的显示效果
+## Implementation Notes
 
-**性能测试**：
-- 大量任务时的渲染性能
-- 评论数据加载的响应时间
-- 内存使用情况监控
+### 关键设计决策
 
-### 4. 测试数据准备
+#### 1. 复用现有样式系统
+- **决策**: 在现有 `.comment-hint` 样式基础上进行调整
+- **理由**: 保持视觉一致性，降低实现复杂度
+- **影响**: 无需新增CSS类，减少样式冲突风险
 
+#### 2. 使用计算属性而非新函数
+- **决策**: 通过Vue计算属性处理显示逻辑
+- **理由**: 响应式更新，无需手动管理状态同步
+- **影响**: 自动依赖追踪，性能优化由Vue框架处理
+
+#### 3. 保持现有数据流
+- **决策**: 不修改props传递方式和数据获取逻辑
+- **理由**: 避免影响其他组件，降低回归风险
+- **影响**: 实现简单，测试范围可控
+
+### 性能优化考虑
+
+#### 计算缓存优化
 ```javascript
-// 测试用例数据结构
-const testCases = [
-  {
-    name: '无评论任务',
-    data: { taskId: 'task1', commentCount: 0, hasUnread: false }
-  },
-  {
-    name: '有评论无未读',
-    data: { taskId: 'task2', commentCount: 5, hasUnread: false }
-  },
-  {
-    name: '有评论有未读',
-    data: { taskId: 'task3', commentCount: 3, hasUnread: true }
-  },
-  {
-    name: '大量评论',
-    data: { taskId: 'task4', commentCount: 99, hasUnread: true }
-  }
-]
+// 使用computed确保只在依赖变化时重新计算
+const commentDisplayText = computed(() => {
+  const count = commentCount.value
+  return count > 0 ? `${count}条评论` : ''
+})
 ```
 
-## Implementation Approach
+#### 条件渲染优化
+```vue
+<!-- 避免不必要的DOM渲染 -->
+<view v-if="commentCount > 0 || hasUnreadComments" class="comment-hint">
+  <!-- 评论信息 -->
+</view>
+```
 
-### 阶段1：基础组件开发
-1. 创建CommentDisplay组件
-2. 实现基础的props接口和样式
-3. 单元测试验证
+### 向后兼容性
 
-### 阶段2：数据接口扩展
-1. 在云函数中实现getTaskCommentStats接口
-2. 测试接口功能和性能
-3. 权限控制验证
+#### 样式兼容性
+- 保持现有的`.comment-hint`类名不变
+- 新增样式使用CSS后代选择器，不影响现有样式
+- 支持现有的card/item模式差异化处理
 
-### 阶段3：缓存系统集成
-1. 在VirtualTaskList中集成评论统计缓存
-2. 实现批量加载和智能更新机制
-3. 测试缓存命中率和更新逻辑
+#### 功能兼容性
+- 保持现有的props接口不变
+- 现有的事件处理逻辑继续有效
+- 缓存和数据获取机制保持不变
 
-### 阶段4：UI集成和优化
-1. 在TaskItem中集成CommentDisplay组件
-2. 移除旧的评论提示代码
-3. 样式调优和响应式适配
-
-### 阶段5：测试和优化
-1. 端到端功能测试
-2. 性能优化和内存管理
-3. 用户体验优化
+这个设计确保了最小化的代码更改，最大化了现有架构和组件的复用，同时提供了更好的用户体验。

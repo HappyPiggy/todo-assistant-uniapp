@@ -58,12 +58,13 @@
           <!-- 描述 -->
           <text v-if="task.description" class="task-description">{{ task.description }}</text>
           
-          <!-- 评论提醒（item模式） -->
+          <!-- 评论信息（item模式） -->
           <view 
-            v-if="variant === 'item' && unreadCommentCount > 0" 
+            v-if="variant === 'item' && shouldShowCommentInfo" 
             class="comment-hint comment-hint--item">
             <uni-icons color="#ff9800" size="12" type="chatbubble" />
-            <text class="comment-count">{{ unreadCommentCount }}</text>
+            <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
+            <view v-if="hasUnreadComments" class="unread-dot"></view>
           </view>
         </view>
       </view>
@@ -122,10 +123,11 @@
           <text class="subtask-text">{{ task.completed_subtask_count }}/{{ task.subtask_count }}</text>
         </view>
         
-        <!-- 评论提醒 -->
-        <view v-if="unreadCommentCount > 0" class="comment-hint">
+        <!-- 评论信息 -->
+        <view v-if="shouldShowCommentInfo" class="comment-hint">
           <uni-icons color="#ff9800" size="14" type="chatbubble" />
-          <text class="comment-count">{{ unreadCommentCount }}</text>
+          <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
+          <view v-if="hasUnreadComments" class="unread-dot"></view>
         </view>
       </view>
     </view>
@@ -208,10 +210,48 @@ const emit = defineEmits([
   'subtaskClick'
 ])
 
+// 评论相关计算属性
+const commentCount = computed(() => {
+  try {
+    return props.task?.comments?.length || 0
+  } catch (error) {
+    console.error('获取评论总数失败:', error)
+    return 0
+  }
+})
+
+const hasUnreadComments = computed(() => {
+  try {
+    return (props.unreadCommentCount || 0) > 0
+  } catch (error) {
+    console.error('检查未读状态失败:', error)
+    return false
+  }
+})
+
+const commentDisplayText = computed(() => {
+  try {
+    const count = commentCount.value
+    return count > 0 ? `${count}条评论` : ''
+  } catch (error) {
+    console.error('格式化评论显示文本失败:', error)
+    return ''
+  }
+})
+
+const shouldShowCommentInfo = computed(() => {
+  try {
+    return commentCount.value > 0 || hasUnreadComments.value
+  } catch (error) {
+    console.error('检查是否显示评论信息失败:', error)
+    return false
+  }
+})
+
 const hasMetaInfo = computed(() => {
   return props.task.due_date || 
          props.task.subtask_count > 0 || 
-         props.unreadCommentCount > 0
+         shouldShowCommentInfo.value
 })
 
 const handleClick = () => {
@@ -536,6 +576,7 @@ const getTagColor = (tag) => {
 
 .comment-hint {
   @include flex-start;
+  align-items: center;
   gap: 4rpx;
   background-color: rgba(255, 152, 0, 0.1);
   padding: 4rpx 8rpx;
@@ -550,7 +591,7 @@ const getTagColor = (tag) => {
 
 .comment-count {
   font-size: $font-size-xs;
-  color: $warning-color;
+  color: $text-tertiary;
   font-weight: $font-weight-medium;
   min-width: 16rpx;
   text-align: center;
@@ -558,6 +599,15 @@ const getTagColor = (tag) => {
   .comment-hint--item & {
     min-width: 12rpx;
   }
+}
+
+.unread-dot {
+  width: 16rpx;
+  height: 16rpx;
+  background-color: $warning-color;
+  border-radius: 50%;
+  margin-left: 8rpx;
+  flex-shrink: 0;
 }
 
 .subtasks-container {

@@ -1,106 +1,49 @@
 # Implementation Plan
 
-- [ ] 1. 创建CommentDisplay组件基础结构
-  - 创建 `/pages/todobooks/components/task/CommentDisplay.vue` 组件文件
-  - 实现props接口定义（taskId, commentCount, hasUnread, variant, size）
-  - 实现基础模板结构和样式
-  - 支持card和item两种显示变体
-  - _Requirements: 1.1, 1.3, 2.1, 3.1_
+- [ ] 1. 修改TaskItem组件的评论显示逻辑
+  - 在TaskItem.vue中添加计算属性处理评论总数和未读状态显示
+  - 修改现有的.comment-hint区域模板，同时显示评论总数和未读红点
+  - 确保card模式和item模式都正确显示新的评论信息格式
+  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.4, 5.3_
 
-- [ ] 2. 实现CommentDisplay组件样式系统
-  - 实现normal和small两种尺寸规格的样式
-  - 创建未读红点提示的视觉设计
-  - 确保与现有UI设计语言的一致性
-  - 实现响应式布局适配
-  - _Requirements: 2.2, 3.1, 3.2, 3.4_
+- [ ] 2. 实现评论总数显示功能
+  - 在TaskItem.vue中添加commentCount计算属性，使用task.comments?.length || 0获取评论总数
+  - 添加commentDisplayText计算属性，格式化显示文本为"X条评论"
+  - 在模板中添加评论总数显示，当commentCount > 0时显示
+  - 使用现有的字体大小和颜色样式，确保与设计系统一致
+  - _Requirements: 1.1, 1.2, 1.3, 3.1, 5.1_
 
-- [ ] 3. 实现本地评论统计计算逻辑
-  - 创建评论统计工具函数 `calculateCommentStats`
-  - 实现评论总数计算（包含回复，排除已删除评论）
-  - 实现未读状态判断（基于最后查看时间，排除自己的评论）
-  - 添加边界条件处理和容错机制
-  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.3_
+- [ ] 3. 实现未读状态红点提示器
+  - 在TaskItem.vue中添加hasUnreadComments计算属性，基于现有unreadCommentCount prop判断
+  - 在模板中添加红点元素，当hasUnreadComments为true时显示
+  - 创建.unread-dot样式类，实现16rpx圆形红点，使用#ff9800颜色
+  - 将红点定位在评论文字右侧，保持8rpx间距
+  - _Requirements: 2.1, 2.2, 2.4, 3.2, 5.2_
 
-- [ ] 5. 扩展VirtualTaskList组件缓存系统
-  - 在 `VirtualTaskList.vue` 中添加 `commentStatsCache` 数据结构
-  - 实现 `commentStatsMap` 计算属性
-  - 集成批量加载评论统计的逻辑
-  - 实现智能缓存更新机制
-  - _Requirements: 1.4, 4.1, 4.2_
+- [ ] 4. 调整评论区域布局和样式
+  - 修改现有.comment-hint样式，优化内部元素的flex布局
+  - 确保评论总数文字、图标和红点在同一行正确对齐
+  - 为card模式和item模式分别调整布局间距和对齐方式
+  - 测试不同评论数量（0条、单条、多条）下的显示效果
+  - _Requirements: 2.4, 3.1, 3.3, 3.4_
 
-- [ ] 6. 实现评论统计数据的本地计算缓存
-  - 监听 `visibleTasks` 变化，识别需要计算统计数据的任务
-  - 基于现有评论缓存数据进行本地统计计算
-  - 实现计算结果的本地缓存，避免重复计算
-  - 添加缓存失效和更新机制
-  - _Requirements: 4.1, 4.2, 4.3_
+- [ ] 5. 添加错误处理和边界情况处理
+  - 在所有计算属性中添加try-catch错误处理
+  - 实现task.comments数据为undefined/null时的安全访问
+  - 添加shouldShowCommentInfo计算属性，控制整个评论区域的显示条件
+  - 确保数据异常时不影响任务列表的正常显示
+  - _Requirements: 4.4, 5.4_
 
-- [ ] 7. 集成CommentDisplay组件到TaskItem
-  - 在 `TaskItem.vue` 中引入 `CommentDisplay` 组件
-  - 在card模式的task-meta区域集成组件
-  - 在item模式的task-content区域集成组件
-  - 传递必要的props数据（taskId, commentCount, hasUnread, variant）
-  - _Requirements: 1.1, 1.3, 3.3_
+- [ ] 6. 验证功能集成和数据更新
+  - 测试评论添加后，评论总数是否实时更新
+  - 测试点击任务进入详情页后，未读红点是否正确消失
+  - 验证虚拟滚动场景下的性能表现
+  - 确认与现有缓存机制的兼容性
+  - _Requirements: 1.4, 2.3, 4.1, 4.2, 4.3_
 
-- [ ] 8. 移除TaskItem中的旧评论提示代码
-  - 删除现有的 `comment-hint` 相关代码和样式
-  - 移除 `unreadCommentCount` 相关的计算逻辑
-  - 清理不再使用的样式类和变量
-  - 确保代码整洁性
-  - _Requirements: 1.2, 3.1_
-
-- [ ] 9. 实现评论查看状态的本地存储管理
-  - 创建本地存储管理工具函数
-  - 实现用户查看评论时的状态记录
-  - 添加存储数据的读取和更新逻辑
-  - 处理存储异常的容错机制
-  - _Requirements: 2.3, 4.4_
-
-- [ ] 10. 在VirtualTaskList中实现评论统计数据传递
-  - 修改传递给TaskItem的props，包含评论统计数据
-  - 确保commentStatsMap数据正确传递到子组件
-  - 实现数据更新时的响应式更新机制
-  - 添加数据验证和默认值处理
-  - _Requirements: 1.4, 3.3, 4.2_
-
-- [ ] 11. 实现评论数据的实时更新机制
-  - 监听评论相关的事件（添加、删除、查看）
-  - 实现缓存数据的增量更新
-  - 确保UI界面的实时同步
-  - 处理并发更新的数据一致性
-  - _Requirements: 1.4, 2.3, 4.2_
-
-- [ ] 12. 添加错误处理和容错机制
-  - 实现网络请求失败时的默认数据处理
-  - 添加数据异常时的UI容错显示
-  - 实现缓存数据过期的自动清理
-  - 确保组件在各种异常情况下的稳定性
-  - _Requirements: 4.4_
-
-- [ ] 13. 创建CommentDisplay组件的单元测试
-  - 测试不同props组合的渲染结果
-  - 验证variant和size属性的样式效果
-  - 测试边界条件（commentCount = 0, 大数值等）
-  - 验证未读状态的视觉提示功能
-  - _Requirements: 1.1, 1.2, 2.1, 2.2_
-
-- [ ] 14. 测试本地统计计算功能和性能
-  - 验证评论统计计算逻辑的正确性
-  - 测试大量评论数据时的计算性能
-  - 验证缓存机制的有效性
-  - 测试异常数据的处理逻辑
-  - _Requirements: 1.1, 1.4, 4.1, 4.2_
-
-- [ ] 15. 进行集成测试和性能优化
-  - 测试VirtualTaskList与CommentDisplay的集成效果
-  - 验证虚拟滚动时的数据更新正确性
-  - 测试大量任务时的渲染性能
-  - 优化内存使用和缓存效率
-  - _Requirements: 3.4, 4.1, 4.3_
-
-- [ ] 16. 最终功能验证和样式调优
-  - 验证所有需求的实现完整性
-  - 测试不同屏幕尺寸下的显示效果
-  - 微调样式细节确保视觉一致性
-  - 进行端到端的用户体验测试
-  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 3.2, 3.3, 3.4_
+- [ ] 7. 测试不同显示模式和响应式布局
+  - 测试card模式下评论信息在meta-left区域的显示效果
+  - 测试item模式下评论信息在任务内容下方的显示效果
+  - 验证不同屏幕尺寸下的布局适配
+  - 确保与现有任务列表排版的协调性
+  - _Requirements: 3.3, 3.4, 4.3_
