@@ -33,7 +33,7 @@
         :is-pinned="isPinned"
         :toggle-pin="togglePin"
         :is-archived="isArchived"
-        :can-edit="canEdit"
+        :can-edit="canEdit.value"
         @retry="refreshTasks"
         @refresh="handleRefresh"
         @add-task="addTask"
@@ -61,7 +61,7 @@
     />
 
     <!-- 浮动创建任务按钮 -->
-    <view v-if="canEdit" class="fab-container">
+    <view v-if="canEdit.value" class="fab-container">
       <view class="fab-button" @click="addTask">
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
