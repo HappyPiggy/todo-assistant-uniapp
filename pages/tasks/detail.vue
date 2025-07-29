@@ -531,7 +531,7 @@ onShow(() => {
 		}
 		readMarkTimer = setTimeout(() => {
 			markTaskAsRead(taskId)
-		}, 1000)
+		}, 500)
 	}
 })
 
