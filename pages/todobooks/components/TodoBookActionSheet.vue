@@ -15,7 +15,7 @@
             </view>
             
             <!-- 删除  -->
-            <view v-if="showDelete" class="action-item danger" @click="handleDeleteAction">
+            <view v-if="canDelete" class="action-item danger" @click="handleDeleteAction">
               <uni-icons color="#FF4757" size="20" type="trash" />
               <text class="action-text">删除</text>
             </view>
@@ -58,13 +58,13 @@
             </view>
             
             <!-- 归档  -->
-            <view v-if="showArchive" class="action-item" @click="handleArchiveAction">
+            <view v-if="canArchive" class="action-item" @click="handleArchiveAction">
               <uni-icons color="#ffc107" size="20" type="folder-add" />
               <text class="action-text">归档</text>
             </view>
             
             <!-- 删除  -->
-            <view v-if="showDelete" class="action-item danger" @click="handleDeleteAction">
+            <view v-if="canDelete" class="action-item danger" @click="handleDeleteAction">
               <uni-icons color="#FF4757" size="20" type="trash" />
               <text class="action-text">删除</text>
             </view>
@@ -88,10 +88,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import ShareDialog from './ShareDialog.vue'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { usePinning } from '@/composables/usePinning.js'
+import { currentUserId } from '@/store/storage.js'
 
 // Props - 只需要基本数据，不需要回调
 const props = defineProps({
@@ -137,6 +138,22 @@ const shareDialogRef = ref(null)
 // 组合式函数
 const { archiveTodoBook, deleteTodoBook } = useBookData()
 const { isPinned, togglePin } = usePinning('todobooks')
+
+// 权限检查
+const isCurrentUserCreator = computed(() => {
+  const userId = currentUserId.value
+  const creatorId = props.bookData?.creator_id
+  return userId && creatorId && userId === creatorId
+})
+
+// 基于权限的显示控制
+const canArchive = computed(() => {
+  return props.showArchive && isCurrentUserCreator.value
+})
+
+const canDelete = computed(() => {
+  return props.showDelete && isCurrentUserCreator.value
+})
 
 // 检查是否置顶
 const isBookPinned = ref(false)
