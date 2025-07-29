@@ -32,6 +32,8 @@
         :refreshing="refreshing"
         :is-pinned="isPinned"
         :toggle-pin="togglePin"
+        :is-archived="isArchived"
+        :can-edit="canEdit"
         @retry="refreshTasks"
         @refresh="handleRefresh"
         @add-task="addTask"
@@ -59,7 +61,7 @@
     />
 
     <!-- 浮动创建任务按钮 -->
-    <view class="fab-container">
+    <view v-if="canEdit" class="fab-container">
       <view class="fab-button" @click="addTask">
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
@@ -78,6 +80,7 @@
     <TodoBookActionSheet
       ref="actionSheetRef"
       :book-data="bookData"
+      :is-archived="isArchived"
       page-type="detail"
       @action-completed="handleActionCompleted"
     />
@@ -103,6 +106,8 @@ import { usePinning } from '@/composables/usePinning.js'
 let bookId = null
 // 标记是否从list页面进入
 let fromListPage = false
+// 标记是否为归档项目册
+let isFromArchive = false
 
 // 初始化组合式函数，此时不传入 bookId
 const {
@@ -149,6 +154,16 @@ const {
 watch(availableTags, (newTags) => {
 }, { deep: true, immediate: true })
 
+// 归档状态检测
+const isArchived = computed(() => {
+  return bookData.value?.is_archived === true || isFromArchive
+})
+
+// 编辑权限检查
+const canEdit = computed(() => {
+  return !isArchived.value && bookData.value
+})
+
 // 组件本地状态
 const currentTask = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
@@ -166,6 +181,8 @@ onLoad(async (options) => {
     bookId = options.id
     // 检查是否从list页面进入
     fromListPage = options.from === 'list'
+    // 检查是否从归档管理页面进入
+    isFromArchive = options.from === 'archive' || options.archived === 'true'
     
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
@@ -174,6 +191,11 @@ onLoad(async (options) => {
     // 如果从列表页跳转过来，设置默认筛选为待办
     if (options.filter === 'todo') {
       setActiveFilter('todo')
+    }
+    
+    // 如果是归档项目册，显示归档状态提示
+    if (isArchived.value) {
+      console.log('当前项目册已归档，编辑功能受限')
     }
   } else {
     console.error('错误：未能从路由参数中获取到 id')

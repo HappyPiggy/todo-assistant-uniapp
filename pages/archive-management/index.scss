@@ -1,0 +1,227 @@
+/* 归档管理页面样式 */
+
+.archive-page {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* 统计卡片样式 */
+.stats-section {
+  padding: 20rpx;
+  
+  .stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20rpx;
+    padding: 30rpx;
+    color: #ffffff;
+    
+    .stats-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 24rpx;
+      
+      .stats-title {
+        font-size: 32rpx;
+        font-weight: 600;
+        margin-left: 16rpx;
+      }
+    }
+    
+    .stats-grid {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24rpx;
+      
+      .stat-item {
+        text-align: center;
+        flex: 1;
+        
+        .stat-number {
+          display: block;
+          font-size: 48rpx;
+          font-weight: bold;
+          margin-bottom: 8rpx;
+          color: #ffffff;
+        }
+        
+        .stat-label {
+          font-size: 24rpx;
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+    }
+    
+    .stats-footer {
+      text-align: center;
+      padding-top: 20rpx;
+      border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+      
+      .stats-summary {
+        font-size: 26rpx;
+        color: rgba(255, 255, 255, 0.9);
+      }
+    }
+  }
+}
+
+/* 归档列表样式 */
+.archive-list {
+  padding: 0 20rpx;
+}
+
+.archive-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  
+  .card-content {
+    .book-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20rpx;
+      
+      .book-icon-small {
+        width: 56rpx;
+        height: 56rpx;
+        border-radius: 12rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 24rpx;
+      }
+      
+      .book-info {
+        flex: 1;
+        
+        .book-title {
+          font-size: 30rpx;
+          font-weight: 500;
+          color: #333;
+          display: block;
+          margin-bottom: 8rpx;
+          line-height: 1.3;
+        }
+        
+        .archive-date {
+          font-size: 24rpx;
+          color: #999;
+        }
+      }
+    }
+    
+    .book-stats {
+      display: flex;
+      align-items: center;
+      
+      .stat-text {
+        font-size: 24rpx;
+        color: #666;
+      }
+      
+      .stat-divider {
+        margin: 0 16rpx;
+        color: #ccc;
+        font-size: 20rpx;
+      }
+    }
+  }
+}
+
+/* 状态样式 */
+.loading-state {
+  padding: 40rpx 20rpx;
+  text-align: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 40rpx;
+  
+  .empty-text {
+    font-size: 32rpx;
+    color: #999;
+    margin-top: 24rpx;
+    margin-bottom: 8rpx;
+  }
+  
+  .empty-desc {
+    font-size: 26rpx;
+    color: #ccc;
+    line-height: 1.4;
+  }
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 40rpx;
+  
+  .error-text {
+    font-size: 28rpx;
+    color: #ff4757;
+    margin: 20rpx 0;
+    text-align: center;
+    line-height: 1.4;
+  }
+  
+  .retry-btn {
+    background-color: #007AFF;
+    color: #ffffff;
+    border: none;
+    border-radius: 12rpx;
+    padding: 16rpx 32rpx;
+    font-size: 28rpx;
+    margin-top: 16rpx;
+  }
+  
+  .retry-btn:active {
+    background-color: #0056CC;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 750rpx) {
+  .stats-section {
+    padding: 15rpx;
+    
+    .stats-card {
+      padding: 24rpx;
+      
+      .stats-header .stats-title {
+        font-size: 28rpx;
+      }
+      
+      .stats-grid .stat-item .stat-number {
+        font-size: 40rpx;
+      }
+    }
+  }
+  
+  .archive-list {
+    padding: 0 15rpx;
+  }
+  
+  .archive-card {
+    padding: 20rpx;
+    margin-bottom: 15rpx;
+    
+    .card-content .book-header {
+      .book-icon-small {
+        width: 48rpx;
+        height: 48rpx;
+        margin-right: 20rpx;
+      }
+      
+      .book-info .book-title {
+        font-size: 28rpx;
+      }
+    }
+  }
+}

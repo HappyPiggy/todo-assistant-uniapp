@@ -47,7 +47,7 @@
 					<text class="card-title">设置</text>
 				</view>
 				<uni-list class="card-list">
-					<uni-list-item title="数据统计" link @click="toStatistics" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
+					<uni-list-item title="归档管理" link @click="toArchiveManagement" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
 					<uni-list-item title="分享管理" link @click="toShareManagement" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
 					</uni-list-item>
@@ -115,8 +115,10 @@
 					url: '/uni_modules/uni-id-pages/pages/pwd/pwd'
 				})
 			},
-			toStatistics() {
-				//todo
+			toArchiveManagement() {
+				uni.navigateTo({
+					url: '/pages/archive-management/index'
+				})
 			},
 			toShareManagement() {
 				uni.navigateTo({

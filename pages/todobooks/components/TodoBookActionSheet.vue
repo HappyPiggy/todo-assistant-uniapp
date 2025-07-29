@@ -6,51 +6,69 @@
       </view>
       <scroll-view scroll-y class="action-scroll">
         <view class="action-list">
-          <!-- 置顶功能 (仅列表页显示) -->
-          <view v-if="showPin" class="action-item" @click="handlePinAction">
-            <uni-icons 
-              :color="isBookPinned ? '#FF6B6B' : '#007AFF'" 
-              size="20" 
-              :type="isBookPinned ? 'star-filled' : 'star'" 
-            />
-            <text class="action-text">{{ isBookPinned ? '取消置顶' : '置顶' }}</text>
-          </view>
+          <!-- 归档项目册只显示分享和删除 -->
+          <template v-if="isArchived">
+            <!-- 分享 -->
+            <view class="action-item" @click="handleShareAction">
+              <uni-icons color="#ff9500" size="20" type="redo" />
+              <text class="action-text">分享</text>
+            </view>
+            
+            <!-- 删除  -->
+            <view v-if="showDelete" class="action-item danger" @click="handleDeleteAction">
+              <uni-icons color="#FF4757" size="20" type="trash" />
+              <text class="action-text">删除</text>
+            </view>
+          </template>
           
-          <!-- 编辑 -->
-          <view class="action-item" @click="handleEditAction">
-            <uni-icons color="#007AFF" size="20" type="compose" />
-            <text class="action-text">编辑</text>
-          </view>
-          
-          <!-- 成员管理 -->
-          <view class="action-item" @click="handleMembersAction">
-            <uni-icons color="#28a745" size="20" type="staff" />
-            <text class="action-text">成员管理</text>
-          </view>
-          
-          <!-- 数据统计 -->
-          <view class="action-item" @click="handleStatisticsAction">
-            <uni-icons color="#17a2b8" size="20" type="bars" />
-            <text class="action-text">数据统计</text>
-          </view>
-          
-          <!-- 分享 -->
-          <view class="action-item" @click="handleShareAction">
-            <uni-icons color="#ff9500" size="20" type="redo" />
-            <text class="action-text">分享</text>
-          </view>
-          
-          <!-- 归档  -->
-          <view v-if="showArchive" class="action-item" @click="handleArchiveAction">
-            <uni-icons color="#ffc107" size="20" type="folder-add" />
-            <text class="action-text">归档</text>
-          </view>
-          
-          <!-- 删除  -->
-          <view v-if="showDelete" class="action-item danger" @click="handleDeleteAction">
-            <uni-icons color="#FF4757" size="20" type="trash" />
-            <text class="action-text">删除</text>
-          </view>
+          <!-- 正常项目册显示所有操作 -->
+          <template v-else>
+            <!-- 置顶功能 (仅列表页显示) -->
+            <view v-if="showPin" class="action-item" @click="handlePinAction">
+              <uni-icons 
+                :color="isBookPinned ? '#FF6B6B' : '#007AFF'" 
+                size="20" 
+                :type="isBookPinned ? 'star-filled' : 'star'" 
+              />
+              <text class="action-text">{{ isBookPinned ? '取消置顶' : '置顶' }}</text>
+            </view>
+            
+            <!-- 编辑 -->
+            <view class="action-item" @click="handleEditAction">
+              <uni-icons color="#007AFF" size="20" type="compose" />
+              <text class="action-text">编辑</text>
+            </view>
+            
+            <!-- 成员管理 -->
+            <view class="action-item" @click="handleMembersAction">
+              <uni-icons color="#28a745" size="20" type="staff" />
+              <text class="action-text">成员管理</text>
+            </view>
+            
+            <!-- 数据统计 -->
+            <view class="action-item" @click="handleStatisticsAction">
+              <uni-icons color="#17a2b8" size="20" type="bars" />
+              <text class="action-text">数据统计</text>
+            </view>
+            
+            <!-- 分享 -->
+            <view class="action-item" @click="handleShareAction">
+              <uni-icons color="#ff9500" size="20" type="redo" />
+              <text class="action-text">分享</text>
+            </view>
+            
+            <!-- 归档  -->
+            <view v-if="showArchive" class="action-item" @click="handleArchiveAction">
+              <uni-icons color="#ffc107" size="20" type="folder-add" />
+              <text class="action-text">归档</text>
+            </view>
+            
+            <!-- 删除  -->
+            <view v-if="showDelete" class="action-item danger" @click="handleDeleteAction">
+              <uni-icons color="#FF4757" size="20" type="trash" />
+              <text class="action-text">删除</text>
+            </view>
+          </template>
         </view>
       </scroll-view>
       <view class="action-cancel" @click="close">
@@ -99,6 +117,11 @@ const props = defineProps({
     type: String,
     default: 'detail', // 'list' | 'detail'
     validator: (value) => ['list', 'detail'].includes(value)
+  },
+  // 归档状态
+  isArchived: {
+    type: Boolean,
+    default: false
   }
 })
 

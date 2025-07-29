@@ -42,7 +42,7 @@
 							</view>
 						</view>
 					</view>
-					<view class="header-actions" @click="showTaskMenu">
+					<view v-if="canEdit" class="header-actions" @click="showTaskMenu">
 						<uni-icons color="#999999" size="24" type="more-filled" />
 					</view>
 				</view>
@@ -174,7 +174,7 @@
 			<view class="comments-section">
 				<view class="section-header">
 					<text class="section-title">评论 ({{ commentsData.total || 0 }})</text>
-					<view class="add-comment" @click="showAddComment">
+					<view v-if="canEdit" class="add-comment" @click="showAddComment">
 						<uni-icons color="#007AFF" size="18" type="chatboxes" />
 					</view>
 				</view>
@@ -211,7 +211,7 @@
 								<text class="comment-content">{{ comment.content }}</text>
 								
 								<!-- 评论操作 -->
-								<view class="comment-actions">
+								<view v-if="canEdit" class="comment-actions">
 									<view class="action-btn" @click="showReplyInput(comment)">
 										<text class="action-text">回复</text>
 									</view>
@@ -227,6 +227,11 @@
 										@click="handleDeleteComment(comment)">
 										<text class="action-text">删除</text>
 									</view>
+								</view>
+								
+								<!-- 归档状态提示 -->
+								<view v-else class="archived-notice">
+									<text class="archived-text">已归档项目册不支持评论操作</text>
 								</view>
 							</view>
 						</view>
@@ -255,7 +260,7 @@
 									<text class="comment-content">{{ reply.content }}</text>
 									
 									<!-- 回复操作 -->
-									<view class="comment-actions">
+									<view v-if="canEdit" class="comment-actions">
 										<view 
 											v-if="canEditComment(reply, task)" 
 											class="action-btn" 
@@ -380,7 +385,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
@@ -450,6 +455,31 @@ const costFormData = ref({
 })
 const updating = ref(false)
 
+// 归档状态
+const isArchived = ref(false)
+const canEdit = computed(() => !isArchived.value)
+
+// 检查项目册归档状态
+const checkBookArchiveStatus = async (bookId) => {
+	try {
+		const todoBookCo = uniCloud.importObject('todobook-co')
+		const result = await todoBookCo.getTodoBookDetail(bookId, {
+			includeBasic: true,
+			includeMembers: false,
+			includeTasks: false
+		})
+		
+		if (result.code === 0 && result.data && result.data.book) {
+			isArchived.value = result.data.book.is_archived === true
+			if (isArchived.value) {
+				console.log('当前任务所属项目册已归档，编辑功能受限')
+			}
+		}
+	} catch (error) {
+		console.error('检查项目册归档状态失败:', error)
+	}
+}
+
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
 	console.log("onLoad options", JSON.stringify(options, null, 2))
@@ -459,6 +489,11 @@ onLoad(async (options) => {
 		
 		// 获取当前用户信息
 		getCurrentUser()
+		
+		// 检查项目册归档状态
+		if (bookId) {
+			await checkBookArchiveStatus(bookId)
+		}
 		
 		// 加载任务详情和评论
 		await loadTaskDetail(taskId)

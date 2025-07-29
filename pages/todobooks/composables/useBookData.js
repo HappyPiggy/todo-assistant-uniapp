@@ -142,6 +142,35 @@ export function useBookData() {
   }
 
   /**
+   * 加载归档项目册列表
+   * @param {Object} options - 加载选项
+   * @returns {Promise<Array>} 归档的 TodoBook 列表
+   */
+  const loadArchivedTodoBooks = async (options = {}) => {
+    console.log('从云端加载归档项目册...')
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.getTodoBooks({
+        include_archived: true,
+        archived_only: true,
+        include_members: true,  // 归档管理需要成员信息用于统计
+        ...options
+      })
+      
+      if (result.code === 0) {
+        const books = result.data.list || result.data
+        console.log('归档项目册加载成功，数量:', books.length)
+        return books
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('加载归档项目册失败:', error)
+      throw error
+    }
+  }
+
+  /**
    * 刷新项目册列表
    * @returns {Promise<Array>} TodoBook 列表
    */
@@ -526,6 +555,7 @@ export function useBookData() {
     // 基础方法
     loadBookDetail,
     loadTodoBooks,
+    loadArchivedTodoBooks,
     refreshTodoBooks,
     archiveTodoBook,
     deleteTodoBook,

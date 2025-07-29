@@ -88,7 +88,7 @@
         </view>
         
         <!-- 更多操作按钮 -->
-        <view class="task-detail-btn" @click.stop="handleMenuClick">
+        <view v-if="canEdit" class="task-detail-btn" @click.stop="handleMenuClick">
           <uni-icons 
             color="#999999" 
             :size="variant === 'card' ? 20 : 18" 
@@ -132,6 +132,8 @@
         :level="level + 1"
         :index="index"
         :parentTask="task"
+        :isArchived="isArchived"
+        :canEdit="canEdit"
         :unreadCommentCount="getSubtaskUnreadCount(subtask)"
         @click="handleSubtaskClick"
         @statusToggle="handleSubtaskStatusToggle"
@@ -176,6 +178,14 @@ const props = defineProps({
   isPinned: {
     type: Boolean,
     default: false
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  canEdit: {
+    type: Boolean,
+    default: true
   },
 })
 

@@ -74,6 +74,8 @@
             :variant="'card'"
             :is-pinned="isPinned(task._id)"
             :unreadCommentCount="unreadCountsMap[task._id]"
+            :is-archived="isArchived"
+            :can-edit="canEdit"
             @click="handleTaskClick"
             @statusToggle="handleStatusToggle"
             @menuClick="handleMenuClick"
@@ -93,6 +95,8 @@
       ref="taskMenuPopup"
       :current-task="currentTask"
       :is-pinned="isPinned(currentTask?._id)"
+      :is-archived="isArchived"
+      :can-edit="canEdit"
       @view-detail="handleViewDetail"
       @edit="handleEdit"
       @delete="handleDelete"
@@ -184,6 +188,15 @@ const props = defineProps({
   togglePin: {
     type: Function,
     default: () => {}
+  },
+  // 归档状态相关
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  canEdit: {
+    type: Boolean,
+    default: true
   }
 })
 

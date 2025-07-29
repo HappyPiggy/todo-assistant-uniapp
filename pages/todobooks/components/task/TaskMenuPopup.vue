@@ -10,26 +10,43 @@
         <text class="menu-title">{{ currentTask && currentTask.title ? currentTask.title : '任务操作' }}</text>
       </view>
       <view class="menu-list">
-        <view class="menu-item" @click="handleTogglePin">
-          <uni-icons 
-            :color="isPinned ? '#FF6B6B' : '#007AFF'" 
-            size="20" 
-            :type="isPinned ? 'star-filled' : 'star'" 
-          />
-          <text class="menu-text">{{ isPinned ? '取消置顶' : '置顶任务' }}</text>
+        <!-- 归档状态下不显示任何操作菜单 -->
+        <view v-if="isArchived" class="menu-item disabled">
+          <uni-icons color="#ccc" size="20" type="info" />
+          <text class="menu-text disabled-text">已归档项目册不支持编辑操作</text>
         </view>
-        <view class="menu-item" @click="handleViewDetail">
-          <uni-icons color="#007AFF" size="20" type="eye" />
-          <text class="menu-text">查看详情</text>
-        </view>
-        <view class="menu-item" @click="handleEdit">
-          <uni-icons color="#28a745" size="20" type="compose" />
-          <text class="menu-text">编辑任务</text>
-        </view>
-        <view class="menu-item danger" @click="handleDelete">
-          <uni-icons color="#FF4757" size="20" type="trash" />
-          <text class="menu-text">删除任务</text>
-        </view>
+        
+        <!-- 正常状态下显示所有操作 -->
+        <template v-else-if="canEdit">
+          <view class="menu-item" @click="handleTogglePin">
+            <uni-icons 
+              :color="isPinned ? '#FF6B6B' : '#007AFF'" 
+              size="20" 
+              :type="isPinned ? 'star-filled' : 'star'" 
+            />
+            <text class="menu-text">{{ isPinned ? '取消置顶' : '置顶任务' }}</text>
+          </view>
+          <view class="menu-item" @click="handleViewDetail">
+            <uni-icons color="#007AFF" size="20" type="eye" />
+            <text class="menu-text">查看详情</text>
+          </view>
+          <view class="menu-item" @click="handleEdit">
+            <uni-icons color="#28a745" size="20" type="compose" />
+            <text class="menu-text">编辑任务</text>
+          </view>
+          <view class="menu-item danger" @click="handleDelete">
+            <uni-icons color="#FF4757" size="20" type="trash" />
+            <text class="menu-text">删除任务</text>
+          </view>
+        </template>
+        
+        <!-- 只读模式：只显示查看详情 -->
+        <template v-else>
+          <view class="menu-item" @click="handleViewDetail">
+            <uni-icons color="#007AFF" size="20" type="eye" />
+            <text class="menu-text">查看详情</text>
+          </view>
+        </template>
       </view>
       <view class="menu-cancel" @click="handleCancel">
         <text class="cancel-text">取消</text>
@@ -49,6 +66,14 @@ const props = defineProps({
   isPinned: {
     type: Boolean,
     default: false
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  canEdit: {
+    type: Boolean,
+    default: true
   },
   maskClosable: {
     type: Boolean,
@@ -157,12 +182,26 @@ defineExpose({
   &.danger .menu-text {
     color: $error-color;
   }
+  
+  &.disabled {
+    cursor: not-allowed;
+    background-color: transparent;
+    
+    &:active {
+      background-color: transparent;
+    }
+  }
 }
 
 .menu-text {
   font-size: $font-size-lg;
   color: $text-primary;
   margin-left: $margin-sm;
+  
+  &.disabled-text {
+    color: #ccc;
+    font-style: italic;
+  }
 }
 
 .menu-cancel {
