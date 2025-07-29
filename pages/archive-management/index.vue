@@ -96,20 +96,30 @@ export default {
       loadArchivedBooks
     } = useArchiveData()
 
-    // 格式化日期
+    // 格式化日期 - 显示具体的日期时间
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      const date = new Date(dateString)
-      const now = new Date()
-      const diff = now - date
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
       
-      if (days === 0) return '今天'
-      if (days === 1) return '昨天'
-      if (days < 7) return `${days}天前`
-      if (days < 30) return `${Math.floor(days / 7)}周前`
-      if (days < 365) return `${Math.floor(days / 30)}个月前`
-      return `${Math.floor(days / 365)}年前`
+      try {
+        const date = new Date(dateString)
+        // 检查日期是否有效
+        if (isNaN(date.getTime())) {
+          console.warn('无效的日期字符串:', dateString)
+          return dateString // 返回原始字符串作为fallback
+        }
+        
+        // 格式化为 YYYY-MM-DD HH:mm
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}`
+      } catch (error) {
+        console.error('格式化日期时出错:', error, '原始值:', dateString)
+        return dateString
+      }
     }
 
     // 计算完成进度
@@ -140,8 +150,23 @@ export default {
     // 加载数据
     const loadData = async () => {
       try {
+        console.log('归档页面开始加载数据...')
         await loadArchivedBooks()
-        console.log('归档页面数据加载完成，archivedBooks:', JSON.stringify(archivedBooks.value, null, 2))
+        
+        console.log('============ 归档页面数据加载完成 ============')
+        console.log('archivedBooks 响应式数据:', JSON.stringify(archivedBooks.value, null, 2))
+        console.log('数据数量:', archivedBooks.value.length)
+        
+        // 验证每个项目册的 archived_at 字段和格式化结果
+        archivedBooks.value.forEach((book, index) => {
+          console.log(`验证归档项目册 ${index + 1}:`)
+          console.log('  - 原始 archived_at:', book.archived_at)
+          console.log('  - 格式化后时间:', formatDate(book.archived_at))
+          console.log('  - Date 对象:', new Date(book.archived_at))
+          console.log('  - 是否有效日期:', !isNaN(new Date(book.archived_at).getTime()))
+        })
+        console.log('============ 归档页面验证完成 ============')
+        
       } catch (err) {
         console.error('加载归档数据失败:', err)
       }

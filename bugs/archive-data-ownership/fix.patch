@@ -1,0 +1,40 @@
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/module/todobook/get-todobooks.js b/uniCloud-alipay/cloudfunctions/todobook-co/module/todobook/get-todobooks.js
+index 5dc5060..2a5b4d5 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/module/todobook/get-todobooks.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/module/todobook/get-todobooks.js
+@@ -16,6 +16,7 @@ const { ERROR_CODES } = require('../../common/constants')
+  * 获取用户的项目册列表
+  * @param {Object} options 选项参数
+  * @param {boolean} options.include_archived 是否包含归档项目册
++ * @param {boolean} options.archived_only 是否只返回归档项目册
+  * @param {number} options.page 页码
+  * @param {number} options.pageSize 每页大小
+  * @param {string} options.keyword 搜索关键词
+@@ -69,7 +70,8 @@ async function getTodoBooks(options = {}) {
+   const { uid, db } = this
+   
+   const { 
+-    include_archived = false, 
++    include_archived = false,
++    archived_only = false,
+     page = 1,
+     pageSize = 20,
+     keyword = ''
+@@ -100,10 +102,15 @@ async function getTodoBooks(options = {}) {
+       whereCondition.$or.push({ _id: db.command.in(memberBookIds) })
+     }
+     
+-    // 归档状态
+-    if (!include_archived) {
++    // 归档状态过滤逻辑
++    if (archived_only) {
++      // 只返回已归档的项目册
++      whereCondition.is_archived = true
++    } else if (!include_archived) {
++      // 默认情况：只返回未归档的项目册
+       whereCondition.is_archived = false
+     }
++    // 如果 include_archived=true 且 archived_only=false，则返回所有状态的项目册
+     
+     // 搜索条件 - 仅搜索项目册标题，精确包含匹配
+     if (keyword && keyword.trim()) {

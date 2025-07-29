@@ -56,20 +56,45 @@ export function useArchiveData() {
       
       // 调用云函数获取已归档项目册，包含成员信息用于统计
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBooks({
+      
+      // 记录调用参数
+      const requestParams = {
         include_archived: true,
         archived_only: true,
         include_members: true,  // 需要成员信息来计算去重成员数
         ...options
-      })
+      }
+      console.log('调用云函数 getTodoBooks，参数:', JSON.stringify(requestParams, null, 2))
       
-      console.log('归档项目册云函数返回结果:', JSON.stringify(result, null, 2))
+      const result = await todoBookCo.getTodoBooks(requestParams)
+      
+      console.log('归档项目册云函数返回结果 - 完整响应:', JSON.stringify(result, null, 2))
       
       if (result.code === 0) {
         const books = result.data.list || result.data || []
         archivedBooks.value = books
-        console.log('归档项目册数据加载成功，数量:', archivedBooks.value.length)
-        console.log('第一个归档项目册数据样例:', books.length > 0 ? JSON.stringify(books[0], null, 2) : '无数据')
+        
+        console.log('===================== 归档数据详细信息 =====================')
+        console.log('归档项目册数据加载成功，总数量:', books.length)
+        
+        // 详细记录每个归档项目册的关键信息
+        books.forEach((book, index) => {
+          console.log(`归档项目册 ${index + 1}:`)
+          console.log('  - ID:', book._id)
+          console.log('  - 标题:', book.title)
+          console.log('  - 是否归档:', book.is_archived)
+          console.log('  - 归档时间 (archived_at):', book.archived_at)
+          console.log('  - 归档时间类型:', typeof book.archived_at)
+          console.log('  - 任务数 (item_count):', book.item_count)
+          console.log('  - 已完成数 (completed_count):', book.completed_count)
+          console.log('  - 成员数 (member_count):', book.member_count)
+          console.log('  - 创建时间:', book.created_at)
+          console.log('  - 更新时间:', book.updated_at)
+          console.log('  - 完整数据:', JSON.stringify(book, null, 2))
+          console.log('---')
+        })
+        console.log('===================== 归档数据信息结束 =====================')
+        
         return books
       }
       throw new Error(result.message || '加载归档项目册失败')
