@@ -3,6 +3,11 @@
     <!-- 页面标题 -->
     <view class="page-header">
       <text class="page-title">{{ pageTitle }}</text>
+      <!-- 分享码导入快捷按钮 -->
+      <view v-if="!isEditMode" class="import-shortcut" @click="handleImportShortcut">
+        <uni-icons type="download" size="18" color="#007AFF"></uni-icons>
+        <text class="import-shortcut-text">从分享码导入</text>
+      </view>
     </view>
 
     <!-- 加载状态 -->
@@ -252,6 +257,13 @@ const handleCancel = () => {
   }
 }
 
+// 处理分享码导入快捷按钮点击
+const handleImportShortcut = () => {
+  uni.navigateTo({
+    url: '/pages/settings/share-management'
+  })
+}
+
 // 生命周期
 onMounted(() => {
   hasInitialized.value = true
@@ -274,6 +286,10 @@ onMounted(() => {
   margin-bottom: $margin-base;
   background-color: $bg-white;
   border-bottom: 1rpx solid $border-color-light;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-title {
@@ -281,5 +297,29 @@ onMounted(() => {
   color: $text-primary;
   font-weight: $font-weight-bold;
   text-align: center;
+}
+
+.import-shortcut {
+  position: absolute;
+  right: $padding-base;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 16rpx;
+  background-color: rgba(0, 122, 255, 0.1);
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(0, 122, 255, 0.2);
+  transition: all 0.3s ease;
+  
+  &:active {
+    background-color: rgba(0, 122, 255, 0.2);
+    transform: scale(0.95);
+  }
+}
+
+.import-shortcut-text {
+  font-size: $font-size-sm;
+  color: #007AFF;
+  font-weight: $font-weight-medium;
 }
 </style>
