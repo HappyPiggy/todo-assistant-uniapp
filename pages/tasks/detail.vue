@@ -179,6 +179,11 @@
 					</view>
 				</view>
 				
+				<!-- 归档状态提示 -->
+				<view v-if="!canEdit" class="archived-notice-section">
+					<text class="archived-text">已归档项目册不支持评论操作</text>
+				</view>
+				
 				<!-- 评论加载状态 -->
 				<view v-if="commentsLoading && comments.length === 0" class="comments-loading">
 					<uni-load-more status="loading" />
@@ -227,11 +232,6 @@
 										@click="handleDeleteComment(comment)">
 										<text class="action-text">删除</text>
 									</view>
-								</view>
-								
-								<!-- 归档状态提示 -->
-								<view v-else class="archived-notice">
-									<text class="archived-text">已归档项目册不支持评论操作</text>
 								</view>
 							</view>
 						</view>
