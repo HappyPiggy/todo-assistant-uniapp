@@ -2,6 +2,8 @@
  * 评论显示改进功能的工具函数和测试验证
  */
 
+import { getTaskCommentCount } from '@/utils/commentUtils.js'
+
 /**
  * 验证TaskItem组件的评论显示逻辑
  * @param {Object} task - 任务对象
@@ -17,8 +19,8 @@ export function validateCommentDisplay(task, unreadCommentCount) {
   }
 
   try {
-    // 验证评论总数计算
-    const commentCount = task?.comments?.length || 0
+    // 验证评论总数计算 - 使用统一的计数函数
+    const commentCount = getTaskCommentCount(task, true)
     validation.results.commentCount = commentCount
     
     // 验证显示文本格式

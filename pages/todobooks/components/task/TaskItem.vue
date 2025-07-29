@@ -160,6 +160,7 @@ import { defineProps, defineEmits, computed } from 'vue'
 import { currentUserId } from '@/store/storage.js'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
+import { getTaskCommentCount } from '@/utils/commentUtils.js'
 
 const props = defineProps({
   task: {
@@ -213,7 +214,8 @@ const emit = defineEmits([
 // 评论相关计算属性
 const commentCount = computed(() => {
   try {
-    return props.task?.comments?.length || 0
+    // 使用统一的评论计数函数，确保包含所有回复
+    return getTaskCommentCount(props.task, true)
   } catch (error) {
     console.error('获取评论总数失败:', error)
     return 0
@@ -232,6 +234,7 @@ const hasUnreadComments = computed(() => {
 const commentDisplayText = computed(() => {
   try {
     const count = commentCount.value
+    console.log("!!!!", count)
     return count > 0 ? `${count}条评论` : ''
   } catch (error) {
     console.error('格式化评论显示文本失败:', error)

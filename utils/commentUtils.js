@@ -204,3 +204,44 @@ export function getReadRecordsStats() {
     storageSize: JSON.stringify(commentReadRecords).length
   }
 }
+
+/**
+ * 统一的任务评论计数函数
+ * 确保所有场景下都使用相同的计算逻辑，包含所有回复
+ * @param {Object} task 任务对象
+ * @param {boolean} includeReplies 是否包含回复，默认true
+ * @returns {number} 评论总数
+ */
+export function getTaskCommentCount(task, includeReplies = true) {
+  try {
+    if (!task || !task.comments || !Array.isArray(task.comments)) {
+      return 0
+    }
+    
+    if (!includeReplies) {
+      // 只计算主评论数量
+      return task.comments.filter(comment => !comment.is_deleted).length
+    }
+    
+    // 计算包含回复的总评论数
+    let totalCount = 0
+    
+    task.comments.forEach(comment => {
+      // 计算主评论（非删除的）
+      if (!comment.is_deleted) {
+        totalCount++
+      }
+      
+      // 计算回复数量（非删除的）
+      if (comment.replies && Array.isArray(comment.replies)) {
+        totalCount += comment.replies.filter(reply => !reply.is_deleted).length
+      }
+    })
+    
+    return totalCount
+    
+  } catch (error) {
+    console.error('计算评论总数失败:', error)
+    return 0
+  }
+}
