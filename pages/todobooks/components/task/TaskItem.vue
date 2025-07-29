@@ -70,9 +70,9 @@
       
       <!-- 右侧操作区 -->
       <view class="task-right">
-        <!-- 状态切换（仅在没有子任务或item模式时显示） -->
+        <!-- 状态切换（仅在没有子任务或item模式时显示，且可编辑时） -->
         <view 
-          v-if="task.subtask_count === 0 || variant === 'item'"
+          v-if="(task.subtask_count === 0 || variant === 'item') && canEdit"
           class="task-status" 
           @click.stop="handleStatusToggle">
           <uni-icons 
@@ -85,6 +85,16 @@
             color="#cccccc" 
             :size="variant === 'card' ? 28 : 24" 
             type="circle" />
+        </view>
+        
+        <!-- 状态显示（不可编辑时） -->
+        <view 
+          v-if="(task.subtask_count === 0 || variant === 'item') && !canEdit && task.status === 'completed'"
+          class="task-status-readonly">
+          <uni-icons 
+            color="#28a745" 
+            :size="variant === 'card' ? 28 : 24" 
+            type="checkmarkempty" />
         </view>
         
         <!-- 更多操作按钮 -->
@@ -349,6 +359,15 @@ const getTagColor = (tag) => {
     
     .task-status {
       @include icon-button(44rpx);
+    }
+    
+    .task-status-readonly {
+      width: 44rpx;
+      height: 44rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.6;
     }
   }
   

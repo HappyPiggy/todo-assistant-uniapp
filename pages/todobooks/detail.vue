@@ -353,6 +353,14 @@ const handleActionCompleted = (result) => {
 }
 
 const addTask = () => {
+  if (isArchived.value) {
+    uni.showToast({
+      title: '归档项目册不能添加任务',
+      icon: 'none'
+    })
+    return
+  }
+  
   uni.navigateTo({
     url: `/pages/tasks/form?bookId=${bookId}`
   })
@@ -379,12 +387,28 @@ const viewTaskDetail = (task) => {
 }
 
 const editTask = (task) => {
+  if (isArchived.value) {
+    uni.showToast({
+      title: '归档项目册中的任务不能编辑',
+      icon: 'none'
+    })
+    return
+  }
+  
   uni.navigateTo({
     url: `/pages/tasks/form?id=${task._id}&bookId=${bookId}`
   })
 }
 
 const deleteTask = async (task) => {
+  if (isArchived.value) {
+    uni.showToast({
+      title: '归档项目册中的任务不能删除',
+      icon: 'none'
+    })
+    return
+  }
+  
   let content = '确定要删除这个任务吗？'
   if (task.subtask_count > 0) {
     content = `此任务包含 ${task.subtask_count} 个子任务，删除后所有子任务也将被删除。确定要继续吗？`

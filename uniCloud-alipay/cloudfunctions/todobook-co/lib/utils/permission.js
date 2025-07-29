@@ -9,19 +9,29 @@ const { createErrorResponse } = require('../../common/utils')
  * @param {string} userId 用户ID
  * @param {string} todoBookId 项目册ID
  * @param {string} permission 权限类型
- * @returns {Object} 权限检查结果 { success: boolean, error?: Object }
+ * @returns {Object} 权限检查结果 { success: boolean, error?: Object, book?: Object }
  */
 async function checkTodoBookPermission(context, userId, todoBookId, permission) {
   const db = context.db
   
   try {
-    // 检查是否是项目册创建者
+    // 检查是否是项目册创建者并获取项目册信息
     const bookResult = await db.collection('todobooks')
       .where({ _id: todoBookId, creator_id: userId })
       .get()
     
     if (bookResult.data.length > 0) {
-      return { success: true } // 创建者拥有所有权限
+      const book = bookResult.data[0]
+      
+      // 检查归档状态：如果是写操作且项目册已归档，则拒绝
+      if (book.is_archived && permission === PERMISSION_TYPE.WRITE) {
+        return {
+          success: false,
+          error: createErrorResponse(ERROR_CODES.FORBIDDEN, '归档项目册不能进行修改操作')
+        }
+      }
+      
+      return { success: true, book: book } // 创建者拥有所有权限（除非归档状态限制）
     }
     
     // 检查成员权限
@@ -41,6 +51,24 @@ async function checkTodoBookPermission(context, userId, todoBookId, permission) 
     }
     
     const member = memberResult.data[0]
+    
+    // 获取项目册信息以检查归档状态
+    const bookInfoResult = await db.collection('todobooks')
+      .where({ _id: todoBookId })
+      .get()
+    
+    if (bookInfoResult.data.length > 0) {
+      const book = bookInfoResult.data[0]
+      
+      // 检查归档状态：如果是写操作且项目册已归档，则拒绝
+      if (book.is_archived && permission === PERMISSION_TYPE.WRITE) {
+        return {
+          success: false,
+          error: createErrorResponse(ERROR_CODES.FORBIDDEN, '归档项目册不能进行修改操作')
+        }
+      }
+    }
+    
     if (!member.permissions.includes(permission)) {
       const permissionMessages = {
         [PERMISSION_TYPE.READ]: '没有查看权限',

@@ -311,6 +311,15 @@ export function useTaskData(bookId, allTasks = null) {
    * @param {Object} task - 任务对象
    */
   const toggleTaskStatus = async (task) => {
+    // 检查归档状态权限
+    if (bookData.value?.is_archived) {
+      uni.showToast({
+        title: '归档项目册中的任务不能修改状态',
+        icon: 'none'
+      })
+      return
+    }
+    
     // 验证任务是否可以完成
     const validation = validateTaskCompletion(task)
     if (!validation.canComplete) {
@@ -464,6 +473,15 @@ export function useTaskData(bookId, allTasks = null) {
    * @param {Object} subtask - 子任务对象
    */
   const toggleSubtaskStatus = async (subtask) => {
+    // 检查归档状态权限
+    if (bookData.value?.is_archived) {
+      uni.showToast({
+        title: '归档项目册中的任务不能修改状态',
+        icon: 'none'
+      })
+      return
+    }
+    
     // 验证子任务是否可以完成
     const validation = validateTaskCompletion(subtask)
     if (!validation.canComplete) {

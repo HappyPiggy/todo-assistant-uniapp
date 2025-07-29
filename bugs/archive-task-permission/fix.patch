@@ -1,0 +1,195 @@
+diff --git a/pages/todobooks/components/task/TaskItem.vue b/pages/todobooks/components/task/TaskItem.vue
+index 7d509d4..cf2b24a 100644
+--- a/pages/todobooks/components/task/TaskItem.vue
++++ b/pages/todobooks/components/task/TaskItem.vue
+@@ -70,9 +70,9 @@
+       
+       <!-- 右侧操作区 -->
+       <view class="task-right">
+-        <!-- 状态切换（仅在没有子任务或item模式时显示） -->
++        <!-- 状态切换（仅在没有子任务或item模式时显示，且可编辑时） -->
+         <view 
+-          v-if="task.subtask_count === 0 || variant === 'item'"
++          v-if="(task.subtask_count === 0 || variant === 'item') && canEdit"
+           class="task-status" 
+           @click.stop="handleStatusToggle">
+           <uni-icons 
+@@ -87,6 +87,16 @@
+             type="circle" />
+         </view>
+         
++        <!-- 状态显示（不可编辑时） -->
++        <view 
++          v-if="(task.subtask_count === 0 || variant === 'item') && !canEdit && task.status === 'completed'"
++          class="task-status-readonly">
++          <uni-icons 
++            color="#28a745" 
++            :size="variant === 'card' ? 28 : 24" 
++            type="checkmarkempty" />
++        </view>
++        
+         <!-- 更多操作按钮 -->
+         <view v-if="canEdit" class="task-detail-btn" @click.stop="handleMenuClick">
+           <uni-icons 
+@@ -350,6 +360,15 @@ const getTagColor = (tag) => {
+     .task-status {
+       @include icon-button(44rpx);
+     }
++    
++    .task-status-readonly {
++      width: 44rpx;
++      height: 44rpx;
++      display: flex;
++      align-items: center;
++      justify-content: center;
++      opacity: 0.6;
++    }
+   }
+   
+ }
+diff --git a/pages/todobooks/composables/useTaskData.js b/pages/todobooks/composables/useTaskData.js
+index 16d3fb3..c0e7692 100644
+--- a/pages/todobooks/composables/useTaskData.js
++++ b/pages/todobooks/composables/useTaskData.js
+@@ -311,6 +311,15 @@ export function useTaskData(bookId, allTasks = null) {
+    * @param {Object} task - 任务对象
+    */
+   const toggleTaskStatus = async (task) => {
++    // 检查归档状态权限
++    if (bookData.value?.is_archived) {
++      uni.showToast({
++        title: '归档项目册中的任务不能修改状态',
++        icon: 'none'
++      })
++      return
++    }
++    
+     // 验证任务是否可以完成
+     const validation = validateTaskCompletion(task)
+     if (!validation.canComplete) {
+@@ -464,6 +473,15 @@ export function useTaskData(bookId, allTasks = null) {
+    * @param {Object} subtask - 子任务对象
+    */
+   const toggleSubtaskStatus = async (subtask) => {
++    // 检查归档状态权限
++    if (bookData.value?.is_archived) {
++      uni.showToast({
++        title: '归档项目册中的任务不能修改状态',
++        icon: 'none'
++      })
++      return
++    }
++    
+     // 验证子任务是否可以完成
+     const validation = validateTaskCompletion(subtask)
+     if (!validation.canComplete) {
+diff --git a/pages/todobooks/detail.vue b/pages/todobooks/detail.vue
+index 9cec728..30c97b2 100644
+--- a/pages/todobooks/detail.vue
++++ b/pages/todobooks/detail.vue
+@@ -353,6 +353,14 @@ const handleActionCompleted = (result) => {
+ }
+ 
+ const addTask = () => {
++  if (isArchived.value) {
++    uni.showToast({
++      title: '归档项目册不能添加任务',
++      icon: 'none'
++    })
++    return
++  }
++  
+   uni.navigateTo({
+     url: `/pages/tasks/form?bookId=${bookId}`
+   })
+@@ -379,12 +387,28 @@ const viewTaskDetail = (task) => {
+ }
+ 
+ const editTask = (task) => {
++  if (isArchived.value) {
++    uni.showToast({
++      title: '归档项目册中的任务不能编辑',
++      icon: 'none'
++    })
++    return
++  }
++  
+   uni.navigateTo({
+     url: `/pages/tasks/form?id=${task._id}&bookId=${bookId}`
+   })
+ }
+ 
+ const deleteTask = async (task) => {
++  if (isArchived.value) {
++    uni.showToast({
++      title: '归档项目册中的任务不能删除',
++      icon: 'none'
++    })
++    return
++  }
++  
+   let content = '确定要删除这个任务吗？'
+   if (task.subtask_count > 0) {
+     content = `此任务包含 ${task.subtask_count} 个子任务，删除后所有子任务也将被删除。确定要继续吗？`
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/lib/utils/permission.js b/uniCloud-alipay/cloudfunctions/todobook-co/lib/utils/permission.js
+index dbb3d47..74c5782 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/lib/utils/permission.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/lib/utils/permission.js
+@@ -9,19 +9,29 @@ const { createErrorResponse } = require('../../common/utils')
+  * @param {string} userId 用户ID
+  * @param {string} todoBookId 项目册ID
+  * @param {string} permission 权限类型
+- * @returns {Object} 权限检查结果 { success: boolean, error?: Object }
++ * @returns {Object} 权限检查结果 { success: boolean, error?: Object, book?: Object }
+  */
+ async function checkTodoBookPermission(context, userId, todoBookId, permission) {
+   const db = context.db
+   
+   try {
+-    // 检查是否是项目册创建者
++    // 检查是否是项目册创建者并获取项目册信息
+     const bookResult = await db.collection('todobooks')
+       .where({ _id: todoBookId, creator_id: userId })
+       .get()
+     
+     if (bookResult.data.length > 0) {
+-      return { success: true } // 创建者拥有所有权限
++      const book = bookResult.data[0]
++      
++      // 检查归档状态：如果是写操作且项目册已归档，则拒绝
++      if (book.is_archived && permission === PERMISSION_TYPE.WRITE) {
++        return {
++          success: false,
++          error: createErrorResponse(ERROR_CODES.FORBIDDEN, '归档项目册不能进行修改操作')
++        }
++      }
++      
++      return { success: true, book: book } // 创建者拥有所有权限（除非归档状态限制）
+     }
+     
+     // 检查成员权限
+@@ -41,6 +51,24 @@ async function checkTodoBookPermission(context, userId, todoBookId, permission)
+     }
+     
+     const member = memberResult.data[0]
++    
++    // 获取项目册信息以检查归档状态
++    const bookInfoResult = await db.collection('todobooks')
++      .where({ _id: todoBookId })
++      .get()
++    
++    if (bookInfoResult.data.length > 0) {
++      const book = bookInfoResult.data[0]
++      
++      // 检查归档状态：如果是写操作且项目册已归档，则拒绝
++      if (book.is_archived && permission === PERMISSION_TYPE.WRITE) {
++        return {
++          success: false,
++          error: createErrorResponse(ERROR_CODES.FORBIDDEN, '归档项目册不能进行修改操作')
++        }
++      }
++    }
++    
+     if (!member.permissions.includes(permission)) {
+       const permissionMessages = {
+         [PERMISSION_TYPE.READ]: '没有查看权限',
