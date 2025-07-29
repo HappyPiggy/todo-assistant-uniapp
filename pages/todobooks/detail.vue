@@ -81,6 +81,7 @@
       ref="actionSheetRef"
       :book-data="bookData"
       :is-archived="isArchived"
+      :show-delete="true"
       page-type="detail"
       @action-completed="handleActionCompleted"
     />

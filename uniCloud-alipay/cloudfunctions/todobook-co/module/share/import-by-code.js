@@ -92,7 +92,6 @@ module.exports = async function importByCode(shareCode, allowDuplicate = false) 
     })
     
     // 验证克隆结果的数据完整性
-    console.log('🔍 [导入验证] 开始验证导入结果的数据完整性...')
     try {
       const taskCollection = db.collection('todoitems')
       const importedTasksResult = await taskCollection.where({
@@ -102,7 +101,6 @@ module.exports = async function importByCode(shareCode, allowDuplicate = false) 
       const importedParentTasks = importedTasksResult.data.filter(task => !task.parent_id)
       const importedChildTasks = importedTasksResult.data.filter(task => task.parent_id)
       
-      console.log(`🔍 [导入验证] 导入的项目册 ${newBookId}: 总任务 ${importedTasksResult.data.length}个, 父任务 ${importedParentTasks.length}个, 子任务 ${importedChildTasks.length}个`)
       
       // 验证子任务的父子关系是否正确
       let validChildTasks = 0
@@ -118,29 +116,17 @@ module.exports = async function importByCode(shareCode, allowDuplicate = false) 
         }
       })
       
-      console.log(`🔍 [导入验证] 子任务关系验证: 有效 ${validChildTasks}个, 无效 ${invalidChildTasks}个`)
       
     } catch (verifyError) {
       console.error('🔍 [导入验证] 验证导入结果时出错:', verifyError)
     }
     
     // 7. 为导入的项目册添加来源标记
-    console.log(`🔍 [导入调试] 开始为项目册 ${newBookId} 设置导入标记`)
-    console.log(`🔍 [导入调试] 分享记录ID: ${shareRecord._id}`)
     
     const updateResult = await bookCollection.doc(newBookId).update({
       imported_from_share_id: shareRecord._id
     })
     
-    console.log(`🔍 [导入调试] 导入标记设置结果:`, JSON.stringify(updateResult, null, 2))
-    
-    // 验证设置是否成功
-    const verifyResult = await bookCollection.doc(newBookId).get()
-    if (verifyResult.data.length > 0) {
-      const importedBook = verifyResult.data[0]
-      console.log(`🔍 [导入调试] 验证导入标记: ${importedBook.imported_from_share_id ? '已设置' : '未设置'}`)
-      console.log(`🔍 [导入调试] 项目册标题: ${importedBook.title}`)
-    }
     
     // 8. 更新分享统计
     await shareCollection.doc(shareRecord._id).update({

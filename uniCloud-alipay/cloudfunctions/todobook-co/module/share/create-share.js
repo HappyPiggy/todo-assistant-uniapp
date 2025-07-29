@@ -12,19 +12,55 @@ module.exports = async function createShare({ todBookId, includeComments = false
     
     // 1. 验证项目册存在并且用户有权限
     const bookCollection = db.collection('todobooks')
-    const bookResult = await bookCollection.where({
-      _id: todBookId,
-      creator_id: userId
-    }).get()
     
-    if (bookResult.data.length === 0) {
+    // 先尝试通过ID直接获取项目册（支持归档项目册）
+    let bookResult
+    try {
+      bookResult = await bookCollection.doc(todBookId).get()
+      console.log('通过doc查询项目册 - 查询结果:', bookResult)
+    } catch (docError) {
+      console.log('doc查询失败，尝试where查询:', docError)
+      // 如果doc查询失败，回退到where查询
+      bookResult = await bookCollection.where({
+        _id: todBookId,
+        creator_id: userId
+      }).get()
+      console.log('通过where查询项目册 - 查询结果:', bookResult)
+    }
+    
+    // 检查项目册是否存在
+    let originalBook
+    if (bookResult.data && bookResult.data.length > 0) {
+      originalBook = bookResult.data[0]
+    } else if (bookResult.data) {
+      // doc查询的情况
+      originalBook = bookResult.data
+    }
+    
+    if (!originalBook || !originalBook._id) {
+      console.log('项目册不存在 - 查询条件:', { _id: todBookId, creator_id: userId })
+      console.log('查询结果:', bookResult)
       return {
         code: 1001,
-        message: '项目册不存在或无权限'
+        message: '项目册不存在'
       }
     }
     
-    const originalBook = bookResult.data[0]
+    // 验证权限：确保当前用户是项目册的创建者
+    if (originalBook.creator_id !== userId) {
+      console.log('权限验证失败 - 项目册创建者:', originalBook.creator_id, '当前用户:', userId)
+      return {
+        code: 1001,
+        message: '无权限操作此项目册'
+      }
+    }
+    
+    console.log('项目册权限检查通过 - 项目册信息:', {
+      id: originalBook._id,
+      title: originalBook.title,
+      is_archived: originalBook.is_archived,
+      creator_id: originalBook.creator_id
+    })
     
     // 2. 检查该项目册是否已经被分享过
     const shareCollection = db.collection('todobook_shares')

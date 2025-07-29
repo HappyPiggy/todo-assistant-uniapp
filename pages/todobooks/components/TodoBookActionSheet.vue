@@ -215,7 +215,7 @@ const handleArchiveAction = async () => {
   
   uni.showModal({
     title: '确认归档',
-    content: '归档后的项目册将移动到归档列表中，确定要归档吗？',
+    content: '确定要归档这个项目册吗？已归档的项目册可在归档管理页查看。',
     success: async (res) => {
       if (res.confirm) {
         try {

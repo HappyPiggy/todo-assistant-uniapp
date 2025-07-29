@@ -77,19 +77,6 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       todobook_id: originalBookId
     }).orderBy('sort_order', 'asc').get()
     
-    // 调试信息：分析原始任务结构
-    console.log(`🔍 [克隆调试] 原项目册 ${originalBookId} 总任务数: ${tasksResult.data.length}`)
-    const parentTasks = tasksResult.data.filter(task => !task.parent_id)
-    const childTasks = tasksResult.data.filter(task => task.parent_id)
-    console.log(`🔍 [克隆调试] 父任务数: ${parentTasks.length}, 子任务数: ${childTasks.length}`)
-    
-    // 打印父子关系映射
-    if (childTasks.length > 0) {
-      console.log('🔍 [克隆调试] 子任务父子关系:')
-      childTasks.forEach(child => {
-        console.log(`  - 子任务 ${child._id} (${child.title}) -> 父任务 ${child.parent_id}`)
-      })
-    }
     
     let taskCount = 0
     const taskIdMapping = new Map() // 记录原任务ID到新任务ID的映射
@@ -127,7 +114,6 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
           commentIdMapping.set(comment._id, newCommentId)
           updatedComment._id = newCommentId
           
-          console.log(`🔍 [评论ID更新] ${comment._id} -> ${newCommentId}`)
         }
         
         return updatedComment
@@ -137,7 +123,6 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       return updatedComments.map(comment => {
         if (comment.reply_to && commentIdMapping.has(comment.reply_to)) {
           comment.reply_to = commentIdMapping.get(comment.reply_to)
-          console.log(`🔍 [回复关系更新] reply_to: ${comment.reply_to}`)
         }
         return comment
       })
@@ -185,26 +170,14 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
         creator_id: isTemplate ? templateCreatorId : newCreatorId,
         // 处理评论：如果需要包含评论则复制，对于分享模板进行匿名化处理
         comments: (() => {
-          console.log(`🔍 [评论处理调试] 任务 ${originalTask._id} (${originalTask.title})`)
-          console.log(`🔍 [评论处理调试] includeComments: ${includeComments}`)
-          console.log(`🔍 [评论处理调试] isTemplate: ${isTemplate}`)
-          console.log(`🔍 [评论处理调试] 原始评论数量: ${(originalTask.comments || []).length}`)
-          
           if (!includeComments) {
-            console.log(`🔍 [评论处理调试] 不包含评论，返回空数组`)
             return []
           }
           
           if (isTemplate) {
-            console.log(`🔍 [评论处理调试] 是分享模板，进行匿名化处理`)
             const anonymizedComments = anonymizeComments(originalTask.comments || [])
-            console.log(`🔍 [评论处理调试] 匿名化后评论数量: ${anonymizedComments.length}`)
-            if (anonymizedComments.length > 0) {
-              console.log(`🔍 [评论处理调试] 第一条匿名化评论用户ID: ${anonymizedComments[0].user_id}`)
-            }
             return anonymizedComments
           } else {
-            console.log(`🔍 [评论处理调试] 不是分享模板，直接复制评论`)
             return originalTask.comments || []
           }
         })()
@@ -215,12 +188,8 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
       taskIdMapping.set(originalTask._id, newTaskId)
       taskCount++
       
-      // 调试信息：记录任务克隆
-      console.log(`🔍 [克隆调试] 克隆任务: ${originalTask._id} -> ${newTaskId} (${originalTask.title})`)
-      
       // 如果包含评论，需要更新评论ID以匹配新任务ID
       if (includeComments && newTaskData.comments && newTaskData.comments.length > 0) {
-        console.log(`🔍 [评论ID修复] 开始更新任务 ${newTaskId} 的评论ID`)
         const updatedComments = updateCommentIds(newTaskData.comments, newTaskId)
         
         // 更新数据库中的评论
@@ -228,12 +197,10 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
           comments: updatedComments
         })
         
-        console.log(`🔍 [评论ID修复] 任务 ${newTaskId} 的评论ID更新完成，共更新 ${updatedComments.length} 条评论`)
       }
     }
     
     // 4. 更新任务的parent_id关系
-    console.log('🔍 [克隆调试] 开始更新父子关系...')
     let parentChildUpdateCount = 0
     
     for (const [originalTaskId, newTaskId] of taskIdMapping) {
@@ -251,29 +218,17 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
           })
           
           // 调试信息：记录父子关系更新
-          console.log(`🔍 [克隆调试] 更新父子关系: 任务 ${newTaskId} 的父任务设为 ${newParentId}`)
           parentChildUpdateCount++
         }
       }
     }
     
-    console.log(`🔍 [克隆调试] 父子关系更新完成，共更新 ${parentChildUpdateCount} 个子任务`)
     
     // 验证最终结果
     const finalTasksResult = await taskCollection.where({
       todobook_id: newBookId
     }).get()
     
-    const finalParentTasks = finalTasksResult.data.filter(task => !task.parent_id)
-    const finalChildTasks = finalTasksResult.data.filter(task => task.parent_id)
-    console.log(`🔍 [克隆调试] 克隆结果验证 - 新项目册 ${newBookId}: 父任务 ${finalParentTasks.length}个, 子任务 ${finalChildTasks.length}个`)
-    
-    if (finalChildTasks.length > 0) {
-      console.log('🔍 [克隆调试] 新项目册子任务关系:')
-      finalChildTasks.forEach(child => {
-        console.log(`  - 子任务 ${child._id} (${child.title}) -> 父任务 ${child.parent_id}`)
-      })
-    }
     
     // 5. 评论已在任务克隆时处理完毕
     
