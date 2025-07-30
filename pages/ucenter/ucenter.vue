@@ -3,7 +3,7 @@
 		<!-- 用户信息区域 -->
 		<view class="user-header">
 			<view class="avatar-section" @click="toUserInfo">
-				<image width="150rpx" height="150rpx" v-if="hasLogin&&userInfo.avatar" :src="userInfo.avatar" class="avatar-image"></image>
+				<image v-if="hasLogin&&userInfo.avatar" :src="userInfo.avatar" class="avatar-image"></image>
 				
 				<view v-else class="default-avatar">
 					<text v-if="hasLogin && userInfo.nickname" class="avatar-text">
@@ -12,15 +12,15 @@
 					<uni-icons v-else color="#ffffff" size="50" type="person-filled" />
 				</view>
 				
-				<view class="edit-avatar-tip" v-if="hasLogin">
-					<uni-icons color="#007AFF" size="20" type="camera" />
-				</view>
 			</view>
 			
 			<view class="user-info">
 				<text class="user-name" v-if="hasLogin">{{userInfo.nickname||userInfo.username||userInfo.mobile}}</text>
 				<text class="user-name" v-else @click="toLogin">点击登录</text>
-				<text class="user-id" v-if="hasLogin">ID: {{userInfo._id}}</text>
+				<view class="user-details" v-if="hasLogin">
+					<text class="user-gender" v-if="userInfo.gender">{{ genderText }}</text>
+				</view>
+				<text class="user-description" v-if="hasLogin && (userInfo.description || userInfo.comment)">{{ userInfo.description || userInfo.comment }}</text>
 			</view>
 		</view>
 
@@ -85,6 +85,15 @@
 			},
 			hasLogin(){
 				return store.hasLogin
+			},
+			genderText() {
+				if (!this.userInfo.gender) return ''
+				const genderMap = {
+					0: '保密',
+					1: '男',
+					2: '女'
+				}
+				return genderMap[this.userInfo.gender] || '保密'
 			}
 		},
 		onLoad() {
@@ -197,23 +206,26 @@
 		margin-bottom: 20rpx;
 	}
 
+
 	.avatar-image {
+		width: 80rpx;
+		height: 80rpx;
 		border-radius: 50%;
-		border: 4rpx solid rgba(255, 255, 255, 0.3);
+		border: 3rpx solid rgba(255, 255, 255, 0.3);
 	}
 
 	.default-avatar {
-		width: 150rpx;
-		height: 150rpx;
+		width: 80rpx;
+		height: 80rpx;
 		background-color: rgba(255, 255, 255, 0.2);
 		border-radius: 50%;
 		justify-content: center;
 		align-items: center;
-		border: 4rpx solid rgba(255, 255, 255, 0.3);
+		border: 3rpx solid rgba(255, 255, 255, 0.3);
 	}
 
 	.avatar-text {
-		font-size: 60rpx;
+		font-size: 32rpx;
 		color: #ffffff;
 		font-weight: 600;
 		text-align: center;
@@ -221,10 +233,10 @@
 
 	.edit-avatar-tip {
 		position: absolute;
-		bottom: 5rpx;
-		right: 5rpx;
-		width: 40rpx;
-		height: 40rpx;
+		bottom: 2rpx;
+		right: 2rpx;
+		width: 28rpx;
+		height: 28rpx;
 		background-color: rgba(255, 255, 255, 0.9);
 		border-radius: 50%;
 		justify-content: center;
@@ -244,10 +256,31 @@
 		margin-bottom: 8rpx;
 	}
 
-	.user-id {
-		font-size: 28rpx;
+	.user-details {
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		gap: 20rpx;
+		flex-wrap: wrap;
+		margin-bottom: 12rpx;
+	}
+
+	.user-gender {
+		font-size: 24rpx;
+		color: rgba(255, 255, 255, 0.9);
+		text-align: center;
+		padding: 4rpx 12rpx;
+		background-color: rgba(255, 255, 255, 0.2);
+		border-radius: 12rpx;
+	}
+
+	.user-description {
+		font-size: 26rpx;
 		color: rgba(255, 255, 255, 0.8);
 		text-align: center;
+		line-height: 1.4;
+		max-width: 500rpx;
+		margin: 0 auto;
 	}
 
 	.sync-status {
