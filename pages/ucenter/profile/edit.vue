@@ -5,8 +5,8 @@
 			<view class="avatar-section">
 				<view class="current-avatar-wrapper" @click="showAvatarPicker">
 					<image 
-						v-if="formData.avatar_url" 
-						:src="formData.avatar_url" 
+						v-if="formData.avatar" 
+						:src="formData.avatar" 
 						class="avatar-preview">
 					</image>
 					<view v-else class="default-avatar">
@@ -36,10 +36,10 @@
 							v-for="(avatar, index) in defaultAvatars" 
 							:key="index"
 							class="avatar-item"
-							:class="{ 'selected': formData.avatar_url === avatar.url }"
+							:class="{ 'selected': formData.avatar === avatar.url }"
 							@click="selectAvatar(avatar)">
 							<image :src="avatar.url" class="avatar-thumbnail"></image>
-							<view v-if="formData.avatar_url === avatar.url" class="selected-mark">
+							<view v-if="formData.avatar === avatar.url" class="selected-mark">
 								<uni-icons type="checkmarkempty" size="16" color="#ffffff"></uni-icons>
 							</view>
 						</view>
@@ -105,7 +105,7 @@
 </template>
 
 <script>
-	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+	import { store, mutations } from '@/uni_modules/uni-id-pages/common/store.js'
 	
 	export default {
 		data() {
@@ -117,7 +117,7 @@
 					mobile: '',
 					email: '',
 					comment: '',
-					avatar_url: ''
+					avatar: ''
 				},
 				defaultAvatars: [
 					{ url: '/static/avatar/avatar1.svg', name: '红色头像' },
@@ -166,7 +166,7 @@
 						mobile: this.userInfo.mobile || '',
 						email: this.userInfo.email || '',
 						comment: this.userInfo.comment || '',
-						avatar_url: this.userInfo.avatar_url || this.defaultAvatars[0].url
+						avatar: this.userInfo.avatar || this.defaultAvatars[0].url
 					}
 				}
 			},
@@ -180,7 +180,7 @@
 			},
 			
 			selectAvatar(avatar) {
-				this.formData.avatar_url = avatar.url
+				this.formData.avatar = avatar.url
 				this.closeAvatarPicker()
 				uni.showToast({
 					title: '头像已选择',
@@ -205,7 +205,7 @@
 					
 					if (result.code === 0) {
 						// 更新本地用户信息
-						await store.updateUserInfo(this.formData)
+						await mutations.updateUserInfo(this.formData)
 						
 						uni.showToast({
 							title: '保存成功',

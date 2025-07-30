@@ -3,7 +3,7 @@
 		<!-- 用户信息区域 -->
 		<view class="user-header">
 			<view class="avatar-section" @click="toUserInfo">
-				<image width="150rpx" height="150rpx" v-if="hasLogin&&userInfo.avatar_url" :src="userInfo.avatar_url" class="avatar-image"></image>
+				<image width="150rpx" height="150rpx" v-if="hasLogin&&userInfo.avatar" :src="userInfo.avatar" class="avatar-image"></image>
 				
 				<view v-else class="default-avatar">
 					<text v-if="hasLogin && userInfo.nickname" class="avatar-text">
