@@ -1,0 +1,47 @@
+diff --git a/pages/todobooks/components/task/TaskItem.vue b/pages/todobooks/components/task/TaskItem.vue
+index a4be8cd..637ba10 100644
+--- a/pages/todobooks/components/task/TaskItem.vue
++++ b/pages/todobooks/components/task/TaskItem.vue
+@@ -8,7 +8,8 @@
+       [priorityClass]: true
+     }"
+     :style="{ marginLeft: level > 0 ? (level * 40) + 'rpx' : '0' }"
+-    @click="handleClick">
++    @click="handleClick" 
++    @tap="handleClick">
+     
+     <!-- 主要内容区域 -->
+     <view class="task-header">
+diff --git a/pages/todobooks/detail.vue b/pages/todobooks/detail.vue
+index 6ccc664..e16baa8 100644
+--- a/pages/todobooks/detail.vue
++++ b/pages/todobooks/detail.vue
+@@ -89,7 +89,7 @@
+ </template>
+ 
+ <script setup>
+-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
++import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
+ 
+ import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
+@@ -369,9 +369,18 @@ const addTask = () => {
+   })
+ }
+ 
+-const handleTaskClick = (task) => {
++const handleTaskClick = async (task) => {
+   if (task.subtask_count > 0) {
++    // 先更新数据
+     task.expanded = !task.expanded
++    
++    // 使用 nextTick 确保在微信小程序中触发重新渲染
++    await nextTick()
++    
++    // 如果仍有问题，可强制刷新相关组件
++    if (virtualTaskListRef.value && virtualTaskListRef.value.$forceUpdate) {
++      virtualTaskListRef.value.$forceUpdate()
++    }
+   } else {
+     uni.navigateTo({
+       url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`
