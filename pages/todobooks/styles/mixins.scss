@@ -303,3 +303,25 @@
   }
   /* #endif */
 }
+
+// 进度条混入
+@mixin progress-bar($height: $progress-height) {
+  height: $height;
+  background-color: $progress-bg;
+  border-radius: calc($height / 2);
+  overflow: hidden;
+  position: relative;
+}
+
+@mixin progress-fill($color: $primary-color) {
+  height: 100%;
+  background-color: $color;
+  transform-origin: left center;
+  transition: transform $progress-animation-duration ease-out;
+  will-change: transform;
+}
+
+// 优先级边框混入
+@mixin priority-border($color, $width: $priority-border-width) {
+  border-left: $width solid $color;
+}

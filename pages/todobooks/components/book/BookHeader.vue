@@ -19,18 +19,15 @@
     </view>
 
     <!-- 进度区域 -->
-    <!-- <view class="progress-section">
-      <view class="progress-info">
-        <text class="progress-text">完成进度</text>
-        <text class="progress-percent">{{ overallProgress }}%</text>
-      </view>
-      <view class="progress-bar">
-        <view 
-          class="progress-fill" 
-          :style="{ width: overallProgress + '%', backgroundColor: (bookData && bookData.color) || '#007AFF' }">
-        </view>
-      </view>
-    </view> -->
+    <view class="progress-section">
+      <ProgressBar
+        :progress="overallProgress || 0"
+        :color="(bookData && bookData.color) || '#007AFF'"
+        :show-text="true"
+        :animated="true"
+        label="完成进度"
+      />
+    </view>
 
     <!-- 统计区域 -->
     <!-- <view class="stats-section">
@@ -52,6 +49,7 @@
 
 <script setup>
 import { defineProps, defineEmits, watchEffect } from 'vue'
+import ProgressBar from '@/pages/todobooks/components/common/ProgressBar.vue'
 
 const props = defineProps({
   bookData: {

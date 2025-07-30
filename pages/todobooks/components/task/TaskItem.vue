@@ -4,7 +4,8 @@
     :class="{ 
       'task-item--card': variant === 'card',
       'task-item--item': variant === 'item',
-      'task-item--completed': task.status === 'completed'
+      'task-item--completed': task.status === 'completed',
+      [priorityClass]: true
     }"
     :style="{ marginLeft: level > 0 ? (level * 40) + 'rpx' : '0' }"
     @click="handleClick">
@@ -12,11 +13,6 @@
     <!-- 主要内容区域 -->
     <view class="task-header">
       <view class="task-left">
-        <!-- 优先级标签 -->
-        <view class="task-priority" :class="task.priority">
-          <text class="priority-text">{{ getPriorityText(task.priority) }}</text>
-        </view>
-        
         <!-- 展开/收起按钮（仅card模式且有子任务时显示） -->
         <view 
           v-if="variant === 'card' && task.subtask_count > 0" 
@@ -211,6 +207,12 @@ const emit = defineEmits([
   'subtaskClick'
 ])
 
+// 优先级CSS类名计算属性
+const priorityClass = computed(() => {
+  const priority = props.task.priority || 'medium'
+  return `task-item--priority-${priority}`
+})
+
 // 评论相关计算属性
 const commentCount = computed(() => {
   try {
@@ -323,21 +325,7 @@ const getTagColor = (tag) => {
     @include card-hover;
     margin-bottom: $margin-sm;
     
-    &.task-item--completed {
-      background-color: #f0f9f4;
-      border: 1rpx solid #d4edda;
-      
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4rpx;
-        background-color: #28a745;
-        border-radius: $border-radius 0 0 $border-radius;
-      }
-    }
+    // 移除完成状态的背景色影响，完成状态只通过勾选框体现
   }
   
   // Item模式样式
@@ -351,21 +339,7 @@ const getTagColor = (tag) => {
       background-color: $gray-200;
     }
     
-    &.task-item--completed {
-      background-color: #e8f5e9;
-      border: 1rpx solid #c3e6cb;
-      
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3rpx;
-        background-color: #28a745;
-        border-radius: $border-radius-small 0 0 $border-radius-small;
-      }
-    }
+    // 移除完成状态的背景色影响，完成状态只通过勾选框体现
     
     .task-header {
       align-items: center;
@@ -436,31 +410,21 @@ const getTagColor = (tag) => {
   flex-shrink: 0;
 }
 
-.task-priority {
-  @include tag-style;
-  margin-right: $margin-sm;
-  flex-shrink: 0;
-  
-  &.low {
-    @include priority-low;
-  }
-  
-  &.medium {
-    @include priority-medium;
-  }
-  
-  &.high {
-    @include priority-high;
-  }
-  
-  &.urgent {
-    @include priority-urgent;
-  }
+// 优先级边框样式
+.task-item--priority-low {
+  @include priority-border($priority-border-low);
 }
 
-.priority-text {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
+.task-item--priority-medium {
+  @include priority-border($priority-border-medium);
+}
+
+.task-item--priority-high {
+  @include priority-border($priority-border-high);
+}
+
+.task-item--priority-urgent {
+  @include priority-border($priority-border-urgent);
 }
 
 .task-expand {
@@ -613,9 +577,63 @@ const getTagColor = (tag) => {
 }
 
 .subtasks-container {
+  position: relative;
   margin-top: $margin-sm;
   padding-top: $margin-sm;
-  border-top: 1rpx solid $border-color-light;
-  gap: $margin-sm;
+  padding-left: $subtask-indent;
+  
+  // 垂直连接线
+  &::before {
+    content: '';
+    position: absolute;
+    left: 10rpx;
+    top: 0;
+    bottom: 20rpx;
+    width: $subtask-connector-width;
+    background-color: $subtask-connector-color;
+  }
+  
+  // 子任务项样式
+  :deep(.task-item--item) {
+    position: relative;
+    
+    // 水平连接线
+    &::after {
+      content: '';
+      position: absolute;
+      left: -10rpx;
+      top: 50%;
+      width: 10rpx;
+      height: $subtask-connector-width;
+      background-color: $subtask-connector-color;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+// 响应式优化
+@media (max-width: 480rpx) {
+  .subtasks-container {
+    padding-left: 16rpx; // 小屏幕下减少缩进
+    
+    &::before {
+      left: 8rpx; // 调整连接线位置
+    }
+    
+    :deep(.task-item--item) {
+      &::after {
+        left: -8rpx;
+        width: 8rpx;
+      }
+    }
+  }
+  
+  // 小屏幕下优先级边框宽度调整  
+  .task-item--priority-low,
+  .task-item--priority-medium,
+  .task-item--priority-high,
+  .task-item--priority-urgent {
+    border-left-width: 3rpx;
+  }
 }
 </style>

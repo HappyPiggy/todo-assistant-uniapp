@@ -141,6 +141,25 @@ $safe-area-bottom: env(safe-area-inset-bottom);
 $safe-area-left: env(safe-area-inset-left);
 $safe-area-right: env(safe-area-inset-right);
 
+// 进度条相关
+$progress-height: 8rpx;
+$progress-height-large: 12rpx;
+$progress-bg: $gray-200;
+$progress-completed-bg: $success-color;
+$progress-animation-duration: $animation-duration-base;
+
+// 优先级边框
+$priority-border-width: 4rpx;
+$priority-border-low: $gray-400;
+$priority-border-medium: $info-color;
+$priority-border-high: $warning-color;
+$priority-border-urgent: $error-color;
+
+// 子任务层级
+$subtask-indent: 20rpx;
+$subtask-connector-color: $border-color;
+$subtask-connector-width: 2rpx;
+
 // 断点（响应式）
 $breakpoint-xs: 480rpx;
 $breakpoint-sm-rpx: 640rpx;

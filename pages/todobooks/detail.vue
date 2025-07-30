@@ -162,7 +162,7 @@ const isArchived = computed(() => {
 
 // 编辑权限检查
 const canEdit = computed(() => {
-  const result = !isArchived.value && bookData.value
+  const result = !isArchived.value && !!bookData.value
   console.log('canEdit计算:', { isArchived: isArchived.value, bookData: !!bookData.value, result })
   return result
 })
