@@ -1,0 +1,383 @@
+/* 星露谷像素风格主题 - 基础配色系统 */
+
+/* ===== 主题1: 温暖田园风格 ===== */
+:root[data-theme="stardew-farm"] {
+  /* 基础背景色 - 温暖的奶油色 */
+  --background: #FDF6E3;
+  --foreground: #2D1810;
+  --card: #FFFFFF;
+  --card-foreground: #2D1810;
+  
+  /* 主要色彩 - 农场橙色 */
+  --primary: #D2691E;
+  --primary-foreground: #FFFFFF;
+  
+  /* 辅助色彩 - 温暖土黄 */
+  --secondary: #DEB887;
+  --secondary-foreground: #2D1810;
+  
+  /* 柔和背景 */
+  --muted: #F5F0E8;
+  --muted-foreground: #6B5B47;
+  --accent: #CD853F;
+  --accent-foreground: #FFFFFF;
+  
+  /* 游戏化状态颜色 */
+  --success: #228B22;      /* 森林绿 */
+  --warning: #FF8C00;      /* 南瓜橙 */
+  --error: #DC143C;        /* 深红色 */
+  --info: #4682B4;         /* 钢蓝色 */
+  
+  /* 任务优先级 - 农场元素色彩 */
+  --priority-urgent: #DC143C;    /* 红萝卜红 */
+  --priority-high: #FF8C00;      /* 南瓜橙 */
+  --priority-medium: #DAA520;    /* 金黄色 */
+  --priority-low: #9ACD32;       /* 黄绿色 */
+  
+  /* 任务状态色彩 */
+  --status-todo: #FF8C00;        /* 待播种橙 */
+  --status-progress: #DAA520;    /* 生长中金 */
+  --status-completed: #228B22;  /* 收获绿 */
+  
+  /* 边框和细节 */
+  --border: #DEB887;
+  --input: #F5F0E8;
+  --ring: --primary;
+  
+  /* 像素风格阴影 */
+  --shadow-pixel: 4px 4px 0px #D2691E40;
+  --shadow-pixel-lg: 6px 6px 0px #D2691E60;
+  
+  /* 游戏UI色彩 */
+  --ui-brown: #8B4513;
+  --ui-wood: #DEB887;
+  --ui-gold: #DAA520;
+}
+
+/* ===== 主题2: 深色夜晚风格 ===== */
+:root[data-theme="stardew-night"] {
+  /* 基础背景色 - 深夜蓝 */
+  --background: #1a1a2e;
+  --foreground: #E6E6FA;
+  --card: #16213e;
+  --card-foreground: #E6E6FA;
+  
+  /* 主要色彩 - 星空紫 */
+  --primary: #9966CC;
+  --primary-foreground: #FFFFFF;
+  
+  /* 辅助色彩 - 月光银 */
+  --secondary: #4A5568;
+  --secondary-foreground: #E6E6FA;
+  
+  /* 柔和背景 */
+  --muted: #2D3748;
+  --muted-foreground: #A0AEC0;
+  --accent: #8A2BE2;
+  --accent-foreground: #FFFFFF;
+  
+  /* 游戏化状态颜色 */
+  --success: #32CD32;      /* 荧光绿 */
+  --warning: #FFD700;      /* 星星金 */
+  --error: #FF6347;        /* 番茄红 */
+  --info: #87CEEB;         /* 天空蓝 */
+  
+  /* 任务优先级 - 夜晚元素 */
+  --priority-urgent: #FF6347;    /* 火焰红 */
+  --priority-high: #FFD700;      /* 星星金 */
+  --priority-medium: #9966CC;    /* 魔法紫 */
+  --priority-low: #87CEEB;       /* 月光蓝 */
+  
+  /* 任务状态色彩 */
+  --status-todo: #FFD700;        /* 待完成金 */
+  --status-progress: #9966CC;    /* 进行中紫 */
+  --status-completed: #32CD32;  /* 完成绿 */
+  
+  /* 边框和细节 */
+  --border: #4A5568;
+  --input: #2D3748;
+  --ring: --primary;
+  
+  /* 像素风格阴影 - 夜光效果 */
+  --shadow-pixel: 4px 4px 0px #9966CC40;
+  --shadow-pixel-lg: 6px 6px 0px #9966CC60;
+  --shadow-glow: 0 0 10px #9966CC80;
+  
+  /* 游戏UI色彩 */
+  --ui-purple: #8A2BE2;
+  --ui-dark: #2D3748;
+  --ui-glow: #FFD700;
+}
+
+/* ===== 主题3: 春季清新风格 ===== */
+:root[data-theme="stardew-spring"] {
+  /* 基础背景色 - 清新薄荷 */
+  --background: #F0FFF0;
+  --foreground: #2F4F2F;
+  --card: #FFFFFF;
+  --card-foreground: #2F4F2F;
+  
+  /* 主要色彩 - 春草绿 */
+  --primary: #32CD32;
+  --primary-foreground: #FFFFFF;
+  
+  /* 辅助色彩 - 樱花粉 */
+  --secondary: #FFB6C1;
+  --secondary-foreground: #2F4F2F;
+  
+  /* 柔和背景 */
+  --muted: #F5FFFA;
+  --muted-foreground: #708090;
+  --accent: #98FB98;
+  --accent-foreground: #2F4F2F;
+  
+  /* 游戏化状态颜色 */
+  --success: #228B22;      /* 深绿 */
+  --warning: #FFA500;      /* 橙色 */
+  --error: #FF69B4;        /* 热粉 */
+  --info: #00CED1;         /* 青绿 */
+  
+  /* 任务优先级 - 春季花朵 */
+  --priority-urgent: #FF69B4;    /* 樱花粉 */
+  --priority-high: #FFA500;      /* 迎春橙 */
+  --priority-medium: #32CD32;    /* 新叶绿 */
+  --priority-low: #87CEEB;       /* 春空蓝 */
+  
+  /* 任务状态色彩 */
+  --status-todo: #FFA500;        /* 待萌芽橙 */
+  --status-progress: #32CD32;    /* 生长绿 */
+  --status-completed: #228B22;  /* 茂盛绿 */
+  
+  /* 边框和细节 */
+  --border: #98FB98;
+  --input: #F5FFFA;
+  --ring: --primary;
+  
+  /* 像素风格阴影 - 柔和绿色 */
+  --shadow-pixel: 4px 4px 0px #32CD3240;
+  --shadow-pixel-lg: 6px 6px 0px #32CD3260;
+  
+  /* 游戏UI色彩 */
+  --ui-green: #228B22;
+  --ui-pink: #FFB6C1;
+  --ui-mint: #98FB98;
+}
+
+/* ===== 通用像素风格样式 ===== */
+
+/* 像素字体 - 模拟8bit风格 */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-pixel: 'Press Start 2P', 'Pixelify Sans', monospace;
+  --font-game: 'Pixelify Sans', cursive;
+  
+  /* 像素风格圆角 */
+  --radius: 0px;           /* 完全方形 */
+  --radius-sm: 2px;        /* 小圆角 */
+  --radius-md: 4px;        /* 中圆角 */
+  --radius-lg: 8px;        /* 大圆角 */
+  
+  /* 像素风格间距 */
+  --spacing-pixel: 8px;    /* 8像素基础单位 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* 像素风格动画 */
+  --transition-pixel: all 0.1s steps(2, end);
+  --transition-bounce: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* 全局像素风格重置 */
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+body {
+  font-family: var(--font-game) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  line-height: 1.4 !important;
+}
+
+/* 像素风格标题 */
+h1, h2, h3 {
+  font-family: var(--font-pixel) !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  letter-spacing: 1px !important;
+}
+
+/* 像素风格卡片 */
+.pixel-card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pixel);
+  transition: var(--transition-pixel);
+  position: relative;
+}
+
+.pixel-card:hover {
+  box-shadow: var(--shadow-pixel-lg);
+  transform: translate(-2px, -2px);
+}
+
+/* 像素风格按钮 */
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  border: 2px solid;
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  transition: var(--transition-pixel);
+  cursor: pointer;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.pixel-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  box-shadow: 2px 2px 0px var(--primary);
+}
+
+.pixel-btn-primary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--primary);
+}
+
+.pixel-btn-primary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--primary);
+}
+
+/* 像素风格进度条 */
+.pixel-progress {
+  background: var(--muted);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  height: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--primary) 0px,
+    var(--primary) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  transition: width 0.5s steps(10, end);
+}
+
+/* 像素风格标签 */
+.pixel-tag {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  padding: 4px 8px;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 像素风格图标替换 */
+.pixel-icon {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  background: var(--foreground);
+  position: relative;
+}
+
+/* 8bit风格阴影效果 */
+.pixel-shadow-1 { box-shadow: 1px 1px 0px var(--border); }
+.pixel-shadow-2 { box-shadow: 2px 2px 0px var(--border); }
+.pixel-shadow-3 { box-shadow: 3px 3px 0px var(--border); }
+.pixel-shadow-4 { box-shadow: 4px 4px 0px var(--border); }
+
+/* 像素风格动画 */
+@keyframes pixel-bounce {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes pixel-shake {
+  0%, 100% { transform: translateX(0px); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes pixel-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+.pixel-bounce { animation: pixel-bounce 0.6s ease-in-out; }
+.pixel-shake { animation: pixel-shake 0.4s ease-in-out; }
+.pixel-glow { animation: pixel-glow 1s infinite; }
+
+/* 网格背景效果 */
+.pixel-grid-bg {
+  background-image: 
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0.1;
+}
+
+/* 像素风格筛选器 */
+.pixel-filter {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  padding: 6px 12px;
+  border: 2px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition-pixel);
+  text-transform: uppercase;
+}
+
+.pixel-filter.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-pixel);
+}
+
+/* 响应式适配 */
+@media (max-width: 640px) {
+  h1, h2, h3 {
+    font-size: 10px !important;
+  }
+  
+  .pixel-btn {
+    font-size: 8px;
+    padding: 6px 12px;
+  }
+  
+  .pixel-tag {
+    font-size: 7px;
+    padding: 3px 6px;
+  }
+  
+  .pixel-filter {
+    font-size: 7px;
+    padding: 4px 8px;
+  }
+}

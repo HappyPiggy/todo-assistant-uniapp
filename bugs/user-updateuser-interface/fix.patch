@@ -1,0 +1,142 @@
+diff --git a/uniCloud-alipay/cloudfunctions/user-co/index.obj.js b/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
+index 629f4eb..bc94614 100644
+--- a/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
++++ b/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
+@@ -2,26 +2,25 @@
+ const uniID = require('uni-id-common')
+ 
+ module.exports = {
+-  _before: function () {
+-    // 统一的前置校验
++  _before: async function () {
++    const token = this.getUniIdToken();  
++    if (!token) {  
++      throw new Error('请登录后再访问');  
++    } 
++
+     this.uniID = uniID.createInstance({
+       context: this.getCloudInfo()
+     })
++    const {uid} = await this.uniID.checkToken(token)
++    this.uid = uid
++    this.db = uniCloud.database()
+   },
+ 
+   /**
+    * 获取用户信息
+    */
+   async getUserInfo() {
+-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+-    if (payload.code && payload.code > 0) {
+-      return {
+-        code: payload.code,
+-        message: payload.message
+-      }
+-    }
+-
+-    const uid = payload.uid
++    const { uid, db } = this
+     const userInfo = await this.uniID.getUserInfo({
+       uid,
+       field: ['_id', 'username', 'nickname', 'avatar_file', 'avatar_url', 'gender', 'mobile', 'email', 'comment', 'register_date', 'last_login_date']
+@@ -45,16 +44,7 @@ module.exports = {
+    * 更新用户资料
+    */
+   async updateProfile(profileData) {
+-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+-    if (payload.code && payload.code > 0) {
+-      return {
+-        code: payload.code,
+-        message: payload.message
+-      }
+-    }
+-
+-    const uid = payload.uid
+-
++    const { uid, db } = this
+     // 数据验证
+     const { nickname, gender, email, comment, avatar_file, avatar_url } = profileData
+     
+@@ -107,12 +97,12 @@ module.exports = {
+     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
+ 
+     try {
+-      const result = await this.uniID.updateUser({
+-        uid,
+-        ...updateData
+-      })
++      // 直接更新数据库中的用户信息
++      const result = await this.db.collection('uni-id-users')
++        .doc(uid)
++        .update(updateData)
+ 
+-      if (result.code === 0) {
++      if (result.updated === 1) {
+         return {
+           code: 0,
+           message: '更新成功',
+@@ -121,8 +111,8 @@ module.exports = {
+       }
+ 
+       return {
+-        code: result.code,
+-        message: result.message
++        code: 500,
++        message: '更新失败，请稍后重试'
+       }
+     } catch (error) {
+       console.error('更新用户资料失败:', error)
+@@ -137,16 +127,7 @@ module.exports = {
+    * 获取用户统计信息
+    */
+   async getUserStats() {
+-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+-    if (payload.code && payload.code > 0) {
+-      return {
+-        code: payload.code,
+-        message: payload.message
+-      }
+-    }
+-
+-    const uid = payload.uid
+-    const db = uniCloud.database()
++    const { uid, db } = this
+ 
+     try {
+       // 获取用户的项目册数量
+@@ -219,16 +200,7 @@ module.exports = {
+    * 更新用户设置
+    */
+   async updateSettings(settings) {
+-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+-    if (payload.code && payload.code > 0) {
+-      return {
+-        code: payload.code,
+-        message: payload.message
+-      }
+-    }
+-
+-    const uid = payload.uid
+-    const db = uniCloud.database()
++    const { uid, db } = this
+ 
+     try {
+       // 检查是否已有设置记录
+@@ -274,16 +246,7 @@ module.exports = {
+    * 获取用户设置
+    */
+   async getSettings() {
+-    const payload = await this.uniID.checkToken(this.getCloudInfo().token)
+-    if (payload.code && payload.code > 0) {
+-      return {
+-        code: payload.code,
+-        message: payload.message
+-      }
+-    }
+-
+-    const uid = payload.uid
+-    const db = uniCloud.database()
++    const { uid, db } = this
+ 
+     try {
+       const result = await db.collection('user_settings')

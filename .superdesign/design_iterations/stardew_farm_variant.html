@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="stardew-farm">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌾 项目册详情 - 星露谷田园风格</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="stardew_pixel_theme.css">
+    <style>
+        /* 田园风格特定样式 */
+        body {
+            background: linear-gradient(45deg, #FDF6E3 25%, #F5F0E8 25%, #F5F0E8 50%, #FDF6E3 50%, #FDF6E3 75%, #F5F0E8 75%);
+            background-size: 32px 32px;
+        }
+        
+        /* 农场工具栏样式 */
+        .farm-toolbar {
+            background: linear-gradient(to bottom, #DEB887, #CD853F);
+            border: 3px solid #8B4513;
+            box-shadow: inset 2px 2px 0px #F5DEB3, 4px 4px 0px #8B4513;
+        }
+        
+        /* 农作物进度条 */
+        .crop-progress {
+            background: #8B4513;
+            border: 2px solid #654321;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .crop-progress::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                #654321 0px,
+                #654321 2px,
+                transparent 2px,
+                transparent 4px
+            );
+        }
+        
+        .crop-fill {
+            background: linear-gradient(90deg, #228B22, #32CD32, #228B22);
+            background-size: 16px 100%;
+            animation: crop-grow 1s ease-out;
+        }
+        
+        @keyframes crop-grow {
+            from { width: 0%; }
+            to { width: var(--progress-width); }
+        }
+        
+        /* 农场卡片装饰 */
+        .farm-card {
+            position: relative;
+        }
+        
+        .farm-card::before {
+            content: '🌾';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 16px;
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 季节标签 */
+        .season-tag {
+            background: linear-gradient(45deg, #DAA520, #FFD700);
+            color: #8B4513;
+            border: 2px solid #B8860B;
+            font-family: var(--font-pixel);
+            text-shadow: 1px 1px 0px #FFFFFF;
+        }
+        
+        /* 农场任务项 */
+        .farm-task {
+            background: linear-gradient(to bottom, #FFFFFF, #F5F0E8);
+            border: 3px solid #DEB887;
+            position: relative;
+        }
+        
+        .farm-task::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #DAA520, transparent);
+        }
+        
+        /* 优先级农作物图标 */
+        .priority-crop {
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        
+        .priority-urgent .priority-crop::before { content: '🍅'; }
+        .priority-high .priority-crop::before { content: '🥕'; }
+        .priority-medium .priority-crop::before { content: '🌽'; }
+        .priority-low .priority-crop::before { content: '🥬'; }
+        
+        /* 农场按钮效果 */
+        .farm-btn {
+            background: linear-gradient(to bottom, #CD853F, #A0522D);
+            border: 2px solid #8B4513;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 0px #654321;
+            box-shadow: inset 1px 1px 0px #DEB887, 2px 2px 0px #654321;
+        }
+        
+        .farm-btn:hover {
+            background: linear-gradient(to bottom, #DAA520, #B8860B);
+            transform: translate(-1px, -1px);
+            box-shadow: inset 1px 1px 0px #F0E68C, 3px 3px 0px #654321;
+        }
+        
+        .farm-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: inset 1px 1px 0px #F0E68C, 1px 1px 0px #654321;
+        }
+        
+        /* 浮动工具效果 */
+        .farm-tool {
+            background: radial-gradient(circle, #DAA520, #CD853F);
+            border: 3px solid #8B4513;
+            box-shadow: 4px 4px 0px #654321;
+        }
+        
+        /* 丰收动画 */
+        @keyframes harvest-bounce {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-2deg); }
+            50% { transform: scale(1.2) rotate(0deg); }
+            75% { transform: scale(1.1) rotate(2deg); }
+        }
+        
+        .harvest-effect {
+            animation: harvest-bounce 0.8s ease-in-out;
+        }
+        
+        /* 田园背景图案 */
+        .field-pattern {
+            background-image: radial-gradient(circle at 1px 1px, #CD853F 1px, transparent 0);
+            background-size: 16px 16px;
+            opacity: 0.1;
+        }
+    </style>
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="min-h-screen relative">
+        <!-- 田园背景图案 -->
+        <div class="field-pattern fixed inset-0 pointer-events-none"></div>
+        
+        <!-- 农场工具栏头部 -->
+        <header class="farm-toolbar sticky top-0 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center space-x-3">
+                    <button class="farm-btn p-2 text-xs" onclick="history.back()">
+                        ⬅️ 返回
+                    </button>
+                    <div>
+                        <h1 class="text-sm font-bold">🌾 REACT项目重构</h1>
+                        <p class="text-xs opacity-75">🏠 私人农场</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="farm-btn p-2 text-xs" onclick="toggleSearch()">
+                        🔍
+                    </button>
+                    <button class="farm-btn p-2 text-xs" onclick="toggleMore()">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="p-4 space-y-4 relative z-10">
+            <!-- 农场概览卡片 -->
+            <section class="pixel-card farm-card p-6 space-y-4">
+                <!-- 丰收统计 -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-2xl font-bold pixel-glow" style="color: var(--success);">75%</div>
+                        <div class="text-xs">🌱 成长进度</div>
+                    </div>
+                    <div class="flex items-center space-x-4 text-xs">
+                        <div class="season-tag px-2 py-1 rounded">
+                            🍂 秋季
+                        </div>
+                        <div>👥 5农夫</div>
+                        <div>📅 7天</div>
+                    </div>
+                </div>
+                
+                <!-- 农作物进度条 -->
+                <div class="space-y-2">
+                    <div class="crop-progress h-4 rounded">
+                        <div class="crop-fill h-full rounded" style="--progress-width: 75%; width: 75%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span>🌱 12株作物</span>
+                        <span>🌾 9已收获</span>  
+                        <span>⏰ 3待收获</span>
+                    </div>
+                </div>
+                
+                <!-- 农场奖励 */
+                <div class="flex items-center space-x-2 text-xs">
+                    <span>今日奖励:</span>
+                    <span class="season-tag px-2 py-1">💰 +150G</span>
+                    <span class="season-tag px-2 py-1">⭐ +50XP</span>
+                </div>
+            </section>
+
+            <!-- 农场筛选器 -->
+            <section class="space-y-3">
+                <!-- 作物类型筛选 -->
+                <div class="flex space-x-2 overflow-x-auto pb-2">
+                    <button class="pixel-filter active">全部作物 (12)</button>
+                    <button class="pixel-filter">🌱 待播种 (3)</button>
+                    <button class="pixel-filter">🌿 生长中 (0)</button>
+                    <button class="pixel-filter">🌾 已成熟 (9)</button>
+                </div>
+                
+                <!-- 农场区域标签 -->
+                <div class="flex space-x-2 overflow-x-auto pb-2">
+                    <span class="text-xs">农场区域:</span>
+                    <button class="pixel-tag" style="background: #98FB98; color: #2F4F2F; border-color: #32CD32;">
+                        🥕 菜园区
+                    </button>
+                    <button class="pixel-tag" style="background: #FFE4B5; color: #8B4513; border-color: #DAA520;">
+                        🌽 谷物区  
+                    </button>
+                    <button class="pixel-tag" style="background: #FFB6C1; color: #8B008B; border-color: #FF69B4;">
+                        🍓 果园区
+                    </button>
+                </div>
+            </section>
+
+            <!-- 农场任务列表 -->
+            <section class="space-y-3">
+                <!-- 紧急任务 -->
+                <div class="farm-task pixel-card p-4 priority-urgent">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="priority-crop"></span>
+                                <h3 class="text-sm font-bold">修复登录页面浇水系统</h3>
+                                <button class="pixel-btn-primary px-2 py-1 text-xs" onclick="toggleTaskStatus(this)">
+                                    ☐
+                                </button>
+                            </div>
+                            <p class="text-xs opacity-75 pl-5">
+                                浇水系统在移动设备上出现故障，农作物可能枯萎
+                            </p>
+                            <div class="flex items-center space-x-3 text-xs pl-5">
+                                <div>👨‍🌾 李雷</div>
+                                <div>📅 今天</div>
+                                <div>💬 2条留言</div>
+                                <div>⏰ 2小时</div>
+                            </div>
+                        </div>
+                        <button class="farm-btn p-2 text-xs">📋</button>
+                    </div>
+                </div>
+
+                <!-- 高优先级任务（带子任务） -->
+                <div class="farm-task pixel-card p-4 priority-high">
+                    <div class="space-y-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="priority-crop"></span>
+                                    <h3 class="text-sm font-bold">建设用户权限温室</h3>
+                                    <button class="pixel-btn-primary px-2 py-1 text-xs">☐</button>
+                                </div>
+                                <div class="flex items-center space-x-3 text-xs pl-5">
+                                    <div>👩‍🌾 韩梅梅</div>
+                                    <div>📅 明天</div>
+                                    <div>🌱 3个种植任务</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="farm-btn p-1 text-xs" onclick="toggleSubtasks(this)">
+                                    🔽
+                                </button>
+                                <button class="farm-btn p-2 text-xs">📋</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 子任务 - 种植清单 -->
+                        <div class="subtasks pl-6 space-y-2 border-l-4" style="border-color: var(--ui-wood);">
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button class="harvest-effect" onclick="toggleTaskStatus(this)">✅</button>
+                                <span class="line-through opacity-75">🌱 准备权限数据土壤</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button class="harvest-effect" onclick="toggleTaskStatus(this)">✅</button>
+                                <span class="line-through opacity-75">🌿 种植角色管理种子</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button onclick="toggleTaskStatus(this)">☐</button>
+                                <span>🌾 收获前端权限果实</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 已完成任务 -->
+                <div class="farm-task pixel-card p-4 priority-medium opacity-75">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="priority-crop"></span>
+                                <h3 class="text-sm font-bold line-through">优化首页作物生长速度</h3>
+                                <button class="pixel-btn-primary px-2 py-1 text-xs">✅</button>
+                            </div>
+                            <p class="text-xs opacity-75 pl-5 line-through">
+                                实现懒加载和代码分割，让作物长得更快更好
+                            </p>
+                            <div class="flex items-center space-x-3 text-xs pl-5">
+                                <div>👨‍🌾 张三</div>
+                                <div>📅 昨天完成</div>
+                                <div style="color: var(--status-completed);">🌾 丰收成功</div>
+                            </div>
+                        </div>
+                        <button class="farm-btn p-2 text-xs">📋</button>
+                    </div>
+                </div>
+
+                <!-- 更多任务预览 -->
+                <div class="pixel-card p-4 space-y-3 opacity-50">
+                    <div class="flex items-start space-x-3">
+                        <div class="skeleton w-4 h-4"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton h-4 w-3/4"></div>
+                            <div class="skeleton h-3 w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 农场工具浮动按钮 -->
+        <div class="fixed bottom-6 right-6 flex flex-col space-y-3 z-40">
+            <!-- 回到农场顶部 -->
+            <button id="backToTop" class="farm-tool p-3 rounded opacity-0 pointer-events-none transition-all" onclick="scrollToTop()">
+                ⬆️
+            </button>
+            
+            <!-- 农场搜索工具 -->
+            <button class="farm-tool p-3 rounded hidden-desktop" onclick="toggleSearch()">
+                🔍
+            </button>
+            
+            <!-- 播种新作物 -->
+            <button class="farm-tool p-4 rounded pixel-glow" onclick="addNewTask()">
+                🌱
+            </button>
+        </div>
+
+        <!-- 农场搜索温室 -->
+        <div id="searchOverlay" class="fixed inset-0 bg-black/50 z-50 opacity-0 pointer-events-none transition-all">
+            <div class="absolute top-0 inset-x-0 farm-toolbar p-4 transform -translate-y-full transition-transform" id="searchPanel">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-1 relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-xs">🔍</span>
+                        <input type="text" placeholder="搜索农场作物..." 
+                               class="w-full pl-8 pr-4 py-3 bg-white border-2 border-solid text-xs pixel-btn"
+                               style="border-color: var(--border);"
+                               id="searchInput">
+                    </div>
+                    <button class="farm-btn p-3 text-xs" onclick="toggleSearch()">❌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化农场系统
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🌾 欢迎来到星露谷项目农场！');
+            
+            // 播放农场背景音效（模拟）
+            setTimeout(() => {
+                console.log('🎵 农场音乐开始播放...');
+            }, 1000);
+        });
+        
+        // 农场搜索功能
+        function toggleSearch() {
+            const overlay = document.getElementById('searchOverlay');
+            const panel = document.getElementById('searchPanel');
+            
+            if (overlay.classList.contains('opacity-0')) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                panel.classList.remove('-translate-y-full');
+                document.getElementById('searchInput').focus();
+            } else {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                panel.classList.add('-translate-y-full');
+            }
+        }
+        
+        // 农作物状态切换（收获/播种）
+        function toggleTaskStatus(button) {
+            const isHarvested = button.textContent === '✅';
+            
+            if (isHarvested) {
+                button.textContent = '☐';
+                button.classList.remove('harvest-effect');
+            } else {
+                button.textContent = '✅';
+                button.classList.add('harvest-effect');
+                
+                // 丰收特效
+                setTimeout(() => {
+                    console.log('🌾 收获成功！获得经验值 +10');
+                }, 300);
+            }
+        }
+        
+        // 子任务展开（温室管理）
+        function toggleSubtasks(button) {
+            const subtasks = button.closest('.farm-task').querySelector('.subtasks');
+            const icon = button.textContent;
+            
+            if (icon === '🔽') {
+                button.textContent = '🔼';
+                subtasks.style.display = 'block';
+            } else {
+                button.textContent = '🔽';
+                subtasks.style.display = 'none';
+            }
+        }
+        
+        // 农场滚动监听
+        window.addEventListener('scroll', () => {
+            const backToTop = document.getElementById('backToTop');
+            if (window.scrollY > 200) {
+                backToTop.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                backToTop.classList.add('opacity-0', 'pointer-events-none');
+            }
+        });
+        
+        // 回到农场顶部
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log('🚁 使用快速传送回到农场入口');
+        }
+        
+        // 播种新作物
+        function addNewTask() {
+            console.log('🌱 准备播种新作物...');
+            alert('🌱 打开种子选择界面\n选择你想要种植的项目类型：\n🥕 Bug修复种子\n🌽 新功能种子\n🍓 优化改进种子');
+        }
+        
+        // 农场工具菜单
+        function toggleMore() {
+            alert('🛠️ 农场工具箱\n⚙️ 农场设置\n📊 收成统计\n👥 雇佣农夫\n🏪 市场交易');
+        }
+        
+        // 筛选器切换
+        document.querySelectorAll('.pixel-filter').forEach(filter => {
+            filter.addEventListener('click', function() {
+                document.querySelectorAll('.pixel-filter').forEach(f => f.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filterType = this.textContent;
+                console.log(`🌾 切换到农场区域: ${filterType}`);
+            });
+        });
+        
+        // 农场成就系统（模拟）
+        let farmExp = 150;
+        let farmLevel = 5;
+        
+        function checkAchievements() {
+            if (farmExp >= 200) {
+                console.log('🏆 恭喜！解锁成就："高效农夫"');
+            }
+        }
+        
+        // 农场天气系统（模拟）
+        const weather = ['☀️ 晴天', '🌧️ 雨天', '❄️ 雪天', '🌪️ 暴风雨'];
+        const todayWeather = weather[Math.floor(Math.random() * weather.length)];
+        console.log(`🌤️ 今日农场天气: ${todayWeather}`);
+        
+        // 定期检查农作物状态
+        setInterval(() => {
+            const crops = document.querySelectorAll('.farm-task:not(.opacity-75)');
+            if (crops.length > 0) {
+                console.log(`🌱 农场状态良好，${crops.length} 株作物正在健康成长`);
+            }
+        }, 30000); // 每30秒检查一次
+    </script>
+</body>
+</html>

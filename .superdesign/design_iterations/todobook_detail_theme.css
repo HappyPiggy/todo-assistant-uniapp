@@ -1,0 +1,240 @@
+:root {
+  /* 基础颜色 */
+  --background: oklch(0.9851 0 0);
+  --foreground: oklch(0.1448 0 0);
+  --card: oklch(1.0000 0 0);
+  --card-foreground: oklch(0.1448 0 0);
+  --popover: oklch(1.0000 0 0);
+  --popover-foreground: oklch(0.1448 0 0);
+  
+  /* 主要颜色 */
+  --primary: oklch(0.4706 0.2157 258.8);
+  --primary-foreground: oklch(0.9851 0 0);
+  --secondary: oklch(0.9554 0 0);
+  --secondary-foreground: oklch(0.2046 0 0);
+  
+  /* 辅助颜色 */
+  --muted: oklch(0.9554 0 0);
+  --muted-foreground: oklch(0.5486 0 0);
+  --accent: oklch(0.9554 0 0);
+  --accent-foreground: oklch(0.2046 0 0);
+  
+  /* 状态颜色 */
+  --destructive: oklch(0.5830 0.2387 28.48);
+  --destructive-foreground: oklch(0.9851 0 0);
+  --success: oklch(0.6491 0.1687 142.50);
+  --success-foreground: oklch(0.9851 0 0);
+  --warning: oklch(0.7810 0.1901 70.67);
+  --warning-foreground: oklch(0.1448 0 0);
+  --info: oklch(0.6608 0.1836 252.59);
+  --info-foreground: oklch(0.9851 0 0);
+  
+  /* 任务优先级颜色 */
+  --priority-urgent: oklch(0.5830 0.2387 28.48);
+  --priority-high: oklch(0.7810 0.1901 70.67);
+  --priority-medium: oklch(0.6608 0.1836 252.59);
+  --priority-low: oklch(0.5486 0.0600 195.00);
+  
+  /* 任务状态颜色 */
+  --status-todo: oklch(0.7810 0.1901 70.67);
+  --status-progress: oklch(0.6608 0.1836 252.59);
+  --status-completed: oklch(0.6491 0.1687 142.50);
+  
+  /* 边框和输入框 */
+  --border: oklch(0.9219 0 0);
+  --input: oklch(0.9219 0 0);
+  --ring: oklch(0.4706 0.2157 258.8);
+  
+  /* 字体 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  
+  /* 圆角 */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* 阴影 */
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+  --shadow: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
+  
+  /* 间距系统 (8px网格) */
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 1rem;       /* 16px */
+  --spacing-lg: 1.5rem;     /* 24px */
+  --spacing-xl: 2rem;       /* 32px */
+  --spacing-2xl: 3rem;      /* 48px */
+  
+  /* 层级 */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+  
+  /* 过渡动画 */
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 250ms ease-out;
+  --transition-slow: 350ms ease-out;
+  
+  /* 断点 */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.1194 0 0);
+    --foreground: oklch(0.9851 0 0);
+    --card: oklch(0.1448 0 0);
+    --card-foreground: oklch(0.9851 0 0);
+    --popover: oklch(0.1448 0 0);
+    --popover-foreground: oklch(0.9851 0 0);
+    
+    --primary: oklch(0.6608 0.1836 252.59);
+    --primary-foreground: oklch(0.1194 0 0);
+    --secondary: oklch(0.2046 0 0);
+    --secondary-foreground: oklch(0.9851 0 0);
+    
+    --muted: oklch(0.2046 0 0);
+    --muted-foreground: oklch(0.6486 0 0);
+    --accent: oklch(0.2046 0 0);
+    --accent-foreground: oklch(0.9851 0 0);
+    
+    --border: oklch(0.2046 0 0);
+    --input: oklch(0.2046 0 0);
+    --ring: oklch(0.6608 0.1836 252.59);
+  }
+}
+
+/* 全局重置和基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  line-height: 1.5 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 卡片组件 */
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* 按钮组件 */
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--accent);
+}
+
+/* 优先级标识 */
+.priority-urgent {
+  color: var(--priority-urgent);
+}
+
+.priority-high {
+  color: var(--priority-high);
+}
+
+.priority-medium {
+  color: var(--priority-medium);
+}
+
+.priority-low {
+  color: var(--priority-low);
+}
+
+/* 状态标识 */
+.status-todo {
+  color: var(--status-todo);
+}
+
+.status-progress {
+  color: var(--status-progress);
+}
+
+.status-completed {
+  color: var(--status-completed);
+}
+
+/* 工具类 */
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.bg-muted {
+  background-color: var(--muted);
+}
+
+.border-default {
+  border-color: var(--border);
+}
+
+/* 响应式工具类 */
+@media (max-width: 640px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .hidden-desktop {
+    display: none !important;
+  }
+}

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="stardew-night">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙 项目册详情 - 星露谷夜晚风格</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="stardew_pixel_theme.css">
+    <style>
+        /* 夜晚风格特定样式 */
+        body {
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%);
+            position: relative;
+        }
+        
+        /* 星空背景效果 */
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+        
+        .star:nth-child(2n) { animation-delay: 1s; }
+        .star:nth-child(3n) { animation-delay: 2s; }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        /* 月光工具栏 */
+        .moonlight-toolbar {
+            background: linear-gradient(to bottom, #2D3748, #1A202C);
+            border: 3px solid #4A5568;
+            box-shadow: inset 2px 2px 0px #4A5568, 0 0 20px #9966CC40;
+        }
+        
+        /* 魔法进度条 */
+        .magic-progress {
+            background: #1A202C;
+            border: 2px solid #4A5568;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .magic-progress::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                #4A5568 0px,
+                #4A5568 2px,
+                transparent 2px,
+                transparent 4px
+            );
+        }
+        
+        .magic-fill {
+            background: linear-gradient(90deg, #9966CC, #8A2BE2, #9966CC);
+            background-size: 20px 100%;
+            animation: magic-flow 2s infinite linear, magic-grow 1s ease-out;
+            box-shadow: 0 0 10px #9966CC80;
+        }
+        
+        @keyframes magic-flow {
+            0% { background-position-x: 0px; }
+            100% { background-position-x: 20px; }
+        }
+        
+        @keyframes magic-grow {
+            from { width: 0%; }
+            to { width: var(--progress-width); }
+        }
+        
+        /* 夜晚卡片发光效果 */
+        .night-card {
+            background: linear-gradient(145deg, #16213e, #1a1a2e);
+            border: 3px solid #4A5568;
+            box-shadow: 0 0 15px #9966CC30, inset 1px 1px 0px #4A5568;
+            position: relative;
+        }
+        
+        .night-card::before {
+            content: '🌙';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 16px;
+            background: linear-gradient(45deg, #8A2BE2, #9966CC);
+            border: 2px solid #4A5568;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px #9966CC80;
+        }
+        
+        /* 时间标签 */
+        .time-tag {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #1A202C;
+            border: 2px solid #B8860B;
+            font-family: var(--font-pixel);
+            text-shadow: 1px 1px 0px #FFFFFF;
+            box-shadow: 0 0 8px #FFD70050;
+        }
+        
+        /* 夜晚任务项 */
+        .night-task {
+            background: linear-gradient(145deg, #16213e, #2D3748);
+            border: 3px solid #4A5568;
+            box-shadow: 0 0 10px #9966CC20;
+            position: relative;
+        }
+        
+        .night-task::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #9966CC80, transparent);
+        }
+        
+        /* 优先级魔法宝石 */
+        .priority-gem {
+            font-size: 12px;
+            margin-right: 8px;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+        
+        .priority-urgent .priority-gem::before { content: '💎'; color: #FF6347; }
+        .priority-high .priority-gem::before { content: '⭐'; color: #FFD700; }
+        .priority-medium .priority-gem::before { content: '🔮'; color: #9966CC; }
+        .priority-low .priority-gem::before { content: '🌟'; color: #87CEEB; }
+        
+        /* 魔法按钮效果 */
+        .magic-btn {
+            background: linear-gradient(145deg, #8A2BE2, #9966CC);
+            border: 2px solid #4A5568;
+            color: #E6E6FA;
+            text-shadow: 1px 1px 0px #4A1A4A;
+            box-shadow: inset 1px 1px 0px #9966CC, 0 0 8px #9966CC40;
+        }
+        
+        .magic-btn:hover {
+            background: linear-gradient(145deg, #9370DB, #8A2BE2);
+            transform: translate(-1px, -1px);
+            box-shadow: inset 1px 1px 0px #9966CC, 0 0 15px #9966CC60;
+        }
+        
+        .magic-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: inset 1px 1px 0px #9966CC, 0 0 5px #9966CC40;
+        }
+        
+        /* 浮动法术效果 */
+        .spell-tool {
+            background: radial-gradient(circle, #9966CC, #8A2BE2);
+            border: 3px solid #4A5568;
+            box-shadow: 0 0 20px #9966CC60;
+            animation: float-spell 3s ease-in-out infinite;
+        }
+        
+        @keyframes float-spell {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+        
+        /* 魔法施展动画 */
+        @keyframes spell-cast {
+            0% { transform: scale(1) rotate(0deg); filter: hue-rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); filter: hue-rotate(90deg); }
+            50% { transform: scale(1.2) rotate(0deg); filter: hue-rotate(180deg); }
+            75% { transform: scale(1.1) rotate(5deg); filter: hue-rotate(270deg); }
+            100% { transform: scale(1) rotate(0deg); filter: hue-rotate(360deg); }
+        }
+        
+        .spell-effect {
+            animation: spell-cast 1s ease-in-out;
+        }
+        
+        /* 夜空背景粒子效果 */
+        .night-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #9966CC;
+            border-radius: 50%;
+            animation: float-particle 8s infinite linear;
+        }
+        
+        @keyframes float-particle {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10px) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景 -->
+    <div class="starfield" id="starfield"></div>
+    
+    <!-- 夜空粒子效果 -->
+    <div class="night-particles" id="particles"></div>
+    
+    <!-- 主容器 -->
+    <div class="min-h-screen relative z-10">
+        <!-- 月光工具栏头部 -->
+        <header class="moonlight-toolbar sticky top-0 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center space-x-3">
+                    <button class="magic-btn p-2 text-xs" onclick="history.back()">
+                        ⬅️ 返回
+                    </button>
+                    <div>
+                        <h1 class="text-sm font-bold">🌙 REACT魔法重构</h1>
+                        <p class="text-xs opacity-75">🔮 神秘法师塔</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="magic-btn p-2 text-xs" onclick="toggleSearch()">
+                        🔍
+                    </button>
+                    <button class="magic-btn p-2 text-xs" onclick="toggleMore()">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="p-4 space-y-4 relative z-10">
+            <!-- 魔法塔概览卡片 -->
+            <section class="pixel-card night-card p-6 space-y-4">
+                <!-- 魔法能量统计 -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-2xl font-bold pixel-glow" style="color: var(--primary);">75%</div>
+                        <div class="text-xs">✨ 魔法进度</div>
+                    </div>
+                    <div class="flex items-center space-x-4 text-xs">
+                        <div class="time-tag px-2 py-1 rounded">
+                            🌙 夜晚 23:45
+                        </div>
+                        <div>🧙‍♂️ 5法师</div>
+                        <div>📅 7天</div>
+                    </div>
+                </div>
+                
+                <!-- 魔法能量条 -->
+                <div class="space-y-2">
+                    <div class="magic-progress h-4 rounded">
+                        <div class="magic-fill h-full rounded" style="--progress-width: 75%; width: 75%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span>🔮 12个法术</span>
+                        <span>✨ 9已掌握</span>  
+                        <span>⏳ 3学习中</span>
+                    </div>
+                </div>
+                
+                <!-- 今夜魔法奖励 */
+                <div class="flex items-center space-x-2 text-xs">
+                    <span>今夜收获:</span>
+                    <span class="time-tag px-2 py-1">💰 +150魔法币</span>
+                    <span class="time-tag px-2 py-1">⭐ +50魔力值</span>
+                    <span class="time-tag px-2 py-1">🌟 月光加成</span>
+                </div>
+            </section>
+
+            <!-- 魔法筛选器 -->
+            <section class="space-y-3">
+                <!-- 法术类型筛选 -->
+                <div class="flex space-x-2 overflow-x-auto pb-2">
+                    <button class="pixel-filter active">全部法术 (12)</button>
+                    <button class="pixel-filter">🔮 学习中 (3)</button>
+                    <button class="pixel-filter">✨ 施法中 (0)</button>
+                    <button class="pixel-filter">⭐ 已掌握 (9)</button>
+                </div>
+                
+                <!-- 魔法学院标签 */
+                <div class="flex space-x-2 overflow-x-auto pb-2">
+                    <span class="text-xs">魔法学派:</span>
+                    <button class="pixel-tag" style="background: #8A2BE2; color: #E6E6FA; border-color: #9966CC;">
+                        🔥 元素系
+                    </button>
+                    <button class="pixel-tag" style="background: #32CD32; color: #FFFFFF; border-color: #228B22;">
+                        🌿 自然系  
+                    </button>
+                    <button class="pixel-tag" style="background: #FFD700; color: #1A202C; border-color: #DAA520;">
+                        ⚡ 奥术系
+                    </button>
+                </div>
+            </section>
+
+            <!-- 魔法任务列表 -->
+            <section class="space-y-3">
+                <!-- 紧急法术任务 -->
+                <div class="night-task pixel-card p-4 priority-urgent">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="priority-gem"></span>
+                                <h3 class="text-sm font-bold">修复登录传送门法阵</h3>
+                                <button class="pixel-btn-primary px-2 py-1 text-xs" onclick="toggleTaskStatus(this)">
+                                    ⬜
+                                </button>
+                            </div>
+                            <p class="text-xs opacity-75 pl-5">
+                                传送门在移动设备上出现魔法波动，用户可能迷失在虚空中
+                            </p>
+                            <div class="flex items-center space-x-3 text-xs pl-5">
+                                <div>🧙‍♂️ 法师李雷</div>
+                                <div>🌙 今夜</div>
+                                <div>📜 2条法术记录</div>
+                                <div>⏰ 2小时魔法时间</div>
+                            </div>
+                        </div>
+                        <button class="magic-btn p-2 text-xs">📋</button>
+                    </div>
+                </div>
+
+                <!-- 高优先级法术（带子法术） -->
+                <div class="night-task pixel-card p-4 priority-high">
+                    <div class="space-y-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="priority-gem"></span>
+                                    <h3 class="text-sm font-bold">构建用户权限结界系统</h3>
+                                    <button class="pixel-btn-primary px-2 py-1 text-xs">⬜</button>
+                                </div>
+                                <div class="flex items-center space-x-3 text-xs pl-5">
+                                    <div>🧙‍♀️ 女法师韩梅梅</div>
+                                    <div>🌅 明日黎明</div>
+                                    <div>🔮 3个子法术</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="magic-btn p-1 text-xs" onclick="toggleSubtasks(this)">
+                                    🔽
+                                </button>
+                                <button class="magic-btn p-2 text-xs">📋</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 子法术 - 魔法咒语清单 -->
+                        <div class="subtasks pl-6 space-y-2 border-l-4" style="border-color: var(--ui-purple);">
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button class="spell-effect" onclick="toggleTaskStatus(this)">✅</button>
+                                <span class="line-through opacity-75">🔮 准备权限数据魔法阵</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button class="spell-effect" onclick="toggleTaskStatus(this)">✅</button>
+                                <span class="line-through opacity-75">⚡ 施展角色管理咒语</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-xs">
+                                <button onclick="toggleTaskStatus(this)">⬜</button>
+                                <span>🌟 释放前端权限魔法</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 已完成的魔法任务 -->
+                <div class="night-task pixel-card p-4 priority-medium opacity-75">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="priority-gem"></span>
+                                <h3 class="text-sm font-bold line-through">优化首页魔法加载速度</h3>
+                                <button class="pixel-btn-primary px-2 py-1 text-xs">✅</button>
+                            </div>
+                            <p class="text-xs opacity-75 pl-5 line-through">
+                                实现懒加载和代码分割魔法，让页面如闪电般快速
+                            </p>
+                            <div class="flex items-center space-x-3 text-xs pl-5">
+                                <div>🧙‍♂️ 大法师张三</div>
+                                <div>🌅 昨日完成</div>
+                                <div style="color: var(--status-completed);">⭐ 魔法大成功</div>
+                            </div>
+                        </div>
+                        <button class="magic-btn p-2 text-xs">📋</button>
+                    </div>
+                </div>
+
+                <!-- 更多法术预览 */
+                <div class="pixel-card night-card p-4 space-y-3 opacity-50">
+                    <div class="flex items-start space-x-3">
+                        <div class="skeleton w-4 h-4" style="background: var(--muted);"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton h-4 w-3/4" style="background: var(--muted);"></div>
+                            <div class="skeleton h-3 w-1/2" style="background: var(--muted);"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 魔法工具浮动按钮 -->
+        <div class="fixed bottom-6 right-6 flex flex-col space-y-3 z-40">
+            <!-- 回到法师塔顶部 -->
+            <button id="backToTop" class="spell-tool p-3 rounded opacity-0 pointer-events-none transition-all" onclick="scrollToTop()">
+                ⬆️
+            </button>
+            
+            <!-- 魔法搜索水晶 -->
+            <button class="spell-tool p-3 rounded hidden-desktop" onclick="toggleSearch()">
+                🔍
+            </button>
+            
+            <!-- 施展新法术 -->
+            <button class="spell-tool p-4 rounded pixel-glow" onclick="addNewTask()">
+                ✨
+            </button>
+        </div>
+
+        <!-- 魔法搜索水晶球 -->
+        <div id="searchOverlay" class="fixed inset-0 bg-black/70 z-50 opacity-0 pointer-events-none transition-all">
+            <div class="absolute top-0 inset-x-0 moonlight-toolbar p-4 transform -translate-y-full transition-transform" id="searchPanel">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-1 relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-xs">🔮</span>
+                        <input type="text" placeholder="搜索魔法法术..." 
+                               class="w-full pl-8 pr-4 py-3 border-2 border-solid text-xs magic-btn"
+                               style="border-color: var(--border); background: var(--input);"
+                               id="searchInput">
+                    </div>
+                    <button class="magic-btn p-3 text-xs" onclick="toggleSearch()">❌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化夜晚魔法系统
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🌙 欢迎来到星露谷魔法师塔！');
+            
+            // 创建星空
+            createStarfield();
+            
+            // 创建魔法粒子
+            createMagicParticles();
+            
+            // 播放夜晚魔法音效（模拟）
+            setTimeout(() => {
+                console.log('🎵 神秘夜晚音乐开始播放...');
+            }, 1000);
+        });
+        
+        // 创建星空背景
+        function createStarfield() {
+            const starfield = document.getElementById('starfield');
+            const starCount = 50;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starfield.appendChild(star);
+            }
+        }
+        
+        // 创建魔法粒子效果
+        function createMagicParticles() {
+            const particles = document.getElementById('particles');
+            
+            setInterval(() => {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = '0s';
+                particle.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                particles.appendChild(particle);
+                
+                // 8秒后移除粒子
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 8000);
+            }, 2000);
+        }
+        
+        // 魔法搜索功能
+        function toggleSearch() {
+            const overlay = document.getElementById('searchOverlay');
+            const panel = document.getElementById('searchPanel');
+            
+            if (overlay.classList.contains('opacity-0')) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                panel.classList.remove('-translate-y-full');
+                document.getElementById('searchInput').focus();
+                console.log('🔮 启动魔法搜索水晶球...');
+            } else {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                panel.classList.add('-translate-y-full');
+            }
+        }
+        
+        // 法术状态切换（施法/学习）
+        function toggleTaskStatus(button) {
+            const isCompleted = button.textContent === '✅';
+            
+            if (isCompleted) {
+                button.textContent = '⬜';
+                button.classList.remove('spell-effect');
+            } else {
+                button.textContent = '✅';
+                button.classList.add('spell-effect');
+                
+                // 魔法施展特效
+                setTimeout(() => {
+                    console.log('✨ 法术施展成功！获得魔力 +15');
+                }, 300);
+            }
+        }
+        
+        // 子法术展开（魔法书管理）
+        function toggleSubtasks(button) {
+            const subtasks = button.closest('.night-task').querySelector('.subtasks');
+            const icon = button.textContent;
+            
+            if (icon === '🔽') {
+                button.textContent = '🔼';
+                subtasks.style.display = 'block';
+                console.log('📖 打开魔法法术书...');
+            } else {
+                button.textContent = '🔽';
+                subtasks.style.display = 'none';
+                console.log('📖 合上魔法法术书...');
+            }
+        }
+        
+        // 法师塔滚动监听
+        window.addEventListener('scroll', () => {
+            const backToTop = document.getElementById('backToTop');
+            if (window.scrollY > 200) {
+                backToTop.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                backToTop.classList.add('opacity-0', 'pointer-events-none');
+            }
+        });
+        
+        // 回到法师塔顶部
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log('🌟 使用瞬移魔法回到塔顶');
+        }
+        
+        // 施展新法术
+        function addNewTask() {
+            console.log('✨ 准备学习新的魔法...');
+            alert('🔮 魔法法术书\n选择你想要学习的法术类型：\n🔥 元素魔法 - Bug修复法术\n⚡ 奥术魔法 - 新功能法术\n🌟 神圣魔法 - 优化改进法术');
+        }
+        
+        // 魔法工具菜单
+        function toggleMore() {
+            alert('🧙‍♂️ 法师工具箱\n🔮 魔法设置\n📊 法术统计\n👥 招募学徒\n🏪 魔法商店');
+        }
+        
+        // 法术筛选器切换
+        document.querySelectorAll('.pixel-filter').forEach(filter => {
+            filter.addEventListener('click', function() {
+                document.querySelectorAll('.pixel-filter').forEach(f => f.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filterType = this.textContent;
+                console.log(`🔮 切换到魔法学派: ${filterType}`);
+            });
+        });
+        
+        // 魔法师成就系统（模拟）
+        let magicPower = 150;
+        let wizardLevel = 5;
+        
+        function checkMagicAchievements() {
+            if (magicPower >= 200) {
+                console.log('🏆 恭喜！解锁成就："大魔法师"');
+            }
+        }
+        
+        // 夜晚时间系统（模拟）
+        function updateNightTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            
+            let timeEmoji = '🌙';
+            if (hours >= 0 && hours < 6) timeEmoji = '🌌';
+            else if (hours >= 6 && hours < 12) timeEmoji = '🌅';
+            else if (hours >= 12 && hours < 18) timeEmoji = '☀️';
+            else timeEmoji = '🌙';
+            
+            console.log(`${timeEmoji} 魔法时间: ${hours}:${minutes.toString().padStart(2, '0')}`);
+        }
+        
+        // 每分钟更新时间
+        setInterval(updateNightTime, 60000);
+        updateNightTime(); // 立即执行一次
+        
+        // 定期检查魔法状态
+        setInterval(() => {
+            const spells = document.querySelectorAll('.night-task:not(.opacity-75)');
+            if (spells.length > 0) {
+                console.log(`🔮 法师塔运转正常，${spells.length} 个法术正在研究中`);
+            }
+        }, 30000); // 每30秒检查一次
+        
+        // 随机魔法事件
+        setInterval(() => {
+            const events = [
+                '🌟 一颗流星划过夜空，魔力增强！',
+                '🔮 发现了古老的魔法卷轴碎片',
+                '🧙‍♂️ 塔中传来神秘的魔法波动',
+                '✨ 月光特别明亮，适合施展强力法术'
+            ];
+            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            console.log(randomEvent);
+        }, 120000); // 每2分钟一个随机事件
+    </script>
+</body>
+</html>

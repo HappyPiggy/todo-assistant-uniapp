@@ -1,0 +1,428 @@
+diff --git a/bugs/task-comment-display-duplication/analysis.md b/bugs/task-comment-display-duplication/analysis.md
+new file mode 100644
+index 0000000..3dd9a77
+--- /dev/null
++++ b/bugs/task-comment-display-duplication/analysis.md
+@@ -0,0 +1,134 @@
++# Root Cause Analysis
++
++## Root Cause
++
++TaskItem.vue组件中存在两套不同的评论数据来源和计算逻辑，导致commentDisplayText在不同时机显示不一致的评论计数：
++
++### 问题的核心原因
++
++1. **初始加载时的数据来源**：
++   - TaskItem组件的`commentCount`计算属性直接使用`props.task?.comments?.length`
++   - 这个数据来自于详情页初始加载时的任务数据，可能包含完整的评论数组（包括所有回复）
++
++2. **静默加载时的数据覆盖**：
++   - VirtualTaskList.vue通过`watch(visibleTasks)`触发静默加载评论
++   - 静默加载通过`commentCache.smartLoadComments()`方法获取评论数据
++   - 这个过程会调用云函数重新获取评论数据，可能与初始数据的结构或内容不同
++   - 新获取的数据通过`syncCacheToTask()`方法同步到task对象，覆盖原始的comments数组
++
++### 具体的数据流分析
++
++**初始数据流**：
++```
++detail.vue onLoad → loadBookDetail() → bookData.allTasks → TaskItem.commentCount
++→ task.comments.length（可能包含所有回复）
++```
++
++**静默加载数据流**：
++```
++VirtualTaskList.vue watch(visibleTasks) → commentCache.smartLoadComments() 
++→ getTaskComments(cloud function) → syncCacheToTask() → task.comments被覆盖
++→ TaskItem.commentCount重新计算（可能只包含主评论）
++```
++
++## Affected Code Locations
++
++### 主要文件
++
++1. **TaskItem.vue:214-221** - 评论计数计算逻辑
++   ```javascript
++   const commentCount = computed(() => {
++     try {
++       return props.task?.comments?.length || 0  // 直接依赖task.comments
++     } catch (error) {
++       console.error('获取评论总数失败:', error)
++       return 0
++     }
++   })
++   ```
++
++2. **VirtualTaskList.vue:284-342** - 静默加载触发逻辑
++   ```javascript
++   watch(visibleTasks, async (newVisibleTasks) => {
++     // 静默加载评论数据，会覆盖原始task.comments
++     await commentCache.smartLoadComments(task._id, props.tasks, callback, true)
++   })
++   ```
++
++3. **useTaskCommentCache.js:400-450** - 静默加载实现
++   ```javascript
++   const smartLoadComments = async (taskId, allTasks, onLoadComplete, silent) => {
++     // 批量加载评论数据
++     const commentData = await getTaskComments(taskId, true)
++     syncCacheToTask(taskId, allTasks) // 同步到task对象，覆盖原数据
++   }
++   ```
++
++4. **useTaskCommentCache.js:200-250** - 缓存同步逻辑
++   ```javascript
++   const syncCacheToTask = (taskId, allTasks) => {
++     // 将缓存数据同步到task对象，可能改变comments数组结构
++   }
++   ```
++
++### 辅助文件
++
++5. **useBookData.js** - 初始数据加载
++6. **commentUtils.js** - 评论计数工具函数
++
++## Fix Strategy
++
++### 解决方案：统一评论数据来源和计算逻辑
++
++**策略1：修改TaskItem.vue使其始终使用包含所有回复的计算方式**
++
++1. **修改commentCount计算逻辑**：不再直接使用`task.comments.length`，而是使用统一的评论计数函数
++2. **引入commentUtils.js的统一计算方法**：确保所有场景下都使用相同的计算逻辑
++3. **处理数据不一致**：在缓存同步时确保数据结构的一致性
++
++**策略2：确保静默加载数据与初始数据结构一致**
++
++1. **检查云函数返回的数据结构**：确保包含所有回复数据
++2. **修改syncCacheToTask方法**：保持数据结构一致性
++3. **添加数据验证**：确保覆盖前后的数据完整性
++
++**选择策略1的原因**：
++- 更加可控，不依赖云函数的实现细节
++- 解耦TaskItem组件与具体的数据加载方式
++- 更容易保证一致性
++
++### 具体实现步骤
++
++1. **创建统一的评论计数函数**：
++   ```javascript
++   // 在commentUtils.js中创建或完善统一的计数函数
++   export const getTaskCommentCount = (task, includeReplies = true) => {
++     // 统一的计数逻辑，确保包含所有回复
++   }
++   ```
++
++2. **修改TaskItem.vue**：
++   ```javascript
++   import { getTaskCommentCount } from '../../utils/commentUtils.js'
++   
++   const commentCount = computed(() => {
++     try {
++       return getTaskCommentCount(props.task, true) // 始终包含回复
++     } catch (error) {
++       console.error('获取评论总数失败:', error)
++       return 0
++     }
++   })
++   ```
++
++3. **验证其他使用评论计数的地方**：确保整个应用中评论计数的一致性
++
++## Alternative Solutions
++
++### 方案2：修复静默加载的数据同步
++- **优点**：保持现有架构不变
++- **缺点**：依赖云函数实现细节，可能影响其他功能
++
++### 方案3：禁用静默加载功能
++- **优点**：简单直接
++- **缺点**：影响用户体验，失去性能优化
+\ No newline at end of file
+diff --git a/bugs/task-comment-display-duplication/report.md b/bugs/task-comment-display-duplication/report.md
+new file mode 100644
+index 0000000..6ed5e61
+--- /dev/null
++++ b/bugs/task-comment-display-duplication/report.md
+@@ -0,0 +1,41 @@
++# Bug Report
++
++## Bug Description
++
++在TaskItem.vue组件中，commentDisplayText的刷新机制存在两套不同的逻辑，导致评论显示不一致。一套刷新任务下的所有评论（包含所有回复），另一套不包含所有回复。需要统一成包含所有回复的版本。
++
++## Reproduction Steps
++
++1. 打开 `/pages/todobooks/detail.vue` 页面，进入任务列表
++2. 观察任务的评论显示文本（commentDisplayText），此时显示的是一套逻辑
++3. 上下拖动任务列表，触发静默加载评论功能
++4. 观察评论显示文本被覆盖，显示为另一套不同的逻辑
++5. 对比两次显示的差异：初始进入时显示一套计数，静默加载后显示另一套计数
++
++## Expected Behavior
++
++所有情况下，commentDisplayText都应该显示任务下的所有评论，包括所有回复的总数。评论计数应该保持一致性。
++
++## Actual Behavior
++
++存在两套不同的评论刷新逻辑：
++- **初始加载逻辑**：刚进入 `/pages/todobooks/detail.vue` 时显示的评论计数（一套逻辑）
++- **静默加载逻辑**：上下拖动任务列表时，触发静默加载评论功能，覆盖之前的显示（另一套逻辑）
++
++这两套逻辑在评论计数方式上不一致，导致同一任务的评论显示数量在不同时机下可能不同。
++
++## Environment
++
++- **Framework**: uni-app + Vue 3
++- **Component**: /pages/todobooks/components/task/TaskItem.vue
++- **Affected Function**: commentDisplayText computed property (line 232-241)
++- **Related Code**: commentCount computed property (line 214-221)
++
++## Impact and Severity
++
++**Severity**: Medium
++
++**Impact**: 
++- 用户体验不一致，评论数显示混乱
++- 可能导致用户对评论功能的困惑
++- 影响任务管理的准确性判断
+\ No newline at end of file
+diff --git a/bugs/task-comment-unread-indicator-persist/analysis.md b/bugs/task-comment-unread-indicator-persist/analysis.md
+new file mode 100644
+index 0000000..89475e0
+--- /dev/null
++++ b/bugs/task-comment-unread-indicator-persist/analysis.md
+@@ -0,0 +1,81 @@
++# 根本原因分析
++
++## Root Cause
++通过深入分析代码结构和评论状态管理机制，发现问题的根本原因是**缺少页面间的评论状态同步机制**。具体表现为：
++
++1. **任务详情页面标记已读后没有通知机制**：在`pages/tasks/detail.vue`中，当用户停留1秒后会自动调用`markTaskAsRead`函数标记评论为已读，但该操作只更新了本地存储，没有触发任何事件来通知其他页面刷新评论状态。
++
++2. **TodoBook详情页面缺少实时状态更新**：`pages/todobooks/detail.vue`通过`VirtualTaskList`组件显示任务列表，未读评论数通过`unreadCountsMap`计算，但该计算结果会被缓存，当用户从任务详情页返回时，不会主动重新计算未读状态。
++
++3. **评论缓存清理时机不准确**：当前的`onShow`清理逻辑只在特定条件下执行（`fromListPage && !hasInitialized.value`），这意味着从任务详情页返回时不会触发缓存清理。
++
++## Affected Code Locations
++
++### 核心问题文件
++1. **`/pages/tasks/detail.vue`** (第527-535行, onShow生命周期)
++   - `markTaskAsRead`函数调用后缺少事件通知
++   - 需要在标记已读后触发全局事件
++
++2. **`/pages/todobooks/composables/useTaskComments.js`** (第253-266行)
++   - `markTaskAsRead`函数实现完整但缺少事件触发
++   - 需要添加事件分发机制
++
++3. **`/pages/todobooks/detail.vue`** (第232-242行, onShow函数)
++   - 评论缓存清理条件过于严格
++   - 需要在页面显示时主动刷新评论状态
++
++4. **`/pages/todobooks/components/task/VirtualTaskList.vue`** (未读计算逻辑)
++   - `unreadCountsMap`计算结果被缓存，缺少实时更新机制
++   - 需要监听评论状态变更事件
++
++## Fix Strategy
++
++### 策略概述
++实现一个基于事件驱动的评论状态同步机制，确保任务详情页面的评论已读状态能够实时反映到TodoBook详情页面。
++
++### 具体修复方案
++
++#### 1. 在任务详情页面添加事件通知机制
++- **位置**: `/pages/tasks/detail.vue` 和 `/pages/todobooks/composables/useTaskComments.js`
++- **方案**: 在`markTaskAsRead`函数执行后，触发全局uni事件通知其他页面评论状态已更新
++- **事件名称**: `task-comments-read`
++- **事件数据**: `{ taskId, timestamp }`
++
++#### 2. 在TodoBook详情页面监听评论状态更新事件
++- **位置**: `/pages/todobooks/detail.vue`
++- **方案**: 在页面生命周期中注册事件监听器，当收到评论已读事件时，清理对应任务的评论缓存并刷新显示
++- **实现方式**: 使用`uni.$on`监听事件，调用`VirtualTaskList`的缓存清理方法
++
++#### 3. 优化VirtualTaskList的缓存刷新机制
++- **位置**: `/pages/todobooks/components/task/VirtualTaskList.vue`
++- **方案**: 添加单个任务的评论缓存清理方法，避免清理全部缓存造成的性能损失
++- **新增方法**: `clearTaskCommentCache(taskId)`
++
++#### 4. 改进onShow的缓存清理逻辑
++- **位置**: `/pages/todobooks/detail.vue` (onShow函数)
++- **方案**: 移除过于严格的条件判断，确保每次页面显示时都能正确处理评论状态
++- **优化**: 使用`nextTick`替代固定延时，提高响应速度
++
++### 实现优先级
++1. **高优先级**: 事件通知机制的添加（修复核心问题）
++2. **中优先级**: 事件监听和缓存刷新逻辑
++3. **低优先级**: onShow逻辑优化（提升用户体验）
++
++## Alternative Solutions
++
++### 方案A: 轮询刷新机制
++定期检查本地存储中的已读记录变化，主动更新UI显示。
++- **优点**: 实现简单，不需要复杂的事件系统
++- **缺点**: 消耗更多资源，响应延迟较高，用户体验不佳
++
++### 方案B: 全局状态管理
++将评论未读状态放入全局状态管理器中统一管理。
++- **优点**: 数据一致性更好，便于调试
++- **缺点**: 增加系统复杂度，需要重构现有代码
++
++### 选择当前策略的原因
++当前选择的事件驱动方案具有以下优势：
++- **最小化改动**: 在现有架构基础上添加事件机制，不需要大规模重构
++- **性能优化**: 按需更新，避免不必要的计算和渲染
++- **维护友好**: 符合Vue.js生态的最佳实践，便于后续维护
++- **扩展性强**: 可以轻松扩展到其他类似的状态同步场景
+\ No newline at end of file
+diff --git a/bugs/task-comment-unread-indicator-persist/report.md b/bugs/task-comment-unread-indicator-persist/report.md
+new file mode 100644
+index 0000000..a3778a5
+--- /dev/null
++++ b/bugs/task-comment-unread-indicator-persist/report.md
+@@ -0,0 +1,39 @@
++# Bug Report
++
++## Bug Description
++在TodoBook详情页面(pages/todobooks/detail.vue)中，当任务存在未读评论时会显示未读提示点。用户点击任务进入详情页面查看评论后，返回到详情页面时，任务项的未读提示点仍然显示，没有消失。这表明评论缓存可能没有正确刷新。
++
++## Reproduction Steps
++1. 打开TodoBook详情页面(pages/todobooks/detail.vue)
++2. 观察到某个任务存在未读评论，显示未读提示点
++3. 点击该任务，进入任务详情页面
++4. 在任务详情页面查看评论（理论上应该标记为已读）
++5. 返回到TodoBook详情页面
++6. 观察任务项的未读提示点状态
++
++## Expected Behavior
++当用户从任务详情页面返回到TodoBook详情页面时，如果评论已被标记为已读，任务项的未读提示点应该消失。
++
++## Actual Behavior
++用户从任务详情页面返回后，任务项的未读提示点仍然显示，表明未读状态没有被正确更新，可能是评论缓存没有刷新导致的。
++
++## Environment
++- 项目: uni-app + Vue 3 + uniCloud
++- 框架: uni-app
++- 云平台: uniCloud Aliyun版本
++- 相关页面: pages/todobooks/detail.vue
++- 相关组件: VirtualTaskList.vue
++- 状态管理: Vue 3 Composition API
++
++## Impact and Severity
++**严重程度: Medium**
++
++**影响:**
++- 用户体验问题：用户已经查看了评论，但界面仍显示未读状态，造成困惑
++- 数据一致性问题：前端显示状态与实际数据状态不符
++- 缓存管理问题：可能涉及评论缓存的清理机制
++
++**业务影响:**
++- 影响用户对评论状态的准确判断
++- 可能导致用户重复查看已读评论
++- 降低应用的整体用户体验
+\ No newline at end of file
+diff --git a/pages/todobooks/components/task/TaskItem.vue b/pages/todobooks/components/task/TaskItem.vue
+index 6a8f8f3..e273fe9 100644
+--- a/pages/todobooks/components/task/TaskItem.vue
++++ b/pages/todobooks/components/task/TaskItem.vue
+@@ -160,6 +160,7 @@ import { defineProps, defineEmits, computed } from 'vue'
+ import { currentUserId } from '@/store/storage.js'
+ import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
+ import { isOverdue } from '../../utils/dateUtils.js'
++import { getTaskCommentCount } from '@/utils/commentUtils.js'
+ 
+ const props = defineProps({
+   task: {
+@@ -213,7 +214,8 @@ const emit = defineEmits([
+ // 评论相关计算属性
+ const commentCount = computed(() => {
+   try {
+-    return props.task?.comments?.length || 0
++    // 使用统一的评论计数函数，确保包含所有回复
++    return getTaskCommentCount(props.task, true)
+   } catch (error) {
+     console.error('获取评论总数失败:', error)
+     return 0
+@@ -232,6 +234,7 @@ const hasUnreadComments = computed(() => {
+ const commentDisplayText = computed(() => {
+   try {
+     const count = commentCount.value
++    console.log("!!!!", count)
+     return count > 0 ? `${count}条评论` : ''
+   } catch (error) {
+     console.error('格式化评论显示文本失败:', error)
+diff --git a/pages/todobooks/utils/commentUtils.js b/pages/todobooks/utils/commentUtils.js
+index e3f1937..e7311de 100644
+--- a/pages/todobooks/utils/commentUtils.js
++++ b/pages/todobooks/utils/commentUtils.js
+@@ -2,6 +2,8 @@
+  * 评论显示改进功能的工具函数和测试验证
+  */
+ 
++import { getTaskCommentCount } from '@/utils/commentUtils.js'
++
+ /**
+  * 验证TaskItem组件的评论显示逻辑
+  * @param {Object} task - 任务对象
+@@ -17,8 +19,8 @@ export function validateCommentDisplay(task, unreadCommentCount) {
+   }
+ 
+   try {
+-    // 验证评论总数计算
+-    const commentCount = task?.comments?.length || 0
++    // 验证评论总数计算 - 使用统一的计数函数
++    const commentCount = getTaskCommentCount(task, true)
+     validation.results.commentCount = commentCount
+     
+     // 验证显示文本格式
+diff --git a/utils/commentUtils.js b/utils/commentUtils.js
+index a7066b3..2f97dba 100644
+--- a/utils/commentUtils.js
++++ b/utils/commentUtils.js
+@@ -203,4 +203,45 @@ export function getReadRecordsStats() {
+     totalComments,
+     storageSize: JSON.stringify(commentReadRecords).length
+   }
++}
++
++/**
++ * 统一的任务评论计数函数
++ * 确保所有场景下都使用相同的计算逻辑，包含所有回复
++ * @param {Object} task 任务对象
++ * @param {boolean} includeReplies 是否包含回复，默认true
++ * @returns {number} 评论总数
++ */
++export function getTaskCommentCount(task, includeReplies = true) {
++  try {
++    if (!task || !task.comments || !Array.isArray(task.comments)) {
++      return 0
++    }
++    
++    if (!includeReplies) {
++      // 只计算主评论数量
++      return task.comments.filter(comment => !comment.is_deleted).length
++    }
++    
++    // 计算包含回复的总评论数
++    let totalCount = 0
++    
++    task.comments.forEach(comment => {
++      // 计算主评论（非删除的）
++      if (!comment.is_deleted) {
++        totalCount++
++      }
++      
++      // 计算回复数量（非删除的）
++      if (comment.replies && Array.isArray(comment.replies)) {
++        totalCount += comment.replies.filter(reply => !reply.is_deleted).length
++      }
++    })
++    
++    return totalCount
++    
++  } catch (error) {
++    console.error('计算评论总数失败:', error)
++    return 0
++  }
+ }
+\ No newline at end of file
