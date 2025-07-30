@@ -204,8 +204,8 @@
 					const result = await userCo.updateProfile(this.formData)
 					
 					if (result.code === 0) {
-						// 更新本地用户信息
-						await mutations.updateUserInfo(this.formData)
+						// 直接更新本地用户信息状态，避免clientDB权限问题
+						mutations.setUserInfo(this.formData)
 						
 						uni.showToast({
 							title: '保存成功',

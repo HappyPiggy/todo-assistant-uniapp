@@ -1,0 +1,15 @@
+diff --git a/pages/ucenter/profile/edit.vue b/pages/ucenter/profile/edit.vue
+index 1f24e40..94aca09 100644
+--- a/pages/ucenter/profile/edit.vue
++++ b/pages/ucenter/profile/edit.vue
+@@ -204,8 +204,8 @@
+ 					const result = await userCo.updateProfile(this.formData)
+ 					
+ 					if (result.code === 0) {
+-						// 更新本地用户信息
+-						await mutations.updateUserInfo(this.formData)
++						// 直接更新本地用户信息状态，避免clientDB权限问题
++						mutations.setUserInfo(this.formData)
+ 						
+ 						uni.showToast({
+ 							title: '保存成功',
