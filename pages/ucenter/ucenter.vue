@@ -1,66 +1,120 @@
 <template>
 	<view class="center">
+		<!-- 背景装饰 -->
+		<view class="bg-decoration">
+			<view class="decoration-circle circle-1"></view>
+			<view class="decoration-circle circle-2"></view>
+			<view class="decoration-circle circle-3"></view>
+		</view>
+		
 		<!-- 用户信息区域 -->
 		<view class="user-header">
-			<view class="avatar-section" @click="toUserInfo">
-				<image v-if="hasLogin&&userInfo.avatar" :src="userInfo.avatar" class="avatar-image"></image>
-				
-				<view v-else class="default-avatar">
-					<text v-if="hasLogin && userInfo.nickname" class="avatar-text">
-						{{ userInfo.nickname.charAt(0).toUpperCase() }}
-					</text>
-					<uni-icons v-else color="#ffffff" size="50" type="person-filled" />
+			<view class="header-content">
+				<view class="avatar-section" @click="toUserInfo">
+					<view class="avatar-container">
+						<image v-if="hasLogin&&userInfo.avatar" :src="userInfo.avatar" class="avatar-image"></image>
+						
+						<view v-else class="default-avatar">
+							<text v-if="hasLogin && userInfo.nickname" class="avatar-text">
+								{{ userInfo.nickname.charAt(0).toUpperCase() }}
+							</text>
+							<uni-icons v-else color="#ffffff" size="50" type="person-filled" />
+						</view>
+						
+						<view class="avatar-status-dot" v-if="hasLogin"></view>
+						<view class="edit-avatar-overlay">
+							<uni-icons color="#ffffff" size="16" type="camera" />
+						</view>
+					</view>
 				</view>
 				
-			</view>
-			
-			<view class="user-info">
-				<text class="user-name" v-if="hasLogin">{{userInfo.nickname||userInfo.username||userInfo.mobile}}</text>
-				<text class="user-name" v-else @click="toLogin">点击登录</text>
-				<view class="user-details" v-if="hasLogin">
-					<text class="user-gender" v-if="userInfo.gender">{{ genderText }}</text>
+				<view class="user-info">
+					<text class="user-name" v-if="hasLogin">{{userInfo.nickname||userInfo.username||userInfo.mobile}}</text>
+					<text class="user-name login-prompt" v-else @click="toLogin">点击登录</text>
+					<view class="user-details" v-if="hasLogin">
+						<text class="user-gender" v-if="userInfo.gender">{{ genderText }}</text>
+
+					</view>
+					<text class="user-description" v-if="hasLogin && (userInfo.description || userInfo.comment)">{{ userInfo.description || userInfo.comment }}</text>
+					<text class="user-description placeholder" v-else-if="hasLogin">添加一句话介绍自己吧～</text>
 				</view>
-				<text class="user-description" v-if="hasLogin && (userInfo.description || userInfo.comment)">{{ userInfo.description || userInfo.comment }}</text>
 			</view>
 		</view>
 
 		<!-- 功能卡片区域 -->
 		<view class="function-cards">
-			<!-- 个人资料卡片 -->
-			<view class="card" v-if="hasLogin">
-				<view class="card-header">
-					<uni-icons color="#007AFF" size="24" type="person" />
-					<text class="card-title">个人资料</text>
+			<!-- 快捷操作卡片 -->
+			<view class="quick-actions" v-if="hasLogin">
+				<view class="quick-action-item" @click="toEditProfile">
+					<view class="action-icon">
+						<uni-icons color="#007AFF" size="24" type="person" />
+					</view>
+					<text class="action-text">编辑资料</text>
 				</view>
-				<uni-list class="card-list">
-					<uni-list-item title="编辑资料" link @click="toEditProfile" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-					<uni-list-item title="修改密码" link @click="toChangePassword" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-				</uni-list>
+				<view class="quick-action-item" @click="toChangePassword">
+					<view class="action-icon">
+						<uni-icons color="#FF6B35" size="24" type="locked" />
+					</view>
+					<text class="action-text">修改密码</text>
+				</view>
+				<view class="quick-action-item" @click="toArchiveManagement">
+					<view class="action-icon">
+						<uni-icons color="#34C759" size="24" type="folder" />
+					</view>
+					<text class="action-text">归档管理</text>
+				</view>
+				<view class="quick-action-item" @click="toShareManagement">
+					<view class="action-icon">
+						<uni-icons color="#AF52DE" size="24" type="paperplane" />
+					</view>
+					<text class="action-text">分享管理</text>
+				</view>
 			</view>
 
 			<!-- 设置卡片 -->
-			<view class="card">
+			<view class="card settings-card">
 				<view class="card-header">
-					<uni-icons color="#6c757d" size="24" type="gear" />
-					<text class="card-title">设置</text>
+					<view class="header-left">
+						<view class="icon-wrapper settings-icon">
+							<uni-icons color="#6c757d" size="20" type="gear" />
+						</view>
+						<text class="card-title">设置</text>
+					</view>
 				</view>
-				<uni-list class="card-list">
-					<uni-list-item title="归档管理" link @click="toArchiveManagement" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-					<uni-list-item title="分享管理" link @click="toShareManagement" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-					<uni-list-item title="应用设置" link to="/pages/ucenter/settings/settings" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-					<uni-list-item title="关于应用" link @click="toAbout" :show-extra-icon="true" :extraIcon="{type:'right',color:'#c0c4cc'}">
-					</uni-list-item>
-				</uni-list>
+				<view class="card-content">
+					<view class="menu-item" @click="navToSettings">
+						<view class="menu-left">
+							<view class="menu-icon">
+								<uni-icons color="#007AFF" size="18" type="settings" />
+							</view>
+							<text class="menu-title">应用设置</text>
+						</view>
+						<view class="menu-right">
+							<text class="menu-desc">个性化配置</text>
+							<uni-icons color="#c0c4cc" size="14" type="right" />
+						</view>
+					</view>
+					<view class="menu-item" @click="toAbout">
+						<view class="menu-left">
+							<view class="menu-icon">
+								<uni-icons color="#FF9500" size="18" type="info" />
+							</view>
+							<text class="menu-title">关于应用</text>
+						</view>
+						<view class="menu-right">
+							<text class="menu-desc">版本信息</text>
+							<uni-icons color="#c0c4cc" size="14" type="right" />
+						</view>
+					</view>
+				</view>
 			</view>
 
 			<!-- 登出按钮 -->
 			<view class="logout-section" v-if="hasLogin">
-				<button class="logout-btn" @click="logout">退出登录</button>
+				<button class="logout-btn" @click="logout">
+					<uni-icons color="#ffffff" size="18" type="loop" />
+					<text class="logout-text">退出登录</text>
+				</button>
 			</view>
 		</view>
 	</view>
@@ -139,6 +193,12 @@
 					url: '/pages/ucenter/about/about'
 				})
 			},
+			
+			navToSettings() {
+				uni.navigateTo({
+					url: '/pages/ucenter/settings/settings'
+				})
+			},
 
 			async changeLoginState(){
 				if(this.hasLogin){
@@ -172,226 +232,5 @@
 </script>
 
 <style lang="scss" scoped>
-	/* #ifndef APP-NVUE */
-	view {
-		display: flex;
-		box-sizing: border-box;
-		flex-direction: column;
-	}
-
-	page {
-		background-color: #f5f5f5;
-	}
-	/* #endif*/
-	
-	.center {
-		flex: 1;
-		flex-direction: column;
-		background-color: #f5f5f5;
-		min-height: 100vh;
-	}
-
-	/* 用户头部区域 */
-	.user-header {
-		background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
-		padding: 60rpx 40rpx 40rpx;
-		flex-direction: column;
-		align-items: center;
-		position: relative;
-		overflow: hidden;
-	}
-
-	.avatar-section {
-		position: relative;
-		margin-bottom: 20rpx;
-	}
-
-
-	.avatar-image {
-		width: 80rpx;
-		height: 80rpx;
-		border-radius: 50%;
-		border: 3rpx solid rgba(255, 255, 255, 0.3);
-	}
-
-	.default-avatar {
-		width: 80rpx;
-		height: 80rpx;
-		background-color: rgba(255, 255, 255, 0.2);
-		border-radius: 50%;
-		justify-content: center;
-		align-items: center;
-		border: 3rpx solid rgba(255, 255, 255, 0.3);
-	}
-
-	.avatar-text {
-		font-size: 32rpx;
-		color: #ffffff;
-		font-weight: 600;
-		text-align: center;
-	}
-
-	.edit-avatar-tip {
-		position: absolute;
-		bottom: 2rpx;
-		right: 2rpx;
-		width: 28rpx;
-		height: 28rpx;
-		background-color: rgba(255, 255, 255, 0.9);
-		border-radius: 50%;
-		justify-content: center;
-		align-items: center;
-	}
-
-	.user-info {
-		align-items: center;
-		margin-bottom: 20rpx;
-	}
-
-	.user-name {
-		font-size: 42rpx;
-		color: #FFFFFF;
-		font-weight: 500;
-		text-align: center;
-		margin-bottom: 8rpx;
-	}
-
-	.user-details {
-		flex-direction: row;
-		align-items: center;
-		justify-content: center;
-		gap: 20rpx;
-		flex-wrap: wrap;
-		margin-bottom: 12rpx;
-	}
-
-	.user-gender {
-		font-size: 24rpx;
-		color: rgba(255, 255, 255, 0.9);
-		text-align: center;
-		padding: 4rpx 12rpx;
-		background-color: rgba(255, 255, 255, 0.2);
-		border-radius: 12rpx;
-	}
-
-	.user-description {
-		font-size: 26rpx;
-		color: rgba(255, 255, 255, 0.8);
-		text-align: center;
-		line-height: 1.4;
-		max-width: 500rpx;
-		margin: 0 auto;
-	}
-
-	.sync-status {
-		flex-direction: row;
-		align-items: center;
-		background-color: rgba(255, 255, 255, 0.15);
-		padding: 16rpx 24rpx;
-		border-radius: 30rpx;
-		margin-top: 10rpx;
-	}
-
-	.sync-text {
-		font-size: 28rpx;
-		color: #FFFFFF;
-		margin-left: 12rpx;
-	}
-
-	/* 功能卡片区域 */
-	.function-cards {
-		padding: 30rpx;
-		gap: 20rpx;
-	}
-
-	.card {
-		background-color: #FFFFFF;
-		border-radius: 20rpx;
-		box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
-		overflow: hidden;
-		margin-bottom: 20rpx;
-	}
-
-	.card-header {
-		flex-direction: row;
-		align-items: center;
-		padding: 30rpx;
-		border-bottom: 1rpx solid #f0f0f0;
-	}
-
-	.card-title {
-		font-size: 32rpx;
-		color: #333333;
-		font-weight: 500;
-		margin-left: 16rpx;
-	}
-
-	.card-list {
-		/* #ifndef APP-NVUE */
-		::v-deep .uni-list {
-			border: none;
-		}
-		
-		::v-deep .uni-list-item {
-			padding: 24rpx 30rpx;
-			border-bottom: 1rpx solid #f0f0f0;
-		}
-		
-		::v-deep .uni-list-item:last-child {
-			border-bottom: none;
-		}
-		
-		::v-deep .uni-list-item__content-title {
-			font-size: 30rpx;
-			color: #333333;
-		}
-		
-		::v-deep .uni-list-item__content-note {
-			font-size: 26rpx;
-			color: #999999;
-		}
-		/* #endif */
-	}
-
-	/* 登出按钮 */
-	.logout-section {
-		padding: 20rpx 30rpx 50rpx;
-	}
-
-	.logout-btn {
-		width: 100%;
-		height: 88rpx;
-		background-color: #FF4757;
-		color: #FFFFFF;
-		border-radius: 16rpx;
-		font-size: 32rpx;
-		font-weight: 500;
-		border: none;
-		/* #ifndef APP-NVUE */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		/* #endif */
-	}
-
-	.logout-btn:active {
-		background-color: #FF3742;
-	}
-
-	/* 响应式设计 */
-	/* #ifndef APP-NVUE */
-	@media (max-width: 750rpx) {
-		.user-header {
-			padding: 50rpx 30rpx 30rpx;
-		}
-		
-		.function-cards {
-			padding: 20rpx;
-		}
-		
-		.card-header {
-			padding: 24rpx;
-		}
-	}
-	/* #endif */
+@import './styles/ucenter.scss';
 </style>
