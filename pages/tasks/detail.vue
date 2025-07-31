@@ -9,18 +9,6 @@
 			<!-- 任务头部 -->
 			<view class="task-header">
 				<view class="header-top">
-					<view class="task-status" @click="toggleStatus">
-						<uni-icons 
-							v-if="task.status === 'completed'"
-							color="#28a745" 
-							size="32" 
-							type="checkmarkempty" />
-						<uni-icons 
-							v-else
-							color="#cccccc" 
-							size="32" 
-							type="circle" />
-					</view>
 					<view class="task-info">
 						<view class="task-title-row">
 							<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
@@ -35,6 +23,22 @@
 								</view>
 							</view>
 						</view>
+						<!-- 负责人信息单独一行 -->
+						<view class="assignee-row" v-if="assigneeInfo">
+							<view class="assignee-avatar">
+								<image 
+									v-if="hasAvatar(assigneeInfo)" 
+									:src="getCommentAvatar(assigneeInfo)" 
+									class="avatar-img" 
+									mode="aspectFill" />
+								<view v-else class="avatar-placeholder">
+									<text class="avatar-text">{{ getCommentAvatarPlaceholder(assigneeInfo) }}</text>
+								</view>
+							</view>
+							<text class="assignee-text">{{ assigneeInfo.nickname || assigneeInfo.username || '未知用户' }}</text>
+						</view>
+						
+						<!-- 创建时间和优先级在下一行 -->
 						<view class="task-meta">
 							<text class="meta-text">{{ formatTime(task.created_at) }} 创建</text>
 							<view class="priority-badge" :class="task.priority">
@@ -46,43 +50,43 @@
 						<uni-icons color="#999999" size="24" type="more-filled" />
 					</view>
 				</view>
-
-				<!-- 父子关系信息 -->
-				<view class="relations-section" v-if="parentTask || subtasks.length > 0">
-					<view class="section-header">
-						<text class="section-title">任务关系</text>
-					</view>
-					<view class="relations-content">
-						<view class="relation-item" v-if="parentTask" @click="handleOpenParentTask">
-							<view class="relation-icon">
-								<uni-icons color="#666666" size="16" type="arrowup" />
-							</view>
-							<text class="relation-text">父任务：{{ parentTask.title }}</text>
-						</view>
-						<view class="relation-item" v-if="subtasks.length > 0">
-							<view class="relation-icon">
-								<uni-icons color="#666666" size="16" type="arrowdown" />
-							</view>
-							<text class="relation-text">子任务：{{ subtasks.length }}个</text>
-						</view>
-					</view>
+				
+				<!-- 任务描述直接放在头部下方 -->
+				<view class="description-content" v-if="task.description">
+					<text class="description-text">{{ task.description }}</text>
 				</view>
+
 			</view>
 
-			<!-- 任务描述 -->
-			<view class="description-section" v-if="task.description">
-				<view class="section-header">
-					<text class="section-title">任务描述</text>
-				</view>
-				<text class="description-content">{{ task.description }}</text>
-			</view>
 
 			<!-- 任务属性 -->
-			<view class="attributes-section">
+			<view class="attributes-section" v-if="hasAnyAttribute">
 				<view class="section-header">
 					<text class="section-title">任务属性</text>
 				</view>
 				<view class="attributes-list">
+					<!-- 父任务关系 -->
+					<view class="attribute-item" v-if="parentTask" @click="handleOpenParentTask">
+						<view class="attr-icon">
+							<uni-icons color="#666666" size="20" type="arrowup" />
+						</view>
+						<view class="attr-content">
+							<text class="attr-label">父任务</text>
+							<text class="attr-value">{{ parentTask.title }}</text>
+						</view>
+					</view>
+					
+					<!-- 子任务关系 -->
+					<view class="attribute-item" v-if="subtasks.length > 0">
+						<view class="attr-icon">
+							<uni-icons color="#666666" size="20" type="arrowdown" />
+						</view>
+						<view class="attr-content">
+							<text class="attr-label">子任务</text>
+							<text class="attr-value">{{ subtasks.length }}个</text>
+						</view>
+					</view>
+					
 					<view class="attribute-item" v-if="task.due_date">
 						<view class="attr-icon">
 							<uni-icons color="#ff9800" size="20" type="calendar" />
@@ -95,7 +99,7 @@
 					
 					<view class="attribute-item" v-if="task.estimated_hours > 0">
 						<view class="attr-icon">
-							<uni-icons color="#17a2b8" size="20" type="clock" />
+							<uni-icons color="#17a2b8" size="20" type="loop" />
 						</view>
 						<view class="attr-content">
 							<text class="attr-label">预估工时</text>
@@ -126,15 +130,6 @@
 						</view>
 					</view>
 
-					<view class="attribute-item" v-if="assigneeInfo">
-						<view class="attr-icon">
-							<uni-icons color="#6c757d" size="20" type="person" />
-						</view>
-						<view class="attr-content">
-							<text class="attr-label">负责人</text>
-							<text class="attr-value">{{ assigneeInfo.nickname || assigneeInfo.username || '未知用户' }}</text>
-						</view>
-					</view>
 				</view>
 			</view>
 
@@ -292,6 +287,7 @@
 					<text class="empty-text">暂无评论，来发表第一条评论吧</text>
 				</view>
 			</view>
+
 		</view>
 
 		<!-- 任务菜单弹窗 -->
@@ -459,6 +455,19 @@ const updating = ref(false)
 // 归档状态
 const isArchived = ref(false)
 const canEdit = computed(() => !isArchived.value)
+
+// 检查是否有任何属性需要显示
+const hasAnyAttribute = computed(() => {
+	if (!task.value) return false
+	
+	return (
+		parentTask.value ||  // 有父任务
+		subtasks.value.length > 0 ||  // 有子任务
+		task.value.due_date ||  // 有截止日期
+		(task.value.estimated_hours && task.value.estimated_hours > 0) ||  // 有预估工时
+		(task.value.budget && task.value.budget > 0)  // 有预算（实际花费跟随预算显示）
+	)
+})
 
 // 检查项目册归档状态
 const checkBookArchiveStatus = async (bookId) => {
