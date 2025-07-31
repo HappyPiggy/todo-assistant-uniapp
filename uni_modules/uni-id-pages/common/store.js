@@ -43,18 +43,21 @@ export const mutations = {
 			const uniIdCo = uniCloud.importObject("uni-id-co", {
 				customUI: true
 			})
+			const userCo = uniCloud.importObject("user-co")
 			try {
-				let res = await usersTable.where("'_id' == $cloudEnv_uid")
-					.field('mobile,nickname,username,email,avatar_file')
-					.get()
-
+				// 使用user-co获取完整用户信息，包括avatar和comment字段
+				const userInfoRes = await userCo.getUserInfo()
 				const realNameRes = await uniIdCo.getRealNameInfo()
 
-				// console.log('fromDbData',res.result.data);
-				this.setUserInfo({
-					...res.result.data[0],
-					realNameAuth: realNameRes
-				})
+				if (userInfoRes.code === 0) {
+					// console.log('fromDbData', userInfoRes.data);
+					this.setUserInfo({
+						...userInfoRes.data,
+						realNameAuth: realNameRes
+					})
+				} else {
+					throw new Error(userInfoRes.message || '获取用户信息失败')
+				}
 			} catch (e) {
 				this.setUserInfo({},{cover:true})
 				console.error(e.message, e.errCode);

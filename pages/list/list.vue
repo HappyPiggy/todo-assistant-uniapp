@@ -156,11 +156,7 @@ onLoad(() => {
 			title: '请先登录',
 			icon: 'none'
 		})
-		setTimeout(() => {
-			uni.navigateTo({
-				url: '/pages/login/login-withpwd'
-			})
-		}, 1500)
+		return
 	}
 	
 	// 监听数据更新事件

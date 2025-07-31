@@ -16,7 +16,8 @@
         <!-- 展开/收起按钮（仅card模式且有子任务时显示） -->
         <view 
           v-if="variant === 'card' && task.subtask_count > 0" 
-          class="task-expand">
+          class="task-expand"
+          @click.stop="handleExpandClick">
           <uni-icons 
             color="#666666" 
             size="16" 
@@ -130,8 +131,109 @@
 
     <!-- 子任务列表（仅card模式） -->
     <view 
-      v-if="variant === 'card' && task.expanded && task.subtasks && task.subtasks.length > 0" 
+      v-if="shouldShowSubtasks" 
       class="subtasks-container">
+      
+      <!-- #ifdef MP-WEIXIN -->
+      <!-- 微信小程序专用内联子任务 -->
+      <view 
+        v-for="(subtask, index) in task.subtasks"
+        :key="'subtask-' + subtask._id"
+        class="wx-subtask-item"
+        :class="{ 
+          'wx-subtask-completed': subtask.status === 'completed',
+          [getWXSubtaskPriorityClass(subtask)]: true
+        }"
+        @click="handleSubtaskItemClick(subtask)">
+        
+        <!-- 连接线 -->
+        <view class="wx-subtask-connector"></view>
+        
+        <!-- 子任务内容 -->
+        <view class="wx-subtask-header">
+          <view class="wx-subtask-left">
+            <view class="wx-subtask-content">
+              <view class="wx-subtask-title-row">
+                <text 
+                  class="wx-subtask-title" 
+                  :class="{ 'wx-subtask-title-completed': subtask.status === 'completed' }">
+                  {{ subtask.title }}
+                </text>
+                <!-- 标签 -->
+                <view 
+                  v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0" 
+                  class="wx-subtask-tags">
+                  <view 
+                    v-for="(tag, tagIndex) in subtask.tags.slice(0, 4)" 
+                    :key="getTagKey(tag, tagIndex)" 
+                    class="wx-subtask-tag-item"
+                    :style="{ backgroundColor: getTagColor(tag) }">
+                    <text class="wx-subtask-tag-text">{{ getTagName(tag) }}</text>
+                  </view>
+                  <text v-if="subtask.tags.length > 4" class="wx-subtask-more-tags">+{{ subtask.tags.length - 4 }}</text>
+                </view>
+              </view>
+              
+              <!-- 描述 -->
+              <text v-if="subtask.description" class="wx-subtask-description">{{ subtask.description }}</text>
+              
+              <!-- 评论信息 -->
+              <view 
+                v-if="getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0" 
+                class="wx-subtask-comment-hint">
+                <uni-icons color="#ff9800" size="12" type="chatbubble" />
+                <text v-if="getWXSubtaskCommentCount(subtask) > 0" class="wx-subtask-comment-count">{{ getWXSubtaskCommentCount(subtask) }}条评论</text>
+                <view v-if="getSubtaskUnreadCount(subtask) > 0" class="wx-subtask-unread-dot"></view>
+              </view>
+            </view>
+          </view>
+          
+          <!-- 右侧操作区 -->
+          <view class="wx-subtask-right">
+            <!-- 状态切换 -->
+            <view 
+              v-if="canEdit"
+              class="wx-subtask-status" 
+              @click.stop="handleSubtaskStatusClick(subtask)">
+              <uni-icons 
+                v-if="subtask.status === 'completed'"
+                color="#28a745" 
+                size="24" 
+                type="checkmarkempty" />
+              <uni-icons 
+                v-else
+                color="#cccccc" 
+                size="24" 
+                type="circle" />
+            </view>
+            
+            <!-- 状态显示（不可编辑时） -->
+            <view 
+              v-if="!canEdit && subtask.status === 'completed'"
+              class="wx-subtask-status-readonly">
+              <uni-icons 
+                color="#28a745" 
+                size="24" 
+                type="checkmarkempty" />
+            </view>
+            
+            <!-- 更多操作按钮 -->
+            <view 
+              v-if="canEdit" 
+              class="wx-subtask-detail-btn" 
+              @click.stop="handleSubtaskMoreClick(subtask)">
+              <uni-icons 
+                color="#999999" 
+                size="18" 
+                type="more-filled" />
+            </view>
+          </view>
+        </view>
+      </view>
+      <!-- #endif -->
+      
+      <!-- #ifndef MP-WEIXIN -->
+      <!-- 其他平台使用嵌套TaskItem -->
       <TaskItem
         v-for="(subtask, index) in task.subtasks"
         :key="subtask._id"
@@ -147,9 +249,16 @@
         @statusToggle="handleSubtaskStatusToggle"
         @menuClick="handleSubtaskMenuClick"
       />
+      <!-- #endif -->
     </view>
   </view>
 </template>
+
+<script>
+export default {
+  name: 'TaskItem'
+}
+</script>
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue'
@@ -258,6 +367,39 @@ const hasMetaInfo = computed(() => {
          shouldShowCommentInfo.value
 })
 
+// 微信小程序专用：子任务显示条件计算属性
+const shouldShowSubtasks = computed(() => {
+  const result = props.variant === 'card' && 
+         props.task.expanded && 
+         props.task.subtasks && 
+         Array.isArray(props.task.subtasks) && 
+         props.task.subtasks.length > 0
+  
+  // #ifdef MP-WEIXIN
+  // 详细调试信息
+  if (props.task.subtask_count > 0) {
+    console.log(`[MP-WEIXIN] TaskItem [${props.task.title}] 子任务显示检查:`, {
+      variant: props.variant,
+      expanded: props.task.expanded,
+      subtask_count: props.task.subtask_count,
+      hasSubtasksArray: !!(props.task.subtasks),
+      subtasksArrayLength: props.task.subtasks?.length || 0,
+      subtasksArrayType: typeof props.task.subtasks,
+      isArray: Array.isArray(props.task.subtasks),
+      finalResult: result,
+      timestamp: new Date().toLocaleTimeString()
+    })
+    
+    // 如果有子任务数量但没有子任务数组，输出警告
+    if (props.task.subtask_count > 0 && (!props.task.subtasks || props.task.subtasks.length === 0)) {
+      console.warn(`[MP-WEIXIN] 任务 "${props.task.title}" 有子任务计数但缺少子任务数据`)
+    }
+  }
+  // #endif
+  
+  return result
+})
+
 const handleClick = () => {
   emit('click', props.task)
 }
@@ -280,6 +422,45 @@ const handleSubtaskMenuClick = (subtask) => {
 
 const handleSubtaskClick = (subtask) => {
   emit('subtaskClick', subtask)
+}
+
+// 处理展开按钮点击 - 微信小程序专用优化
+const handleExpandClick = () => {
+  // #ifdef MP-WEIXIN
+  console.log(`[MP-WEIXIN] 展开按钮被点击: ${props.task.title}, 当前展开状态: ${props.task.expanded}`)
+  // #endif
+  
+  // 直接触发任务点击事件，让父组件处理展开逻辑
+  emit('click', props.task)
+}
+
+// 微信小程序和其他平台通用的子任务事件处理
+const handleSubtaskItemClick = (subtask) => {
+  emit('subtaskClick', subtask)
+}
+
+const handleSubtaskStatusClick = (subtask) => {
+  emit('subtaskStatusToggle', subtask)
+}
+
+const handleSubtaskMoreClick = (subtask) => {
+  emit('subtaskMenuClick', subtask)
+}
+
+// 微信小程序专用辅助方法
+const getWXSubtaskPriorityClass = (subtask) => {
+  const priority = subtask.priority || 'medium'
+  console.log(`[WX-Inline] 子任务 "${subtask.title}" 优先级: ${priority}`)
+  return `wx-subtask--priority-${priority}`
+}
+
+const getWXSubtaskCommentCount = (subtask) => {
+  try {
+    return getTaskCommentCount(subtask, true)
+  } catch (error) {
+    console.error('获取子任务评论总数失败:', error)
+    return 0
+  }
 }
 
 
@@ -580,6 +761,8 @@ const getTagColor = (tag) => {
   position: relative;
   margin-top: $margin-sm;
   padding-top: $margin-sm;
+  
+  /* #ifndef MP-WEIXIN */
   padding-left: $subtask-indent;
   
   // 垂直连接线
@@ -592,8 +775,15 @@ const getTagColor = (tag) => {
     width: $subtask-connector-width;
     background-color: $subtask-connector-color;
   }
+  /* #endif */
   
-  // 子任务项样式
+  /* #ifdef MP-WEIXIN */
+  // 微信小程序简化版样式
+  padding-left: $padding-base;
+  /* #endif */
+  
+  // 子任务项样式 - 微信小程序兼容版
+  /* #ifndef MP-WEIXIN */
   :deep(.task-item--item) {
     position: relative;
     
@@ -609,6 +799,25 @@ const getTagColor = (tag) => {
       transform: translateY(-50%);
     }
   }
+  /* #endif */
+  
+  /* #ifdef MP-WEIXIN */
+  .subtask-wrapper .task-item--item {
+    position: relative;
+    
+    // 水平连接线
+    &::after {
+      content: '';
+      position: absolute;
+      left: -10rpx;
+      top: 50%;
+      width: 10rpx;
+      height: $subtask-connector-width;
+      background-color: $subtask-connector-color;
+      transform: translateY(-50%);
+    }
+  }
+  /* #endif */
 }
 
 // 响应式优化
@@ -620,12 +829,23 @@ const getTagColor = (tag) => {
       left: 8rpx; // 调整连接线位置
     }
     
+    /* #ifndef MP-WEIXIN */
     :deep(.task-item--item) {
       &::after {
         left: -8rpx;
         width: 8rpx;
       }
     }
+    /* #endif */
+    
+    /* #ifdef MP-WEIXIN */
+    .subtask-wrapper .task-item--item {
+      &::after {
+        left: -8rpx;
+        width: 8rpx;
+      }
+    }
+    /* #endif */
   }
   
   // 小屏幕下优先级边框宽度调整  
@@ -636,4 +856,179 @@ const getTagColor = (tag) => {
     border-left-width: 3rpx;
   }
 }
+
+/* #ifdef MP-WEIXIN */
+// 微信小程序内联子任务样式
+.wx-subtask-item {
+  cursor: pointer;
+  position: relative;
+  padding: $padding-sm;
+  background-color: $gray-100;
+  border-radius: $border-radius-small;
+  margin-bottom: $margin-xs;
+  
+  &:active {
+    background-color: $gray-200;
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  // 优先级边框样式
+  &--priority-low {
+    @include priority-border($priority-border-low);
+    border-left: $priority-border-width solid $priority-border-low !important;
+    background-color: rgba(128, 128, 128, 0.1) !important;
+  }
+  
+  &--priority-medium {
+    @include priority-border($priority-border-medium);
+    border-left: $priority-border-width solid $priority-border-medium !important;
+    background-color: rgba(255, 152, 0, 0.1) !important;
+  }
+  
+  &--priority-high {
+    @include priority-border($priority-border-high);
+    border-left: $priority-border-width solid $priority-border-high !important;
+    background-color: rgba(255, 193, 7, 0.1) !important;
+  }
+  
+  &--priority-urgent {
+    @include priority-border($priority-border-urgent);
+    border-left: $priority-border-width solid $priority-border-urgent !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+  }
+}
+
+.wx-subtask-connector {
+  position: absolute;
+  left: -10rpx;
+  top: 50%;
+  width: 10rpx;
+  height: $subtask-connector-width;
+  background-color: $subtask-connector-color;
+  transform: translateY(-50%);
+}
+
+.wx-subtask-header {
+  @include flex-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.wx-subtask-left {
+  @include flex-start;
+  flex: 1;
+}
+
+.wx-subtask-right {
+  @include flex-start;
+  gap: $margin-sm;
+  flex-shrink: 0;
+}
+
+.wx-subtask-content {
+  flex: 1;
+}
+
+.wx-subtask-title-row {
+  @include flex-start;
+  align-items: flex-start;
+  gap: $margin-xs;
+  margin-bottom: 4rpx;
+  flex-wrap: wrap;
+}
+
+.wx-subtask-title {
+  font-size: $font-size-base;
+  color: $text-primary;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-base;
+  
+  &-completed {
+    color: $text-tertiary;
+    text-decoration: line-through;
+  }
+}
+
+.wx-subtask-tags {
+  @include flex-start;
+  gap: $margin-xs;
+  flex-shrink: 0;
+}
+
+.wx-subtask-tag-item {
+  padding: 2rpx 6rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  @include flex-center;
+}
+
+.wx-subtask-tag-text {
+  font-size: $font-size-xs;
+  color: #ffffff;
+  font-weight: $font-weight-medium;
+}
+
+.wx-subtask-more-tags {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+}
+
+.wx-subtask-description {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: $line-height-base;
+  display: block;
+}
+
+.wx-subtask-status {
+  @include icon-button(44rpx);
+  border: 1rpx solid $border-color;
+}
+
+.wx-subtask-status-readonly {
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.wx-subtask-detail-btn {
+  @include icon-button(32rpx);
+}
+
+.wx-subtask-comment-hint {
+  @include flex-start;
+  align-items: center;
+  gap: 4rpx;
+  background-color: rgba(255, 152, 0, 0.1);
+  padding: 4rpx 8rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid rgba(255, 152, 0, 0.3);
+  margin-top: $margin-xs;
+  align-self: flex-start;
+}
+
+.wx-subtask-comment-count {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  font-weight: $font-weight-medium;
+  min-width: 12rpx;
+  text-align: center;
+}
+
+.wx-subtask-unread-dot {
+  width: 16rpx;
+  height: 16rpx;
+  background-color: $warning-color;
+  border-radius: 50%;
+  margin-left: 8rpx;
+  flex-shrink: 0;
+}
+/* #endif */
+
 </style>

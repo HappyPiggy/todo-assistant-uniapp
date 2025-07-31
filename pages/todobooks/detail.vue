@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
@@ -371,7 +371,32 @@ const addTask = () => {
 
 const handleTaskClick = (task) => {
   if (task.subtask_count > 0) {
+    // #ifdef MP-WEIXIN
+    // 微信小程序专用处理逻辑
+    const currentExpanded = task.expanded || false
+    console.log(`[MP-WEIXIN] 处理任务点击: ${task.title}`, {
+      currentExpanded,
+      subtask_count: task.subtask_count,
+      hasSubtasks: !!(task.subtasks),
+      subtasksLength: task.subtasks?.length || 0
+    })
+    
+    // 切换展开状态
+    task.expanded = !currentExpanded
+    
+    // 强制触发响应式更新
+    nextTick(() => {
+      console.log(`[MP-WEIXIN] 任务 ${task.title} 展开状态已更新: ${task.expanded}`)
+      // 如果展开了但没有子任务数据，尝试重新加载
+      if (task.expanded && (!task.subtasks || task.subtasks.length === 0)) {
+        console.warn(`[MP-WEIXIN] 任务展开但缺少子任务数据，需要重新加载`)
+      }
+    })
+    // #endif
+    
+    // #ifndef MP-WEIXIN
     task.expanded = !task.expanded
+    // #endif
   } else {
     uni.navigateTo({
       url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`

@@ -51,15 +51,9 @@
 					</view>
 					<text class="action-text">编辑资料</text>
 				</view>
-				<view class="quick-action-item" @click="toChangePassword">
-					<view class="action-icon">
-						<uni-icons color="#FF6B35" size="24" type="locked" />
-					</view>
-					<text class="action-text">修改密码</text>
-				</view>
 				<view class="quick-action-item" @click="toArchiveManagement">
 					<view class="action-icon">
-						<uni-icons color="#34C759" size="24" type="folder" />
+						<uni-icons color="#34C759" size="24" type="folder-add" />
 					</view>
 					<text class="action-text">归档管理</text>
 				</view>
@@ -164,9 +158,7 @@
 					this.toLogin()
 					return
 				}
-				uni.navigateTo({
-					url: '/uni_modules/uni-id-pages/pages/userinfo/userinfo'
-				})
+				this.toEditProfile()
 			},
 			toEditProfile() {
 				uni.navigateTo({

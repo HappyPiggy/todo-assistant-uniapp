@@ -21,21 +21,44 @@ module.exports = {
    */
   async getUserInfo() {
     const { uid, db } = this
-    const userInfo = await this.uniID.getUserInfo({
-      uid,
-      field: ['_id', 'username', 'nickname', 'avatar_file', 'avatar', 'gender', 'mobile', 'email', 'comment', 'register_date', 'last_login_date']
-    })
+    
+    try {
+      // 直接从数据库查询用户信息
+      const result = await db.collection('uni-id-users')
+        .doc(uid)
+        .field({
+          '_id': true,
+          'username': true,
+          'nickname': true,
+          'avatar_file': true,
+          'avatar': true,
+          'gender': true,
+          'mobile': true,
+          'email': true,
+          'comment': true,
+          'register_date': true,
+          'last_login_date': true
+        })
+        .get()
 
-    if (userInfo.code === 0) {
-      return {
-        code: 0,
-        data: userInfo.userInfo
+      if (result.data && result.data.length > 0) {
+        return {
+          code: 0,
+          data: result.data[0]
+        }
+      } else {
+        return {
+          code: 404,
+          message: '用户不存在'
+        }
       }
-    }
-
-    return {
-      code: userInfo.code,
-      message: userInfo.message
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      return {
+        code: 500,
+        message: '获取用户信息失败',
+        error: error.message
+      }
     }
   },
 
@@ -45,8 +68,9 @@ module.exports = {
    */
   async updateProfile(profileData) {
     const { uid, db } = this
-    // 数据验证
-    const { nickname, gender, email, comment, avatar_file, avatar } = profileData
+    // 数据验证 - 支持description字段并映射到comment
+    const { nickname, gender, email, comment, description, avatar_file, avatar } = profileData
+    const actualComment = comment || description // 支持两种字段名
     
     if (nickname && (nickname.length < 2 || nickname.length > 20)) {
       return {
@@ -62,7 +86,7 @@ module.exports = {
       }
     }
 
-    if (comment && comment.length > 200) {
+    if (actualComment && actualComment.length > 200) {
       return {
         code: 400,
         message: '个人简介不能超过200个字符'
@@ -92,7 +116,7 @@ module.exports = {
     if (nickname !== undefined) updateData.nickname = nickname.trim()
     if (gender !== undefined) updateData.gender = gender
     if (email !== undefined) updateData.email = email
-    if (comment !== undefined) updateData.comment = comment
+    if (actualComment !== undefined) updateData.comment = actualComment // 统一使用comment字段存储
     if (avatar_file !== undefined) updateData.avatar_file = avatar_file
     if (avatar !== undefined) updateData.avatar = avatar
 
