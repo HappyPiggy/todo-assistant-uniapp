@@ -13,6 +13,29 @@
     <!-- 主要内容区域 -->
     <view class="task-header">
       <view class="task-left">
+        <!-- 状态切换按钮（仅在没有子任务或item模式时显示，且可编辑时） -->
+        <view 
+          v-if="(task.subtask_count === 0 || variant === 'item') && canEdit"
+          class="task-status task-status--square" 
+          :class="{ 'task-status--completed': task.status === 'completed' }"
+          @click.stop="handleStatusToggle">
+          <uni-icons 
+            v-if="task.status === 'completed'"
+            color="#28a745" 
+            :size="variant === 'card' ? 16 : 14" 
+            type="checkmarkempty" />
+        </view>
+        
+        <!-- 状态显示（不可编辑时） -->
+        <view 
+          v-if="(task.subtask_count === 0 || variant === 'item') && !canEdit && task.status === 'completed'"
+          class="task-status-readonly task-status--square task-status--completed">
+          <uni-icons 
+            color="#28a745" 
+            :size="variant === 'card' ? 16 : 14" 
+            type="checkmarkempty" />
+        </view>
+        
         <!-- 展开/收起按钮（仅card模式且有子任务时显示） -->
         <view 
           v-if="variant === 'card' && task.subtask_count > 0" 
@@ -68,33 +91,6 @@
       
       <!-- 右侧操作区 -->
       <view class="task-right">
-        <!-- 状态切换（仅在没有子任务或item模式时显示，且可编辑时） -->
-        <view 
-          v-if="(task.subtask_count === 0 || variant === 'item') && canEdit"
-          class="task-status" 
-          @click.stop="handleStatusToggle">
-          <uni-icons 
-            v-if="task.status === 'completed'"
-            color="#28a745" 
-            :size="variant === 'card' ? 28 : 24" 
-            type="checkmarkempty" />
-          <uni-icons 
-            v-else
-            color="#cccccc" 
-            :size="variant === 'card' ? 28 : 24" 
-            type="circle" />
-        </view>
-        
-        <!-- 状态显示（不可编辑时） -->
-        <view 
-          v-if="(task.subtask_count === 0 || variant === 'item') && !canEdit && task.status === 'completed'"
-          class="task-status-readonly">
-          <uni-icons 
-            color="#28a745" 
-            :size="variant === 'card' ? 28 : 24" 
-            type="checkmarkempty" />
-        </view>
-        
         <!-- 更多操作按钮 -->
         <view v-if="canEdit" class="task-detail-btn" @click.stop="handleMenuClick">
           <uni-icons 
@@ -152,6 +148,29 @@
         <!-- 子任务内容 -->
         <view class="wx-subtask-header">
           <view class="wx-subtask-left">
+            <!-- 状态切换按钮 -->
+            <view 
+              v-if="canEdit"
+              class="wx-subtask-status wx-subtask-status--square" 
+              :class="{ 'wx-subtask-status--completed': subtask.status === 'completed' }"
+              @click.stop="handleSubtaskStatusClick(subtask)">
+              <uni-icons 
+                v-if="subtask.status === 'completed'"
+                color="#28a745" 
+                size="14" 
+                type="checkmarkempty" />
+            </view>
+            
+            <!-- 状态显示（不可编辑时） -->
+            <view 
+              v-if="!canEdit && subtask.status === 'completed'"
+              class="wx-subtask-status-readonly wx-subtask-status--square wx-subtask-status--completed">
+              <uni-icons 
+                color="#28a745" 
+                size="14" 
+                type="checkmarkempty" />
+            </view>
+            
             <view class="wx-subtask-content">
               <view class="wx-subtask-title-row">
                 <text 
@@ -190,33 +209,6 @@
           
           <!-- 右侧操作区 -->
           <view class="wx-subtask-right">
-            <!-- 状态切换 -->
-            <view 
-              v-if="canEdit"
-              class="wx-subtask-status" 
-              @click.stop="handleSubtaskStatusClick(subtask)">
-              <uni-icons 
-                v-if="subtask.status === 'completed'"
-                color="#28a745" 
-                size="24" 
-                type="checkmarkempty" />
-              <uni-icons 
-                v-else
-                color="#cccccc" 
-                size="24" 
-                type="circle" />
-            </view>
-            
-            <!-- 状态显示（不可编辑时） -->
-            <view 
-              v-if="!canEdit && subtask.status === 'completed'"
-              class="wx-subtask-status-readonly">
-              <uni-icons 
-                color="#28a745" 
-                size="24" 
-                type="checkmarkempty" />
-            </view>
-            
             <!-- 更多操作按钮 -->
             <view 
               v-if="canEdit" 
@@ -556,6 +548,29 @@ const getTagColor = (tag) => {
     
     .task-status {
       @include icon-button(44rpx);
+      
+      &--square {
+        width: 24rpx;
+        height: 24rpx;
+        border-radius: 4rpx;
+        border: 1rpx solid #cccccc;
+        background-color: #ffffff;
+        @include flex-center;
+        margin-right: $margin-xs;
+        
+        &:hover {
+          background-color: $gray-100;
+        }
+        
+        &:active {
+          background-color: $gray-200;
+        }
+        
+        &.task-status--completed {
+          border-color: #28a745;
+          background-color: #f8fff9;
+        }
+      }
     }
     
     .task-status-readonly {
@@ -565,6 +580,22 @@ const getTagColor = (tag) => {
       align-items: center;
       justify-content: center;
       opacity: 0.6;
+      
+      &--square {
+        width: 24rpx;
+        height: 24rpx;
+        border-radius: 4rpx;
+        border: 1rpx solid #cccccc;
+        background-color: #ffffff;
+        @include flex-center;
+        margin-right: $margin-xs;
+        opacity: 0.6;
+        
+        &.task-status--completed {
+          border-color: #28a745;
+          background-color: #f8fff9;
+        }
+      }
     }
   }
   
@@ -688,6 +719,29 @@ const getTagColor = (tag) => {
 .task-status {
   @include icon-button(52rpx);
   border: 1rpx solid $border-color;
+  
+  &--square {
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 4rpx;
+    border: 1rpx solid #cccccc;
+    background-color: #ffffff;
+    @include flex-center;
+    margin-right: $margin-sm;
+    
+    &:hover {
+      background-color: $gray-100;
+    }
+    
+    &:active {
+      background-color: $gray-200;
+    }
+    
+    &.task-status--completed {
+      border-color: #28a745;
+      background-color: #f8fff9;
+    }
+  }
 }
 
 .task-detail-btn {
@@ -920,6 +974,7 @@ const getTagColor = (tag) => {
 .wx-subtask-left {
   @include flex-start;
   flex: 1;
+  align-items: flex-start;
 }
 
 .wx-subtask-right {
@@ -930,6 +985,7 @@ const getTagColor = (tag) => {
 
 .wx-subtask-content {
   flex: 1;
+  margin-left: $margin-sm;
 }
 
 .wx-subtask-title-row {
@@ -986,6 +1042,29 @@ const getTagColor = (tag) => {
 .wx-subtask-status {
   @include icon-button(44rpx);
   border: 1rpx solid $border-color;
+  
+  &--square {
+    width: 20rpx;
+    height: 20rpx;
+    border-radius: 3rpx;
+    border: 1rpx solid #cccccc;
+    background-color: #ffffff;
+    @include flex-center;
+    margin-right: $margin-xs;
+    
+    &:hover {
+      background-color: $gray-100;
+    }
+    
+    &:active {
+      background-color: $gray-200;
+    }
+    
+    &.wx-subtask-status--completed {
+      border-color: #28a745;
+      background-color: #f8fff9;
+    }
+  }
 }
 
 .wx-subtask-status-readonly {
@@ -995,6 +1074,22 @@ const getTagColor = (tag) => {
   align-items: center;
   justify-content: center;
   opacity: 0.6;
+  
+  &--square {
+    width: 20rpx;
+    height: 20rpx;
+    border-radius: 3rpx;
+    border: 1rpx solid #cccccc;
+    background-color: #ffffff;
+    @include flex-center;
+    margin-right: $margin-xs;
+    opacity: 0.6;
+    
+    &.wx-subtask-status--completed {
+      border-color: #28a745;
+      background-color: #f8fff9;
+    }
+  }
 }
 
 .wx-subtask-detail-btn {
@@ -1029,6 +1124,7 @@ const getTagColor = (tag) => {
   margin-left: 8rpx;
   flex-shrink: 0;
 }
+
 /* #endif */
 
 </style>
