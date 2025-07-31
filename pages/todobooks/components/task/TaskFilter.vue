@@ -92,6 +92,8 @@ const handleTagConfirm = (tags) => {
   @include flex-between;
   padding: $padding-sm $padding-base;
   margin-bottom: $margin-sm;
+  background-color: $gray-50;
+  border-top: 1rpx solid $gray-200;
 }
 
 .tab-scroll {

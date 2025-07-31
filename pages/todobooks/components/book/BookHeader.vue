@@ -95,7 +95,6 @@ watchEffect(() => {
 
 .book-header {
   @include card-style;
-  margin-bottom: $margin-base;
   padding: $padding-base;
 }
 
