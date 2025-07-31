@@ -2,7 +2,7 @@
   <view v-if="visible" class="search-overlay" @click="handleOverlayClick">
     <view class="search-container" @click.stop>
       <view class="search-header">
-        <text class="search-title">搜索任务</text>
+        <text class="search-title">{{ title || '搜索任务' }}</text>
         <view class="close-button" @click="handleClose">
           <uni-icons color="#666666" size="24" type="close" />
         </view>
@@ -37,6 +37,10 @@ const props = defineProps({
   keyword: {
     type: String,
     default: ''
+  },
+  title: {
+    type: String,
+    default: '搜索任务'
   }
 })
 
@@ -95,9 +99,9 @@ const handleOverlayClick = () => {
   /* #endif */
   z-index: 9999;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 200rpx;
+  padding: 40rpx;
   animation: overlay-fade-in 0.3s ease;
 }
 

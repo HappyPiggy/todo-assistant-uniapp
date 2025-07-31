@@ -1,15 +1,15 @@
 <template>
 	<view class="list-page">
 		<!-- 顶部搜索栏 -->
-		<view class="search-section">
-			<uni-search-bar 
-				v-model="searchKeyword" 
-				placeholder="搜索项目册..." 
-				@input="onSearchInput"
-				@cancel="onSearchCancel"
-				@confirm="onSearchConfirm"
-				:focus="false">
-			</uni-search-bar>
+		<view class="search-section" @click="handleSearchClick">
+			<view class="search-button">
+				<uni-icons color="#999999" size="20" type="search" />
+				<text class="search-placeholder">搜索项目册...</text>
+				<view v-if="searchKeyword" class="search-keyword-display">
+					<text class="keyword-text">{{ searchKeyword }}</text>
+					<uni-icons color="#999999" size="16" type="close" @click.stop="clearSearch" />
+				</view>
+			</view>
 		</view>
 
 		<!-- 项目册列表 -->
@@ -105,6 +105,16 @@
 			</view>
 		</view>
 
+		<!-- 搜索弹窗 -->
+		<SearchOverlay
+			:visible="showSearchOverlay"
+			:keyword="searchKeyword"
+			title="搜索项目册"
+			@search="handleSearchOverlaySearch"
+			@clear="handleSearchOverlayClear"
+			@close="handleSearchOverlayClose"
+		/>
+
 		<!-- 操作弹窗 -->
 		<TodoBookActionSheet
 			ref="actionSheetRef"
@@ -126,6 +136,7 @@ import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
 import { usePinning } from '@/composables/usePinning.js'
 import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
+import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
 
 // 使用 todobook 操作组合式函数
 const { 
@@ -141,6 +152,7 @@ const searchTimer = ref(null)
 const loadMoreStatus = ref('more')
 const currentBook = ref(null)
 const actionSheetRef = ref(null)
+const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 
 // 置顶功能
 const { sortedItems: sortedTodoBooks, isPinned, togglePin, refreshPinnedIds } = usePinning('todobooks', todoBooks)
@@ -237,22 +249,32 @@ const refreshTodoBooks = async (isFromPullDown = false) => {
 	}
 }
 
-// 搜索相关方法
-const onSearchInput = (value) => {
-	searchKeyword.value = value
+// 搜索弹窗处理函数
+const handleSearchClick = () => {
+	showSearchOverlay.value = true
+}
+
+const handleSearchOverlaySearch = (keyword) => {
+	searchKeyword.value = keyword
+	showSearchOverlay.value = false
 	// 使用防抖处理
 	clearTimeout(searchTimer.value)
 	searchTimer.value = setTimeout(() => {
 		refreshTodoBooks(false)
-	}, 500)
+	}, 300)
 }
 
-const onSearchCancel = () => {
+const handleSearchOverlayClear = () => {
 	searchKeyword.value = ''
 	refreshTodoBooks(false)
 }
 
-const onSearchConfirm = () => {
+const handleSearchOverlayClose = () => {
+	showSearchOverlay.value = false
+}
+
+const clearSearch = () => {
+	searchKeyword.value = ''
 	refreshTodoBooks(false)
 }
 
