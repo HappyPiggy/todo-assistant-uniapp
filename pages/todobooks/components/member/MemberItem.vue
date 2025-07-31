@@ -2,12 +2,12 @@
   <view class="member-item" :class="{ 'is-current-user': isCurrentUser }">
     <view class="member-avatar">
       <image 
-        v-if="member.avatar" 
-        :src="member.avatar" 
+        v-if="hasAvatar(member)" 
+        :src="getMemberAvatar(member)" 
         class="avatar-image"
         mode="aspectFill" />
       <view v-else class="avatar-placeholder">
-        <text class="avatar-text">{{ getAvatarText(getMemberNickname(member)) }}</text>
+        <text class="avatar-text">{{ getMemberAvatarPlaceholder(member) }}</text>
       </view>
     </view>
     
@@ -35,6 +35,7 @@
 import { defineProps, defineEmits, computed } from 'vue'
 import { currentUserId } from '@/store/storage.js'
 import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { getMemberAvatar, getMemberAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
 
 const emit = defineEmits(['menuClick'])
 
@@ -57,11 +58,6 @@ onShow(() => {
 const isCurrentUser = computed(() => {
   return props.member.user_id === currentUserId.value
 })
-
-const getAvatarText = (name) => {
-  if (!name) return '?'
-  return name.charAt(0).toUpperCase()
-}
 
 const getMemberNickname = (member) => {
   // 使用与 useMemberData.js 相同的字段访问方式

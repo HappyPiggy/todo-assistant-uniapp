@@ -200,12 +200,12 @@
 						<view class="comment-main">
 							<view class="comment-avatar">
 								<image 
-									v-if="comment.user_avatar" 
-									:src="comment.user_avatar" 
+									v-if="hasAvatar(comment)" 
+									:src="getCommentAvatar(comment)" 
 									class="avatar-img" 
 									mode="aspectFill" />
 								<view v-else class="avatar-placeholder">
-									<text class="avatar-text">{{ (comment.user_nickname || '用户').charAt(0) }}</text>
+									<text class="avatar-text">{{ getCommentAvatarPlaceholder(comment) }}</text>
 								</view>
 							</view>
 							<view class="comment-content-wrapper">
@@ -244,12 +244,12 @@
 								class="reply-item">
 								<view class="comment-avatar">
 									<image 
-										v-if="reply.user_avatar" 
-										:src="reply.user_avatar" 
+										v-if="hasAvatar(reply)" 
+										:src="getCommentAvatar(reply)" 
 										class="avatar-img" 
 										mode="aspectFill" />
 									<view v-else class="avatar-placeholder">
-										<text class="avatar-text">{{ (reply.user_nickname || '用户').charAt(0) }}</text>
+										<text class="avatar-text">{{ getCommentAvatarPlaceholder(reply) }}</text>
 									</view>
 								</view>
 								<view class="comment-content-wrapper">
@@ -390,6 +390,7 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
 import { useTaskUtils } from './composables/useTaskUtils.js'
+import { getCommentAvatar, getCommentAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
 
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null

@@ -56,6 +56,7 @@ async function getTaskComments(params) {
             _id: true,
             nickname: true,
             avatar_file: true,
+            avatar: true,
             username: true,
             mobile: true,
             email: true
@@ -93,7 +94,8 @@ async function getTaskComments(params) {
               }
               
               comment.user_nickname = displayName
-              comment.user_avatar = user.avatar_file || ''
+              // 优先使用avatar字段，兼容avatar_file字段
+              comment.user_avatar = user.avatar || user.avatar_file || ''
             } else {
               comment.user_nickname = '用户'
               comment.user_avatar = ''

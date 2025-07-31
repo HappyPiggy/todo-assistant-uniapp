@@ -1,0 +1,1354 @@
+diff --git a/bugs/avatar-unification/analysis.md b/bugs/avatar-unification/analysis.md
+new file mode 100644
+index 0000000..bc17d10
+--- /dev/null
++++ b/bugs/avatar-unification/analysis.md
+@@ -0,0 +1,97 @@
++# Bug分析：头像获取不统一问题
++
++## 根本原因
++
++通过对代码的全面分析，发现头像获取不统一的根本原因如下：
++
++### 1. 头像字段名称不统一
++项目中存在多种头像字段命名方式：
++- **用户中心页面**：使用 `userInfo.avatar` 字段，来源于 `uni-id-pages` 的 store
++- **成员管理页面**：使用 `member.avatar` 字段，但实际数据结构中使用的是 `member['user_info.avatar_url']` 和 `member['user_info.avatar_file']`
++- **评论系统**：使用 `comment.user_avatar` 和 `reply.user_avatar` 字段
++- **云函数后端**：使用 `avatar`、`avatar_file` 等字段
++
++### 2. 数据获取逻辑不统一
++- **用户中心**：直接从全局 store 获取当前登录用户信息 (`store.userInfo`)
++- **成员管理**：通过云函数 `todobook-co.getMembers()` 查询用户表获取成员信息
++- **评论系统**：通过云函数 `get-task-comments.js` 处理后获取头像信息
++
++### 3. 头像字段映射缺失
++在多个组件中直接使用了简化的头像字段名，但实际的数据结构中头像信息存储路径不同：
++- `MemberItem.vue` 使用 `member.avatar`，但实际数据在 `member['user_info.avatar_url']` 或 `member['user_info.avatar_file']`
++- 评论组件使用 `comment.user_avatar`，来源于云函数中的 `user.avatar_file` 字段
++
++### 4. 统一工具方法未被充分使用
++虽然 `useMemberData.js` 中提供了 `getMemberAvatar()` 方法来统一获取头像，但并非所有组件都使用了此方法。
++
++## 受影响的代码位置
++
++### 需要修改的文件：
++
++1. **`/pages/todobooks/components/member/MemberItem.vue`** (第5-6行)
++   - 当前使用：`member.avatar`
++   - 需要改为：使用 `getMemberAvatar()` 方法
++
++2. **`/pages/tasks/detail.vue`** (第203-204, 247-248行)
++   - 当前使用：`comment.user_avatar` 和 `reply.user_avatar`
++   - 需要验证：云函数是否正确设置了这些字段
++
++3. **可能需要检查的其他文件：**
++   - `/pages/todobooks/components/member/RoleChangeModal.vue` - 如果显示头像
++   - 任何其他显示用户头像的组件
++
++### 相关正确实现的文件：
++4. **`/pages/todobooks/composables/useMemberData.js`** (第238-252行)
++   - 已有正确的 `getMemberAvatar()` 方法，需要被充分使用
++
++5. **`/pages/ucenter/ucenter.vue`** (第15行)
++   - 正确使用：`userInfo.avatar`，无需修改
++
++6. **云函数处理逻辑：**
++   - `/uniCloud-alipay/cloudfunctions/todobook-co/module/comments/get-task-comments.js`
++   - 需要确保正确设置 `user_avatar` 字段
++
++## 修复策略
++
++### 方案一：统一使用工具方法和标准化头像获取（推荐）
++
++#### 1. 成员管理系统修复
++- 修改 `MemberItem.vue` 组件，导入并使用 `useMemberData` 中的 `getMemberAvatar()` 方法
++- 确保所有显示成员头像的地方都使用统一的获取逻辑
++
++#### 2. 评论系统修复
++- 验证云函数 `get-task-comments.js` 中的头像字段设置是否正确
++- 检查评论显示逻辑是否需要调整（目前云函数设置 `user_avatar` 为 `user.avatar_file`）
++
++#### 3. 创建统一的头像获取工具函数
++- 创建一个全局的头像获取工具函数，用于所有页面和组件
++- 统一处理不同数据源的头像字段映射
++
++### 方案二：在数据加载时标准化字段
++1. 在各个数据加载方法中，将头像字段统一映射为 `avatar`
++2. 保持组件的现有逻辑不变
++
++### 选择方案一的理由：
++- 更加灵活，可以处理多种头像字段的兼容性
++- 提供了更好的封装性和复用性
++- 避免了数据结构的侵入性修改
++- 与现有的工具方法保持一致
++- 可以统一处理用户中心、成员管理、评论系统等不同场景的头像获取
++
++### 具体实现步骤：
++
++#### 步骤1：创建全局头像工具函数
++创建 `/utils/avatarUtils.js` 文件，提供统一的头像获取逻辑
++
++#### 步骤2：修复成员管理头像显示
++修复 `MemberItem.vue` 中的头像获取逻辑
++
++#### 步骤3：验证评论系统头像
++检查评论系统的头像显示是否正确工作
++
++#### 步骤4：验证云函数头像字段
++确保云函数正确设置头像相关字段
++
++## 替代解决方案
++
++如果采用方案二，需要在各个数据加载方法中添加字段映射，但这种方案会改变数据结构，可能影响其他使用数据的地方，因此不推荐。
+\ No newline at end of file
+diff --git a/bugs/avatar-unification/report.md b/bugs/avatar-unification/report.md
+new file mode 100644
+index 0000000..3bf01e8
+--- /dev/null
++++ b/bugs/avatar-unification/report.md
+@@ -0,0 +1,30 @@
++# Bug报告：头像获取不统一问题
++
++## Bug描述
++ucenter页面虽然设置了用户的头像，但是其他用到头像的页面（如成员管理页）仍然使用了默认头像，导致用户头像显示不一致。
++
++## 复现步骤
++1. 打开应用并登录用户账号
++2. 进入ucenter（用户中心）页面，设置用户头像
++3. 导航到成员管理页面（/pages/todobooks/members.vue）
++4. 观察显示的用户头像
++
++## 预期行为
++- 所有页面都应该显示用户在个人设置中上传的头像
++- 头像获取应该统一化，确保一致性
++
++## 实际行为
++- ucenter页面正确显示用户设置的头像
++- 成员管理页面等其他页面仍然显示默认头像
++- 头像获取逻辑不统一，各页面独立处理
++
++## 环境信息
++- 框架：uni-app + Vue 3
++- 平台：多平台（H5、小程序、App）
++- 后端：uniCloud + MongoDB
++- 认证系统：uni-id-pages
++
++## 影响和严重性
++- **影响**：用户体验不一致，可能导致用户困惑
++- **严重性**：中等 - 功能可用但体验有缺陷
++- **用户影响**：所有设置过头像的用户在不同页面看到的头像可能不一致
+\ No newline at end of file
+diff --git a/bugs/ucenter-ui-issues/analysis.md b/bugs/ucenter-ui-issues/analysis.md
+new file mode 100644
+index 0000000..3f4b209
+--- /dev/null
++++ b/bugs/ucenter-ui-issues/analysis.md
+@@ -0,0 +1,80 @@
++# 根本原因分析
++
++## 根本原因
++
++通过代码分析，我发现了三个问题的根本原因：
++
++### 1. 归档管理图标显示问题
++- **问题位置**：`pages/ucenter/ucenter.vue:56`
++- **原因**：使用了 `type="folder"` 图标类型，但在代码中检查发现其他地方都使用了更具体的图标类型，如 `folder-add`
++- **技术原因**：uni-icons组件可能不支持简单的 `folder` 类型，或者该图标在某些平台上显示异常
++
++### 2. 用户登录后头像和描述恢复默认值问题
++- **问题位置**：`uni_modules/uni-id-pages/common/store.js:47-48`
++- **原因**：登录成功后调用 `updateUserInfo()` 方法时，数据库查询字段列表不完整
++- **技术原因**：
++  - 第47-48行的字段查询只包含：`'mobile,nickname,username,email,avatar_file'`
++  - 缺少 `avatar` 和 `description`/`comment` 字段
++  - `avatar_file` 字段可能与UI层期望的 `avatar` 字段不匹配
++  - 这导致登录后从数据库获取的用户信息不包含头像和描述数据
++
++### 3. 头像点击无法进入编辑资料页面问题
++- **问题位置**：`pages/ucenter/ucenter.vue:156-164`
++- **原因**：头像点击事件 `toUserInfo()` 方法跳转到了错误的页面
++- **技术原因**：
++  - 当前跳转到：`/uni_modules/uni-id-pages/pages/userinfo/userinfo`
++  - 但用户期望跳转到：`/pages/ucenter/profile/edit`（编辑资料页面）
++  - 这是一个业务逻辑错误，头像点击应该直接进入编辑页面
++
++## 受影响的代码位置
++
++### 归档管理图标
++- **文件**：`pages/ucenter/ucenter.vue`
++- **行数**：56
++- **函数/模块**：归档管理快捷操作区域
++
++### 用户数据同步
++- **文件**：`uni_modules/uni-id-pages/common/store.js`
++- **行数**：47-48
++- **函数/模块**：`updateUserInfo()` 方法中的数据库查询
++
++### 头像点击事件
++- **文件**：`pages/ucenter/ucenter.vue`
++- **行数**：156-164
++- **函数/模块**：`toUserInfo()` 方法
++
++## 修复策略
++
++### 1. 修复归档管理图标
++- **策略**：将 `type="folder"` 更改为支持更好的图标类型
++- **具体方案**：使用 `type="folder-add"` 或 `type="archives"` 等已验证可用的图标类型
++- **原因**：项目中其他地方使用 `folder-add` 图标显示正常
++
++### 2. 修复用户数据同步问题
++- **策略**：更新数据库查询字段列表，包含所有必要的用户信息字段
++- **具体方案**：
++  - 在 `store.js` 第48行的字段列表中添加 `avatar,description,comment` 字段
++  - 确保 `avatar_file` 和 `avatar` 字段的映射关系正确
++- **原因**：确保登录后能获取完整的用户信息
++
++### 3. 修复头像点击跳转问题
++- **策略**：修改 `toUserInfo()` 方法的跳转逻辑
++- **具体方案**：
++  - 将跳转目标从 `/uni_modules/uni-id-pages/pages/userinfo/userinfo` 
++  - 更改为 `/pages/ucenter/profile/edit`
++  - 或者直接调用现有的 `toEditProfile()` 方法
++- **原因**：提供更直观的用户体验，点击头像直接进入编辑页面
++
++## 替代解决方案
++
++### 归档管理图标替代方案
++- 使用 `type="list"` 或 `type="menu"` 作为归档管理的图标
++- 使用自定义图标文件替代uni-icons
++
++### 用户数据同步替代方案
++- 在ucenter页面的 `onLoad` 或 `onShow` 生命周期中主动调用完整的用户信息更新
++- 实现本地存储与云端数据的增量同步机制
++
++### 头像点击替代方案
++- 保持当前跳转逻辑不变，在用户信息页面添加"编辑资料"快捷入口
++- 为头像添加长按事件，长按进入编辑页面，点击进入查看页面
+\ No newline at end of file
+diff --git a/bugs/ucenter-ui-issues/fix.patch b/bugs/ucenter-ui-issues/fix.patch
+new file mode 100644
+index 0000000..591be1c
+--- /dev/null
++++ b/bugs/ucenter-ui-issues/fix.patch
+@@ -0,0 +1,708 @@
++diff --git a/pages/list/list.vue b/pages/list/list.vue
++index dd1000f..533efc4 100644
++--- a/pages/list/list.vue
+++++ b/pages/list/list.vue
++@@ -156,11 +156,7 @@ onLoad(() => {
++ 			title: '请先登录',
++ 			icon: 'none'
++ 		})
++-		setTimeout(() => {
++-			uni.navigateTo({
++-				url: '/pages/login/login-withpwd'
++-			})
++-		}, 1500)
+++		return
++ 	}
++ 	
++ 	// 监听数据更新事件
++diff --git a/pages/todobooks/components/task/TaskItem.vue b/pages/todobooks/components/task/TaskItem.vue
++index a4be8cd..7ade00a 100644
++--- a/pages/todobooks/components/task/TaskItem.vue
+++++ b/pages/todobooks/components/task/TaskItem.vue
++@@ -16,7 +16,8 @@
++         <!-- 展开/收起按钮（仅card模式且有子任务时显示） -->
++         <view 
++           v-if="variant === 'card' && task.subtask_count > 0" 
++-          class="task-expand">
+++          class="task-expand"
+++          @click.stop="handleExpandClick">
++           <uni-icons 
++             color="#666666" 
++             size="16" 
++@@ -130,8 +131,109 @@
++ 
++     <!-- 子任务列表（仅card模式） -->
++     <view 
++-      v-if="variant === 'card' && task.expanded && task.subtasks && task.subtasks.length > 0" 
+++      v-if="shouldShowSubtasks" 
++       class="subtasks-container">
+++      
+++      <!-- #ifdef MP-WEIXIN -->
+++      <!-- 微信小程序专用内联子任务 -->
+++      <view 
+++        v-for="(subtask, index) in task.subtasks"
+++        :key="'subtask-' + subtask._id"
+++        class="wx-subtask-item"
+++        :class="{ 
+++          'wx-subtask-completed': subtask.status === 'completed',
+++          [getWXSubtaskPriorityClass(subtask)]: true
+++        }"
+++        @click="handleSubtaskItemClick(subtask)">
+++        
+++        <!-- 连接线 -->
+++        <view class="wx-subtask-connector"></view>
+++        
+++        <!-- 子任务内容 -->
+++        <view class="wx-subtask-header">
+++          <view class="wx-subtask-left">
+++            <view class="wx-subtask-content">
+++              <view class="wx-subtask-title-row">
+++                <text 
+++                  class="wx-subtask-title" 
+++                  :class="{ 'wx-subtask-title-completed': subtask.status === 'completed' }">
+++                  {{ subtask.title }}
+++                </text>
+++                <!-- 标签 -->
+++                <view 
+++                  v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0" 
+++                  class="wx-subtask-tags">
+++                  <view 
+++                    v-for="(tag, tagIndex) in subtask.tags.slice(0, 4)" 
+++                    :key="getTagKey(tag, tagIndex)" 
+++                    class="wx-subtask-tag-item"
+++                    :style="{ backgroundColor: getTagColor(tag) }">
+++                    <text class="wx-subtask-tag-text">{{ getTagName(tag) }}</text>
+++                  </view>
+++                  <text v-if="subtask.tags.length > 4" class="wx-subtask-more-tags">+{{ subtask.tags.length - 4 }}</text>
+++                </view>
+++              </view>
+++              
+++              <!-- 描述 -->
+++              <text v-if="subtask.description" class="wx-subtask-description">{{ subtask.description }}</text>
+++              
+++              <!-- 评论信息 -->
+++              <view 
+++                v-if="getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0" 
+++                class="wx-subtask-comment-hint">
+++                <uni-icons color="#ff9800" size="12" type="chatbubble" />
+++                <text v-if="getWXSubtaskCommentCount(subtask) > 0" class="wx-subtask-comment-count">{{ getWXSubtaskCommentCount(subtask) }}条评论</text>
+++                <view v-if="getSubtaskUnreadCount(subtask) > 0" class="wx-subtask-unread-dot"></view>
+++              </view>
+++            </view>
+++          </view>
+++          
+++          <!-- 右侧操作区 -->
+++          <view class="wx-subtask-right">
+++            <!-- 状态切换 -->
+++            <view 
+++              v-if="canEdit"
+++              class="wx-subtask-status" 
+++              @click.stop="handleSubtaskStatusClick(subtask)">
+++              <uni-icons 
+++                v-if="subtask.status === 'completed'"
+++                color="#28a745" 
+++                size="24" 
+++                type="checkmarkempty" />
+++              <uni-icons 
+++                v-else
+++                color="#cccccc" 
+++                size="24" 
+++                type="circle" />
+++            </view>
+++            
+++            <!-- 状态显示（不可编辑时） -->
+++            <view 
+++              v-if="!canEdit && subtask.status === 'completed'"
+++              class="wx-subtask-status-readonly">
+++              <uni-icons 
+++                color="#28a745" 
+++                size="24" 
+++                type="checkmarkempty" />
+++            </view>
+++            
+++            <!-- 更多操作按钮 -->
+++            <view 
+++              v-if="canEdit" 
+++              class="wx-subtask-detail-btn" 
+++              @click.stop="handleSubtaskMoreClick(subtask)">
+++              <uni-icons 
+++                color="#999999" 
+++                size="18" 
+++                type="more-filled" />
+++            </view>
+++          </view>
+++        </view>
+++      </view>
+++      <!-- #endif -->
+++      
+++      <!-- #ifndef MP-WEIXIN -->
+++      <!-- 其他平台使用嵌套TaskItem -->
++       <TaskItem
++         v-for="(subtask, index) in task.subtasks"
++         :key="subtask._id"
++@@ -147,10 +249,17 @@
++         @statusToggle="handleSubtaskStatusToggle"
++         @menuClick="handleSubtaskMenuClick"
++       />
+++      <!-- #endif -->
++     </view>
++   </view>
++ </template>
++ 
+++<script>
+++export default {
+++  name: 'TaskItem'
+++}
+++</script>
+++
++ <script setup>
++ import { defineProps, defineEmits, computed } from 'vue'
++ import { currentUserId } from '@/store/storage.js'
++@@ -258,6 +367,39 @@ const hasMetaInfo = computed(() => {
++          shouldShowCommentInfo.value
++ })
++ 
+++// 微信小程序专用：子任务显示条件计算属性
+++const shouldShowSubtasks = computed(() => {
+++  const result = props.variant === 'card' && 
+++         props.task.expanded && 
+++         props.task.subtasks && 
+++         Array.isArray(props.task.subtasks) && 
+++         props.task.subtasks.length > 0
+++  
+++  // #ifdef MP-WEIXIN
+++  // 详细调试信息
+++  if (props.task.subtask_count > 0) {
+++    console.log(`[MP-WEIXIN] TaskItem [${props.task.title}] 子任务显示检查:`, {
+++      variant: props.variant,
+++      expanded: props.task.expanded,
+++      subtask_count: props.task.subtask_count,
+++      hasSubtasksArray: !!(props.task.subtasks),
+++      subtasksArrayLength: props.task.subtasks?.length || 0,
+++      subtasksArrayType: typeof props.task.subtasks,
+++      isArray: Array.isArray(props.task.subtasks),
+++      finalResult: result,
+++      timestamp: new Date().toLocaleTimeString()
+++    })
+++    
+++    // 如果有子任务数量但没有子任务数组，输出警告
+++    if (props.task.subtask_count > 0 && (!props.task.subtasks || props.task.subtasks.length === 0)) {
+++      console.warn(`[MP-WEIXIN] 任务 "${props.task.title}" 有子任务计数但缺少子任务数据`)
+++    }
+++  }
+++  // #endif
+++  
+++  return result
+++})
+++
++ const handleClick = () => {
++   emit('click', props.task)
++ }
++@@ -282,6 +424,45 @@ const handleSubtaskClick = (subtask) => {
++   emit('subtaskClick', subtask)
++ }
++ 
+++// 处理展开按钮点击 - 微信小程序专用优化
+++const handleExpandClick = () => {
+++  // #ifdef MP-WEIXIN
+++  console.log(`[MP-WEIXIN] 展开按钮被点击: ${props.task.title}, 当前展开状态: ${props.task.expanded}`)
+++  // #endif
+++  
+++  // 直接触发任务点击事件，让父组件处理展开逻辑
+++  emit('click', props.task)
+++}
+++
+++// 微信小程序和其他平台通用的子任务事件处理
+++const handleSubtaskItemClick = (subtask) => {
+++  emit('subtaskClick', subtask)
+++}
+++
+++const handleSubtaskStatusClick = (subtask) => {
+++  emit('subtaskStatusToggle', subtask)
+++}
+++
+++const handleSubtaskMoreClick = (subtask) => {
+++  emit('subtaskMenuClick', subtask)
+++}
+++
+++// 微信小程序专用辅助方法
+++const getWXSubtaskPriorityClass = (subtask) => {
+++  const priority = subtask.priority || 'medium'
+++  console.log(`[WX-Inline] 子任务 "${subtask.title}" 优先级: ${priority}`)
+++  return `wx-subtask--priority-${priority}`
+++}
+++
+++const getWXSubtaskCommentCount = (subtask) => {
+++  try {
+++    return getTaskCommentCount(subtask, true)
+++  } catch (error) {
+++    console.error('获取子任务评论总数失败:', error)
+++    return 0
+++  }
+++}
+++
++ 
++ // 获取子任务未读评论数
++ const getSubtaskUnreadCount = (subtask) => {
++@@ -580,6 +761,8 @@ const getTagColor = (tag) => {
++   position: relative;
++   margin-top: $margin-sm;
++   padding-top: $margin-sm;
+++  
+++  /* #ifndef MP-WEIXIN */
++   padding-left: $subtask-indent;
++   
++   // 垂直连接线
++@@ -592,8 +775,15 @@ const getTagColor = (tag) => {
++     width: $subtask-connector-width;
++     background-color: $subtask-connector-color;
++   }
+++  /* #endif */
++   
++-  // 子任务项样式
+++  /* #ifdef MP-WEIXIN */
+++  // 微信小程序简化版样式
+++  padding-left: $padding-base;
+++  /* #endif */
+++  
+++  // 子任务项样式 - 微信小程序兼容版
+++  /* #ifndef MP-WEIXIN */
++   :deep(.task-item--item) {
++     position: relative;
++     
++@@ -609,6 +799,25 @@ const getTagColor = (tag) => {
++       transform: translateY(-50%);
++     }
++   }
+++  /* #endif */
+++  
+++  /* #ifdef MP-WEIXIN */
+++  .subtask-wrapper .task-item--item {
+++    position: relative;
+++    
+++    // 水平连接线
+++    &::after {
+++      content: '';
+++      position: absolute;
+++      left: -10rpx;
+++      top: 50%;
+++      width: 10rpx;
+++      height: $subtask-connector-width;
+++      background-color: $subtask-connector-color;
+++      transform: translateY(-50%);
+++    }
+++  }
+++  /* #endif */
++ }
++ 
++ // 响应式优化
++@@ -620,12 +829,23 @@ const getTagColor = (tag) => {
++       left: 8rpx; // 调整连接线位置
++     }
++     
+++    /* #ifndef MP-WEIXIN */
++     :deep(.task-item--item) {
++       &::after {
++         left: -8rpx;
++         width: 8rpx;
++       }
++     }
+++    /* #endif */
+++    
+++    /* #ifdef MP-WEIXIN */
+++    .subtask-wrapper .task-item--item {
+++      &::after {
+++        left: -8rpx;
+++        width: 8rpx;
+++      }
+++    }
+++    /* #endif */
++   }
++   
++   // 小屏幕下优先级边框宽度调整  
++@@ -636,4 +856,179 @@ const getTagColor = (tag) => {
++     border-left-width: 3rpx;
++   }
++ }
+++
+++/* #ifdef MP-WEIXIN */
+++// 微信小程序内联子任务样式
+++.wx-subtask-item {
+++  cursor: pointer;
+++  position: relative;
+++  padding: $padding-sm;
+++  background-color: $gray-100;
+++  border-radius: $border-radius-small;
+++  margin-bottom: $margin-xs;
+++  
+++  &:active {
+++    background-color: $gray-200;
+++  }
+++  
+++  &:last-child {
+++    margin-bottom: 0;
+++  }
+++  
+++  // 优先级边框样式
+++  &--priority-low {
+++    @include priority-border($priority-border-low);
+++    border-left: $priority-border-width solid $priority-border-low !important;
+++    background-color: rgba(128, 128, 128, 0.1) !important;
+++  }
+++  
+++  &--priority-medium {
+++    @include priority-border($priority-border-medium);
+++    border-left: $priority-border-width solid $priority-border-medium !important;
+++    background-color: rgba(255, 152, 0, 0.1) !important;
+++  }
+++  
+++  &--priority-high {
+++    @include priority-border($priority-border-high);
+++    border-left: $priority-border-width solid $priority-border-high !important;
+++    background-color: rgba(255, 193, 7, 0.1) !important;
+++  }
+++  
+++  &--priority-urgent {
+++    @include priority-border($priority-border-urgent);
+++    border-left: $priority-border-width solid $priority-border-urgent !important;
+++    background-color: rgba(220, 53, 69, 0.1) !important;
+++  }
+++}
+++
+++.wx-subtask-connector {
+++  position: absolute;
+++  left: -10rpx;
+++  top: 50%;
+++  width: 10rpx;
+++  height: $subtask-connector-width;
+++  background-color: $subtask-connector-color;
+++  transform: translateY(-50%);
+++}
+++
+++.wx-subtask-header {
+++  @include flex-between;
+++  align-items: center;
+++  margin-bottom: 0;
+++}
+++
+++.wx-subtask-left {
+++  @include flex-start;
+++  flex: 1;
+++}
+++
+++.wx-subtask-right {
+++  @include flex-start;
+++  gap: $margin-sm;
+++  flex-shrink: 0;
+++}
+++
+++.wx-subtask-content {
+++  flex: 1;
+++}
+++
+++.wx-subtask-title-row {
+++  @include flex-start;
+++  align-items: flex-start;
+++  gap: $margin-xs;
+++  margin-bottom: 4rpx;
+++  flex-wrap: wrap;
+++}
+++
+++.wx-subtask-title {
+++  font-size: $font-size-base;
+++  color: $text-primary;
+++  font-weight: $font-weight-medium;
+++  line-height: $line-height-base;
+++  
+++  &-completed {
+++    color: $text-tertiary;
+++    text-decoration: line-through;
+++  }
+++}
+++
+++.wx-subtask-tags {
+++  @include flex-start;
+++  gap: $margin-xs;
+++  flex-shrink: 0;
+++}
+++
+++.wx-subtask-tag-item {
+++  padding: 2rpx 6rpx;
+++  border-radius: 6rpx;
+++  border: 1rpx solid rgba(255, 255, 255, 0.3);
+++  @include flex-center;
+++}
+++
+++.wx-subtask-tag-text {
+++  font-size: $font-size-xs;
+++  color: #ffffff;
+++  font-weight: $font-weight-medium;
+++}
+++
+++.wx-subtask-more-tags {
+++  font-size: $font-size-xs;
+++  color: $text-tertiary;
+++}
+++
+++.wx-subtask-description {
+++  font-size: $font-size-sm;
+++  color: $text-secondary;
+++  line-height: $line-height-base;
+++  display: block;
+++}
+++
+++.wx-subtask-status {
+++  @include icon-button(44rpx);
+++  border: 1rpx solid $border-color;
+++}
+++
+++.wx-subtask-status-readonly {
+++  width: 44rpx;
+++  height: 44rpx;
+++  display: flex;
+++  align-items: center;
+++  justify-content: center;
+++  opacity: 0.6;
+++}
+++
+++.wx-subtask-detail-btn {
+++  @include icon-button(32rpx);
+++}
+++
+++.wx-subtask-comment-hint {
+++  @include flex-start;
+++  align-items: center;
+++  gap: 4rpx;
+++  background-color: rgba(255, 152, 0, 0.1);
+++  padding: 4rpx 8rpx;
+++  border-radius: 8rpx;
+++  border: 1rpx solid rgba(255, 152, 0, 0.3);
+++  margin-top: $margin-xs;
+++  align-self: flex-start;
+++}
+++
+++.wx-subtask-comment-count {
+++  font-size: $font-size-xs;
+++  color: $text-tertiary;
+++  font-weight: $font-weight-medium;
+++  min-width: 12rpx;
+++  text-align: center;
+++}
+++
+++.wx-subtask-unread-dot {
+++  width: 16rpx;
+++  height: 16rpx;
+++  background-color: $warning-color;
+++  border-radius: 50%;
+++  margin-left: 8rpx;
+++  flex-shrink: 0;
+++}
+++/* #endif */
+++
++ </style>
++\ No newline at end of file
++diff --git a/pages/todobooks/detail.vue b/pages/todobooks/detail.vue
++index 6ccc664..479bfc6 100644
++--- a/pages/todobooks/detail.vue
+++++ b/pages/todobooks/detail.vue
++@@ -89,7 +89,7 @@
++ </template>
++ 
++ <script setup>
++-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+++import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
++ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
++ 
++ import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
++@@ -371,7 +371,32 @@ const addTask = () => {
++ 
++ const handleTaskClick = (task) => {
++   if (task.subtask_count > 0) {
+++    // #ifdef MP-WEIXIN
+++    // 微信小程序专用处理逻辑
+++    const currentExpanded = task.expanded || false
+++    console.log(`[MP-WEIXIN] 处理任务点击: ${task.title}`, {
+++      currentExpanded,
+++      subtask_count: task.subtask_count,
+++      hasSubtasks: !!(task.subtasks),
+++      subtasksLength: task.subtasks?.length || 0
+++    })
+++    
+++    // 切换展开状态
+++    task.expanded = !currentExpanded
+++    
+++    // 强制触发响应式更新
+++    nextTick(() => {
+++      console.log(`[MP-WEIXIN] 任务 ${task.title} 展开状态已更新: ${task.expanded}`)
+++      // 如果展开了但没有子任务数据，尝试重新加载
+++      if (task.expanded && (!task.subtasks || task.subtasks.length === 0)) {
+++        console.warn(`[MP-WEIXIN] 任务展开但缺少子任务数据，需要重新加载`)
+++      }
+++    })
+++    // #endif
+++    
+++    // #ifndef MP-WEIXIN
++     task.expanded = !task.expanded
+++    // #endif
++   } else {
++     uni.navigateTo({
++       url: `/pages/tasks/detail?id=${task._id}&bookId=${bookId}`
++diff --git a/pages/ucenter/ucenter.vue b/pages/ucenter/ucenter.vue
++index 6545f6a..5a8b2de 100644
++--- a/pages/ucenter/ucenter.vue
+++++ b/pages/ucenter/ucenter.vue
++@@ -51,15 +51,9 @@
++ 					</view>
++ 					<text class="action-text">编辑资料</text>
++ 				</view>
++-				<view class="quick-action-item" @click="toChangePassword">
++-					<view class="action-icon">
++-						<uni-icons color="#FF6B35" size="24" type="locked" />
++-					</view>
++-					<text class="action-text">修改密码</text>
++-				</view>
++ 				<view class="quick-action-item" @click="toArchiveManagement">
++ 					<view class="action-icon">
++-						<uni-icons color="#34C759" size="24" type="folder" />
+++						<uni-icons color="#34C759" size="24" type="folder-add" />
++ 					</view>
++ 					<text class="action-text">归档管理</text>
++ 				</view>
++@@ -164,9 +158,7 @@
++ 					this.toLogin()
++ 					return
++ 				}
++-				uni.navigateTo({
++-					url: '/uni_modules/uni-id-pages/pages/userinfo/userinfo'
++-				})
+++				this.toEditProfile()
++ 			},
++ 			toEditProfile() {
++ 				uni.navigateTo({
++diff --git a/uniCloud-alipay/cloudfunctions/user-co/index.obj.js b/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
++index f464eba..ae7b218 100644
++--- a/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
+++++ b/uniCloud-alipay/cloudfunctions/user-co/index.obj.js
++@@ -21,22 +21,45 @@ module.exports = {
++    */
++   async getUserInfo() {
++     const { uid, db } = this
++-    const userInfo = await this.uniID.getUserInfo({
++-      uid,
++-      field: ['_id', 'username', 'nickname', 'avatar_file', 'avatar', 'gender', 'mobile', 'email', 'comment', 'register_date', 'last_login_date']
++-    })
+++    
+++    try {
+++      // 直接从数据库查询用户信息
+++      const result = await db.collection('uni-id-users')
+++        .doc(uid)
+++        .field({
+++          '_id': true,
+++          'username': true,
+++          'nickname': true,
+++          'avatar_file': true,
+++          'avatar': true,
+++          'gender': true,
+++          'mobile': true,
+++          'email': true,
+++          'comment': true,
+++          'register_date': true,
+++          'last_login_date': true
+++        })
+++        .get()
++ 
++-    if (userInfo.code === 0) {
+++      if (result.data && result.data.length > 0) {
+++        return {
+++          code: 0,
+++          data: result.data[0]
+++        }
+++      } else {
+++        return {
+++          code: 404,
+++          message: '用户不存在'
+++        }
+++      }
+++    } catch (error) {
+++      console.error('获取用户信息失败:', error)
++       return {
++-        code: 0,
++-        data: userInfo.userInfo
+++        code: 500,
+++        message: '获取用户信息失败',
+++        error: error.message
++       }
++     }
++-
++-    return {
++-      code: userInfo.code,
++-      message: userInfo.message
++-    }
++   },
++ 
++ 
++@@ -45,8 +68,9 @@ module.exports = {
++    */
++   async updateProfile(profileData) {
++     const { uid, db } = this
++-    // 数据验证
++-    const { nickname, gender, email, comment, avatar_file, avatar } = profileData
+++    // 数据验证 - 支持description字段并映射到comment
+++    const { nickname, gender, email, comment, description, avatar_file, avatar } = profileData
+++    const actualComment = comment || description // 支持两种字段名
++     
++     if (nickname && (nickname.length < 2 || nickname.length > 20)) {
++       return {
++@@ -62,7 +86,7 @@ module.exports = {
++       }
++     }
++ 
++-    if (comment && comment.length > 200) {
+++    if (actualComment && actualComment.length > 200) {
++       return {
++         code: 400,
++         message: '个人简介不能超过200个字符'
++@@ -92,7 +116,7 @@ module.exports = {
++     if (nickname !== undefined) updateData.nickname = nickname.trim()
++     if (gender !== undefined) updateData.gender = gender
++     if (email !== undefined) updateData.email = email
++-    if (comment !== undefined) updateData.comment = comment
+++    if (actualComment !== undefined) updateData.comment = actualComment // 统一使用comment字段存储
++     if (avatar_file !== undefined) updateData.avatar_file = avatar_file
++     if (avatar !== undefined) updateData.avatar = avatar
++ 
++diff --git a/uni_modules/uni-id-pages/common/store.js b/uni_modules/uni-id-pages/common/store.js
++index 49b547e..dbfcf43 100644
++--- a/uni_modules/uni-id-pages/common/store.js
+++++ b/uni_modules/uni-id-pages/common/store.js
++@@ -43,18 +43,21 @@ export const mutations = {
++ 			const uniIdCo = uniCloud.importObject("uni-id-co", {
++ 				customUI: true
++ 			})
+++			const userCo = uniCloud.importObject("user-co")
++ 			try {
++-				let res = await usersTable.where("'_id' == $cloudEnv_uid")
++-					.field('mobile,nickname,username,email,avatar_file')
++-					.get()
++-
+++				// 使用user-co获取完整用户信息，包括avatar和comment字段
+++				const userInfoRes = await userCo.getUserInfo()
++ 				const realNameRes = await uniIdCo.getRealNameInfo()
++ 
++-				// console.log('fromDbData',res.result.data);
++-				this.setUserInfo({
++-					...res.result.data[0],
++-					realNameAuth: realNameRes
++-				})
+++				if (userInfoRes.code === 0) {
+++					// console.log('fromDbData', userInfoRes.data);
+++					this.setUserInfo({
+++						...userInfoRes.data,
+++						realNameAuth: realNameRes
+++					})
+++				} else {
+++					throw new Error(userInfoRes.message || '获取用户信息失败')
+++				}
++ 			} catch (e) {
++ 				this.setUserInfo({},{cover:true})
++ 				console.error(e.message, e.errCode);
+diff --git a/bugs/ucenter-ui-issues/report.md b/bugs/ucenter-ui-issues/report.md
+new file mode 100644
+index 0000000..be354b3
+--- /dev/null
++++ b/bugs/ucenter-ui-issues/report.md
+@@ -0,0 +1,44 @@
++# Bug报告
++
++## Bug描述
++ucenter页面存在三个UI和功能问题：1) 归档管理图标无法正常显示；2) 重新登录后头像和个人描述恢复为默认值；3) 头像点击无法进入编辑资料页面。
++
++## 复现步骤
++1. **归档管理图标问题**：
++   - 打开应用，进入ucenter页面
++   - 查看归档管理功能区域
++   - 观察图标是否正常显示
++
++2. **登录后数据重置问题**：
++   - 在ucenter页面设置个人头像和描述
++   - 退出登录
++   - 重新登录
++   - 查看ucenter页面的头像和描述是否保持之前的设置
++
++3. **头像点击问题**：
++   - 在ucenter页面点击头像
++   - 观察是否能够进入编辑资料页面
++
++## 期望行为
++1. 归档管理图标应该正常显示
++2. 重新登录后，用户的头像和个人描述应该保持之前的设置
++3. 点击头像应该能够跳转到编辑资料页面
++
++## 实际行为
++1. 归档管理图标无效/无法显示
++2. 重新登录后，头像和个人描述恢复成默认值
++3. 点击头像没有任何响应，无法进入编辑页面
++
++## 环境信息
++- 项目：uni-app + Vue 3 + uniCloud
++- 认证系统：uni-id-pages
++- 数据库：MongoDB (uniCloud DB)
++- 平台：支持H5、小程序、原生应用
++
++## 影响和严重程度
++- **严重程度**：Medium
++- **影响范围**：用户中心页面的用户体验
++- **影响**：
++  - 归档管理功能不可用影响用户操作体验
++  - 用户数据丢失问题影响用户信任度
++  - 头像交互失效降低用户体验流畅性
+\ No newline at end of file
+diff --git a/pages/tasks/detail.vue b/pages/tasks/detail.vue
+index e4748f5..ddc79c5 100644
+--- a/pages/tasks/detail.vue
++++ b/pages/tasks/detail.vue
+@@ -200,12 +200,12 @@
+ 						<view class="comment-main">
+ 							<view class="comment-avatar">
+ 								<image 
+-									v-if="comment.user_avatar" 
+-									:src="comment.user_avatar" 
++									v-if="hasAvatar(comment)" 
++									:src="getCommentAvatar(comment)" 
+ 									class="avatar-img" 
+ 									mode="aspectFill" />
+ 								<view v-else class="avatar-placeholder">
+-									<text class="avatar-text">{{ (comment.user_nickname || '用户').charAt(0) }}</text>
++									<text class="avatar-text">{{ getCommentAvatarPlaceholder(comment) }}</text>
+ 								</view>
+ 							</view>
+ 							<view class="comment-content-wrapper">
+@@ -244,12 +244,12 @@
+ 								class="reply-item">
+ 								<view class="comment-avatar">
+ 									<image 
+-										v-if="reply.user_avatar" 
+-										:src="reply.user_avatar" 
++										v-if="hasAvatar(reply)" 
++										:src="getCommentAvatar(reply)" 
+ 										class="avatar-img" 
+ 										mode="aspectFill" />
+ 									<view v-else class="avatar-placeholder">
+-										<text class="avatar-text">{{ (reply.user_nickname || '用户').charAt(0) }}</text>
++										<text class="avatar-text">{{ getCommentAvatarPlaceholder(reply) }}</text>
+ 									</view>
+ 								</view>
+ 								<view class="comment-content-wrapper">
+@@ -390,6 +390,7 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
+ import { useTaskDetail } from './composables/useTaskDetail.js'
+ import { useTaskComments } from './composables/useTaskComments.js'
+ import { useTaskUtils } from './composables/useTaskUtils.js'
++import { getCommentAvatar, getCommentAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
+ 
+ // 用于存储从路由获取的参数，初始为 null
+ let taskId = null
+diff --git a/pages/todobooks/components/member/MemberItem.vue b/pages/todobooks/components/member/MemberItem.vue
+index dd7fa80..e49d55f 100644
+--- a/pages/todobooks/components/member/MemberItem.vue
++++ b/pages/todobooks/components/member/MemberItem.vue
+@@ -2,12 +2,12 @@
+   <view class="member-item" :class="{ 'is-current-user': isCurrentUser }">
+     <view class="member-avatar">
+       <image 
+-        v-if="member.avatar" 
+-        :src="member.avatar" 
++        v-if="hasAvatar(member)" 
++        :src="getMemberAvatar(member)" 
+         class="avatar-image"
+         mode="aspectFill" />
+       <view v-else class="avatar-placeholder">
+-        <text class="avatar-text">{{ getAvatarText(getMemberNickname(member)) }}</text>
++        <text class="avatar-text">{{ getMemberAvatarPlaceholder(member) }}</text>
+       </view>
+     </view>
+     
+@@ -35,6 +35,7 @@
+ import { defineProps, defineEmits, computed } from 'vue'
+ import { currentUserId } from '@/store/storage.js'
+ import { onLoad, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
++import { getMemberAvatar, getMemberAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
+ 
+ const emit = defineEmits(['menuClick'])
+ 
+@@ -58,11 +59,6 @@ const isCurrentUser = computed(() => {
+   return props.member.user_id === currentUserId.value
+ })
+ 
+-const getAvatarText = (name) => {
+-  if (!name) return '?'
+-  return name.charAt(0).toUpperCase()
+-}
+-
+ const getMemberNickname = (member) => {
+   // 使用与 useMemberData.js 相同的字段访问方式
+   return member['user_info.nickname'] || '未知用户'
+diff --git a/pages/todobooks/composables/useMemberData.js b/pages/todobooks/composables/useMemberData.js
+index 9f582b8..186947f 100644
+--- a/pages/todobooks/composables/useMemberData.js
++++ b/pages/todobooks/composables/useMemberData.js
+@@ -236,19 +236,30 @@ export function useMemberData() {
+    * @returns {string} 头像URL或占位符文本
+    */
+   const getMemberAvatar = (member) => {
+-    // 优先使用新的avatar_url字段
++    // 优先使用avatar字段
++    if (member.user_info && typeof member.user_info === 'object') {
++      if (member.user_info.avatar) {
++        return member.user_info.avatar
++      }
++      if (member.user_info.avatar_file) {
++        return member.user_info.avatar_file
++      }
++    }
++    
++    // 兼容字符串键格式
++    if (member['user_info.avatar']) {
++      return member['user_info.avatar']
++    }
++    
+     if (member['user_info.avatar_url']) {
+       return member['user_info.avatar_url']
+     }
+     
+-    // 兼容旧的avatar_file字段
+     if (member['user_info.avatar_file']) {
+       return member['user_info.avatar_file']
+     }
+     
+-    // 返回昵称首字母作为占位符
+-    const nickname = member['user_info.nickname']
+-    return nickname ? nickname.charAt(0).toUpperCase() : '?'
++    return ''
+   }
+   
+   /**
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/module/comments/get-task-comments.js b/uniCloud-alipay/cloudfunctions/todobook-co/module/comments/get-task-comments.js
+index 320727e..9b493f4 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/module/comments/get-task-comments.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/module/comments/get-task-comments.js
+@@ -56,6 +56,7 @@ async function getTaskComments(params) {
+             _id: true,
+             nickname: true,
+             avatar_file: true,
++            avatar: true,
+             username: true,
+             mobile: true,
+             email: true
+@@ -93,7 +94,8 @@ async function getTaskComments(params) {
+               }
+               
+               comment.user_nickname = displayName
+-              comment.user_avatar = user.avatar_file || ''
++              // 优先使用avatar字段，兼容avatar_file字段
++              comment.user_avatar = user.avatar || user.avatar_file || ''
+             } else {
+               comment.user_nickname = '用户'
+               comment.user_avatar = ''
+diff --git a/uniCloud-alipay/cloudfunctions/todobook-co/module/member/get-members.js b/uniCloud-alipay/cloudfunctions/todobook-co/module/member/get-members.js
+index 7aaeba8..132d6ee 100644
+--- a/uniCloud-alipay/cloudfunctions/todobook-co/module/member/get-members.js
++++ b/uniCloud-alipay/cloudfunctions/todobook-co/module/member/get-members.js
+@@ -44,7 +44,8 @@ async function getMembers(todobook_id) {
+             last_access_at: 1,
+             invited_by: 1,
+             'user_info.nickname': 1,
+-            'user_info.avatar_file': 1
++            'user_info.avatar_file': 1,
++            'user_info.avatar': 1
+           })
+           .sort({ joined_at: 1 })
+           .end()
+@@ -76,7 +77,8 @@ async function getMembers(todobook_id) {
+           .field({
+             _id: true,
+             nickname: true,
+-            avatar_file: true
++            avatar_file: true,
++            avatar: true
+           })
+           .get()
+         
+@@ -90,7 +92,8 @@ async function getMembers(todobook_id) {
+         const membersWithUserInfo = members.data.map(member => {
+           const userInfo = userMap[member.user_id] || {
+             nickname: '未知用户',
+-            avatar_file: null
++            avatar_file: null,
++            avatar: null
+           }
+           return {
+             ...member,
+diff --git a/utils/avatarUtils.js b/utils/avatarUtils.js
+new file mode 100644
+index 0000000..10d0f4a
+--- /dev/null
++++ b/utils/avatarUtils.js
+@@ -0,0 +1,174 @@
++/**
++ * 头像工具函数
++ * 统一处理项目中所有头像获取逻辑
++ */
++
++/**
++ * 获取用户头像URL或占位符文本
++ * @param {Object} user - 用户对象
++ * @param {Object} options - 选项
++ * @param {boolean} options.returnPlaceholder - 是否返回占位符文本而非URL
++ * @returns {string} 头像URL或占位符文本
++ */
++export function getUserAvatar(user, options = {}) {
++  if (!user) return options.returnPlaceholder ? '?' : ''
++  
++  // 尝试获取头像URL
++  const avatarUrl = getAvatarUrl(user)
++  
++  if (avatarUrl && !options.returnPlaceholder) {
++    return avatarUrl
++  }
++  
++  // 返回占位符文本
++  if (options.returnPlaceholder || !avatarUrl) {
++    return getAvatarPlaceholder(user)
++  }
++  
++  return avatarUrl || ''
++}
++
++/**
++ * 获取头像URL
++ * @param {Object} user - 用户对象
++ * @returns {string} 头像URL
++ */
++function getAvatarUrl(user) {
++  if (!user) return ''
++  
++  // 用户中心场景：直接从userInfo获取
++  if (user.avatar) {
++    return user.avatar
++  }
++  
++  // 成员管理场景：从嵌套的user_info获取
++  if (user['user_info.avatar']) {
++    return user['user_info.avatar']
++  }
++  
++  if (user['user_info.avatar_url']) {
++    return user['user_info.avatar_url']
++  }
++  
++  if (user['user_info.avatar_file']) {
++    return user['user_info.avatar_file']
++  }
++  
++  // 直接从user_info对象获取（当数据结构为对象而非字符串键时）
++  if (user.user_info && typeof user.user_info === 'object') {
++    if (user.user_info.avatar) {
++      return user.user_info.avatar
++    }
++    if (user.user_info.avatar_file) {
++      return user.user_info.avatar_file
++    }
++  }
++  
++  // 评论场景：user_avatar字段
++  if (user.user_avatar) {
++    return user.user_avatar
++  }
++  
++  // 直接的avatar_file字段
++  if (user.avatar_file) {
++    return user.avatar_file
++  }
++  
++  return ''
++}
++
++/**
++ * 获取头像占位符文本（用户昵称首字母）
++ * @param {Object} user - 用户对象
++ * @returns {string} 占位符文本
++ */
++function getAvatarPlaceholder(user) {
++  if (!user) return '?'
++  
++  // 尝试从不同字段获取昵称
++  let nickname = ''
++  
++  // 用户中心场景
++  if (user.nickname) {
++    nickname = user.nickname
++  }
++  // 成员管理场景
++  else if (user['user_info.nickname']) {
++    nickname = user['user_info.nickname']
++  }
++  // 直接从user_info对象获取
++  else if (user.user_info && typeof user.user_info === 'object' && user.user_info.nickname) {
++    nickname = user.user_info.nickname
++  }
++  // 评论场景
++  else if (user.user_nickname) {
++    nickname = user.user_nickname
++  }
++  // 其他字段
++  else if (user.username) {
++    nickname = user.username
++  }
++  
++  return nickname ? nickname.charAt(0).toUpperCase() : '?'
++}
++
++/**
++ * 获取成员头像（兼容现有的useMemberData逻辑）
++ * @param {Object} member - 成员对象
++ * @returns {string} 头像URL
++ */
++export function getMemberAvatar(member) {
++  return getUserAvatar(member)
++}
++
++/**
++ * 获取成员头像占位符文本
++ * @param {Object} member - 成员对象
++ * @returns {string} 占位符文本
++ */
++export function getMemberAvatarPlaceholder(member) {
++  return getUserAvatar(member, { returnPlaceholder: true })
++}
++
++/**
++ * 获取评论用户头像
++ * @param {Object} comment - 评论对象
++ * @returns {string} 头像URL
++ */
++export function getCommentAvatar(comment) {
++  return getUserAvatar(comment)
++}
++
++/**
++ * 获取评论用户头像占位符文本
++ * @param {Object} comment - 评论对象
++ * @returns {string} 占位符文本
++ */
++export function getCommentAvatarPlaceholder(comment) {
++  return getUserAvatar(comment, { returnPlaceholder: true })
++}
++
++/**
++ * 检查是否有头像
++ * @param {Object} user - 用户对象
++ * @returns {boolean} 是否有头像
++ */
++export function hasAvatar(user) {
++  return !!getAvatarUrl(user)
++}
++
++/**
++ * 获取默认头像路径（基于用户ID或昵称）
++ * @param {Object} user - 用户对象
++ * @returns {string} 默认头像路径
++ */
++export function getDefaultAvatarPath(user) {
++  if (!user) return '/static/avatar/avatar1.svg'
++  
++  // 根据用户ID或昵称生成一个固定的头像索引
++  const identifier = user._id || user.user_id || user.nickname || user.username || 'default'
++  const hash = identifier.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
++  const avatarIndex = (hash % 8) + 1
++  
++  return `/static/avatar/avatar${avatarIndex}.svg`
++}
+\ No newline at end of file

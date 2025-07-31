@@ -44,7 +44,8 @@ async function getMembers(todobook_id) {
             last_access_at: 1,
             invited_by: 1,
             'user_info.nickname': 1,
-            'user_info.avatar_file': 1
+            'user_info.avatar_file': 1,
+            'user_info.avatar': 1
           })
           .sort({ joined_at: 1 })
           .end()
@@ -76,7 +77,8 @@ async function getMembers(todobook_id) {
           .field({
             _id: true,
             nickname: true,
-            avatar_file: true
+            avatar_file: true,
+            avatar: true
           })
           .get()
         
@@ -90,7 +92,8 @@ async function getMembers(todobook_id) {
         const membersWithUserInfo = members.data.map(member => {
           const userInfo = userMap[member.user_id] || {
             nickname: '未知用户',
-            avatar_file: null
+            avatar_file: null,
+            avatar: null
           }
           return {
             ...member,

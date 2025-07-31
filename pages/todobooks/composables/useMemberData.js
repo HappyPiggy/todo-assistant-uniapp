@@ -236,19 +236,30 @@ export function useMemberData() {
    * @returns {string} 头像URL或占位符文本
    */
   const getMemberAvatar = (member) => {
-    // 优先使用新的avatar_url字段
+    // 优先使用avatar字段
+    if (member.user_info && typeof member.user_info === 'object') {
+      if (member.user_info.avatar) {
+        return member.user_info.avatar
+      }
+      if (member.user_info.avatar_file) {
+        return member.user_info.avatar_file
+      }
+    }
+    
+    // 兼容字符串键格式
+    if (member['user_info.avatar']) {
+      return member['user_info.avatar']
+    }
+    
     if (member['user_info.avatar_url']) {
       return member['user_info.avatar_url']
     }
     
-    // 兼容旧的avatar_file字段
     if (member['user_info.avatar_file']) {
       return member['user_info.avatar_file']
     }
     
-    // 返回昵称首字母作为占位符
-    const nickname = member['user_info.nickname']
-    return nickname ? nickname.charAt(0).toUpperCase() : '?'
+    return ''
   }
   
   /**
