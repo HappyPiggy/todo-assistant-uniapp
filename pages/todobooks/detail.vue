@@ -196,8 +196,10 @@ onLoad(async (options) => {
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
     initializeTasks(allTasks.value)
     
-    // 如果从列表页跳转过来，设置默认筛选为待办
-    if (options.filter === 'todo') {
+    // 如果从列表页跳转过来，设置默认筛选
+    if (options.filter === 'all') {
+      setActiveFilter('all')
+    } else if (options.filter === 'todo') {
       setActiveFilter('todo')
     }
     

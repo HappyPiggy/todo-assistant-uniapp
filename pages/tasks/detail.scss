@@ -143,12 +143,23 @@ page {
 .task-meta {
 	flex-direction: row;
 	align-items: center;
+	justify-content: space-between;
 	gap: 16rpx;
+}
+
+.time-info {
+	flex-direction: column;
+	gap: 6rpx;
 }
 
 .meta-text {
 	font-size: 26rpx;
 	color: #999999;
+}
+
+.updated-text {
+	color: #666666;
+	font-weight: 500;
 }
 
 .priority-badge {

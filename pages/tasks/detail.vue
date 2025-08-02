@@ -38,9 +38,12 @@
 							<text class="assignee-text">{{ assigneeInfo.nickname || assigneeInfo.username || '未知用户' }}</text>
 						</view>
 						
-						<!-- 创建时间和优先级在下一行 -->
+						<!-- 创建时间、更新时间和优先级在下一行 -->
 						<view class="task-meta">
-							<text class="meta-text">{{ formatTime(task.created_at) }} 创建</text>
+							<view class="time-info">
+								<text class="meta-text">{{ formatDateTime(task.created_at) }} 创建</text>
+								<text v-if="task.updated_at && task.updated_at !== task.created_at" class="meta-text updated-text">{{ formatDateTime(task.updated_at) }} 更新</text>
+							</view>
 							<view class="priority-badge" :class="task.priority">
 								<text class="priority-text">{{ getPriorityText(task.priority) }}</text>
 							</view>
@@ -439,6 +442,9 @@ const {
 	openSubtask,
 	addSubtask
 } = useTaskUtils()
+
+// 导入formatDateTime函数
+import { formatDateTime } from '../todobooks/utils/dateUtils.js'
 
 // 组件本地状态
 const taskMenuPopup = ref(null)

@@ -327,7 +327,7 @@ onPullDownRefresh(() => {
 // 页面导航方法
 const openTodoBook = (book) => {
 	uni.navigateTo({
-		url: `/pages/todobooks/detail?id=${book._id}&filter=todo&from=list`
+		url: `/pages/todobooks/detail?id=${book._id}&filter=all&from=list`
 	})
 }
 

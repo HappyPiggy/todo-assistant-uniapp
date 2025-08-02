@@ -66,3 +66,23 @@ export function isOverdue(date) {
   
   return taskDate < today
 }
+
+/**
+ * 格式化时间为年月日分格式
+ * @param {string|Date} date - 日期
+ * @returns {string} 格式化后的时间 (yyyy年mm月dd日 hh:mm)
+ */
+export function formatDateTime(date) {
+  if (!date) return ''
+  
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
+  
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  
+  return `${year}年${month}月${day}日 ${hours}:${minutes}`
+}

@@ -179,24 +179,24 @@ watch(() => props.currentSort, (newSort) => {
 // 监听用户切换，清除本地排序偏好
 watch(currentUserId, (newUserId, oldUserId) => {
   if (oldUserId && newUserId !== oldUserId) {
-    console.log('TaskSortPicker: 用户切换，重置排序偏好', { oldUserId, newUserId })
+    console.log('TaskSortPicker: 用户切换，重置排序偏好到临时状态', { oldUserId, newUserId })
     tempSelectedSort.value = getDefaultSort()
-    emit('confirm', getDefaultSort())
+    // 移除自动确认，让用户手动选择
   }
 }, { immediate: false })
 
 // 组件挂载时加载本地存储的排序偏好
 onMounted(() => {
   const localSort = loadSortFromLocal()
-  console.log('TaskSortPicker: 组件挂载，本地排序偏好:', localSort, '当前排序:', props.currentSort)
+  console.log('TaskSortPicker: 组件挂载，加载本地排序偏好:', localSort)
   
-  if (localSort && (localSort.field !== props.currentSort.field || localSort.order !== props.currentSort.order)) {
-    console.log('TaskSortPicker: 应用本地存储的排序偏好')
+  // 只设置临时选择状态，不自动确认
+  if (localSort) {
     tempSelectedSort.value = localSort
-    emit('confirm', localSort)
+    console.log('TaskSortPicker: 已加载本地存储偏好到临时状态')
   } else {
-    console.log('TaskSortPicker: 使用当前排序偏好')
     tempSelectedSort.value = { ...props.currentSort }
+    console.log('TaskSortPicker: 使用当前排序偏好')
   }
 })
 </script>
