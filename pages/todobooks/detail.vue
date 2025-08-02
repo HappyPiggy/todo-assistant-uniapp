@@ -104,6 +104,7 @@ import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionShee
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
 import { usePinning } from '@/composables/usePinning.js'
+import { currentUserId } from '@/store/storage.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
 let bookId = null
@@ -139,6 +140,8 @@ const {
   setSearchKeyword,
   setSelectedTags,
   setSortOption,
+  updateBookId,
+  initializeSortFromStorage,
   taskStats,
   overallProgress,
   toggleTaskStatus,
@@ -159,6 +162,20 @@ const {
 // 监听availableTags变化
 watch(availableTags, (newTags) => {
 }, { deep: true, immediate: true })
+
+// 监听用户切换，重新初始化排序状态
+watch(currentUserId, (newUserId, oldUserId) => {
+  if (newUserId && oldUserId && newUserId !== oldUserId && bookId) {
+    console.log('👤 用户切换，重新初始化排序状态', { oldUserId, newUserId, bookId })
+    // 用户切换后重新初始化排序状态
+    initializeSortFromStorage()
+  }
+  if (newUserId && !oldUserId && bookId) {
+    console.log('👤 用户ID现在可用，初始化排序状态', { newUserId, bookId })
+    // 从无用户ID到有用户ID，初始化排序状态
+    initializeSortFromStorage()
+  }
+}, { immediate: false })
 
 // 归档状态检测
 const isArchived = computed(() => {
@@ -192,9 +209,15 @@ onLoad(async (options) => {
     // 检查是否从归档管理页面进入
     isFromArchive = options.from === 'archive' || options.archived === 'true'
     
+    // 更新useTaskData中的bookId
+    updateBookId(bookId)
+    
     // 先加载项目册详情（包含任务数据）
     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
     initializeTasks(allTasks.value)
+    
+    // 在任务初始化后，初始化排序状态
+    initializeSortFromStorage()
     
     // 如果从列表页跳转过来，设置默认筛选
     if (options.filter === 'all') {

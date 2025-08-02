@@ -114,8 +114,9 @@ const selectSort = (option) => {
 
 // 确认选择
 const confirm = () => {
-  console.log('确认排序选择:', tempSelectedSort.value)
+  console.log('🎯 确认排序选择:', JSON.stringify(tempSelectedSort.value, null, 2))
   saveSortToLocal(tempSelectedSort.value)
+  console.log('🎯 触发confirm事件，传递数据:', JSON.stringify(tempSelectedSort.value, null, 2))
   emit('confirm', tempSelectedSort.value)
 }
 
@@ -130,11 +131,18 @@ const cancel = () => {
 // 本地存储相关函数
 const getSortStorageKey = () => {
   const userId = currentUserId.value
-  if (!userId || !props.todorbookId) return null
-  return `task_sort_${userId}_${props.todorbookId}`
+  console.log('🔑 生成存储键 - userId:', userId, 'todorbookId:', props.todorbookId)
+  if (!userId || !props.todorbookId) {
+    console.log('⚠️ 存储键生成失败 - 缺少必要参数')
+    return null
+  }
+  const key = `task_sort_${userId}_${props.todorbookId}`
+  console.log('✅ 存储键生成成功:', key)
+  return key
 }
 
 const saveSortToLocal = (sortOption) => {
+  console.log('💾 开始保存排序偏好 - sortOption:', JSON.stringify(sortOption, null, 2))
   try {
     const storageKey = getSortStorageKey()
     if (storageKey) {
@@ -142,29 +150,49 @@ const saveSortToLocal = (sortOption) => {
         sortOption: sortOption,
         timestamp: Date.now()
       }
+      console.log('💾 准备保存数据:', JSON.stringify(sortData, null, 2))
       uni.setStorageSync(storageKey, JSON.stringify(sortData))
-      console.log('排序偏好已保存到本地:', storageKey, sortData)
+      console.log('✅ 排序偏好已保存到本地:', storageKey)
+      
+      // 验证保存是否成功
+      const verification = uni.getStorageSync(storageKey)
+      console.log('🔍 验证保存结果:', verification ? '成功' : '失败', verification)
+    } else {
+      console.log('❌ 保存失败 - 无法生成存储键')
     }
   } catch (error) {
-    console.error('保存排序偏好失败:', error)
+    console.error('❌ 保存排序偏好失败:', error)
   }
 }
 
 const loadSortFromLocal = () => {
+  console.log('📖 开始加载本地排序偏好')
   try {
     const storageKey = getSortStorageKey()
     if (storageKey) {
+      console.log('📖 使用存储键加载数据:', storageKey)
       const sortDataStr = uni.getStorageSync(storageKey)
+      console.log('📖 读取原始数据:', sortDataStr)
+      
       if (sortDataStr) {
         const sortData = JSON.parse(sortDataStr)
-        console.log('从本地加载排序偏好:', storageKey, sortData)
-        return sortData.sortOption || getDefaultSort()
+        console.log('✅ 成功解析排序数据:', JSON.stringify(sortData, null, 2))
+        const sortOption = sortData.sortOption || getDefaultSort()
+        console.log('📖 返回排序选项:', JSON.stringify(sortOption, null, 2))
+        return sortOption
+      } else {
+        console.log('⚠️ 本地无排序偏好数据，使用默认排序')
       }
+    } else {
+      console.log('❌ 加载失败 - 无法生成存储键')
     }
   } catch (error) {
-    console.error('加载排序偏好失败:', error)
+    console.error('❌ 加载排序偏好失败:', error)
   }
-  return getDefaultSort()
+  
+  const defaultSort = getDefaultSort()
+  console.log('📖 返回默认排序:', JSON.stringify(defaultSort, null, 2))
+  return defaultSort
 }
 
 const getDefaultSort = () => {
@@ -187,18 +215,41 @@ watch(currentUserId, (newUserId, oldUserId) => {
 
 // 组件挂载时加载本地存储的排序偏好
 onMounted(() => {
+  console.log('🚀 TaskSortPicker组件挂载开始')
+  console.log('🚀 当前props.currentSort:', JSON.stringify(props.currentSort, null, 2))
+  console.log('🚀 当前props.todorbookId:', props.todorbookId)
+  console.log('🚀 当前currentUserId:', currentUserId.value)
+  
   const localSort = loadSortFromLocal()
-  console.log('TaskSortPicker: 组件挂载，加载本地排序偏好:', localSort)
+  console.log('🚀 组件挂载，加载本地排序偏好结果:', JSON.stringify(localSort, null, 2))
   
   // 只设置临时选择状态，不自动确认
-  if (localSort) {
+  if (localSort && (localSort.field !== getDefaultSort().field || localSort.order !== getDefaultSort().order)) {
     tempSelectedSort.value = localSort
-    console.log('TaskSortPicker: 已加载本地存储偏好到临时状态')
+    console.log('✅ 已加载本地存储偏好到临时状态:', JSON.stringify(localSort, null, 2))
   } else {
     tempSelectedSort.value = { ...props.currentSort }
-    console.log('TaskSortPicker: 使用当前排序偏好')
+    console.log('✅ 使用当前排序偏好:', JSON.stringify(props.currentSort, null, 2))
   }
+  
+  console.log('🚀 组件挂载完成，最终tempSelectedSort:', JSON.stringify(tempSelectedSort.value, null, 2))
 })
+
+// 监听currentUserId变化，如果之前无法生成存储键，现在尝试重新加载
+watch(currentUserId, (newUserId, oldUserId) => {
+  console.log('👤 currentUserId变化:', { oldUserId, newUserId })
+  
+  if (newUserId && !oldUserId) {
+    // 从无用户ID到有用户ID，尝试重新加载本地偏好
+    console.log('👤 用户ID现在可用，重新尝试加载本地偏好')
+    const localSort = loadSortFromLocal()
+    
+    if (localSort && (localSort.field !== getDefaultSort().field || localSort.order !== getDefaultSort().order)) {
+      tempSelectedSort.value = localSort
+      console.log('✅ 重新加载本地存储偏好成功:', JSON.stringify(localSort, null, 2))
+    }
+  }
+}, { immediate: false })
 </script>
 
 <style lang="scss" scoped>

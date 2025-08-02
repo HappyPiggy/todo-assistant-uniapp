@@ -5,6 +5,7 @@ import { calculateUnreadCount } from '@/utils/commentUtils.js'
 import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
+import { currentUserId } from '@/store/storage.js'
 
 /**
  * 按标签筛选任务
@@ -247,7 +248,48 @@ function searchTasks(tasks, keyword) {
  * @param {Object} allTasks - 所有任务数据的响应式引用
  * @returns {Object} 任务数据和操作方法
  */
+/**
+ * 获取排序存储键
+ * @param {string} userId - 用户ID
+ * @param {string} bookId - 项目册ID
+ * @returns {string|null} 存储键
+ */
+function getSortStorageKey(userId, bookId) {
+  if (!userId || !bookId) return null
+  return `task_sort_${userId}_${bookId}`
+}
+
+/**
+ * 从本地存储加载排序偏好
+ * @param {string} bookId - 项目册ID
+ * @returns {Object} 排序选项
+ */
+function loadSortFromStorage(bookId) {
+  try {
+    const userId = currentUserId.value
+    const storageKey = getSortStorageKey(userId, bookId)
+    
+    if (storageKey) {
+      const sortDataStr = uni.getStorageSync(storageKey)
+      if (sortDataStr) {
+        const sortData = JSON.parse(sortDataStr)
+        console.log('🎯 useTaskData从本地加载排序偏好:', JSON.stringify(sortData.sortOption, null, 2))
+        return sortData.sortOption || { field: 'created_at', order: 'desc' }
+      }
+    }
+  } catch (error) {
+    console.error('useTaskData加载排序偏好失败:', error)
+  }
+  
+  console.log('🎯 useTaskData使用默认排序偏好')
+  return { field: 'created_at', order: 'desc' }
+}
+
 export function useTaskData(bookId, allTasks = null, bookData = null) {
+  // 初始化排序状态，优先使用本地存储的偏好
+  const initialSort = loadSortFromStorage(bookId)
+  console.log('🎯 useTaskData初始化排序状态:', JSON.stringify(initialSort, null, 2))
+  
   // 响应式数据
   const tasks = ref([])
   const loading = ref(false)
@@ -256,7 +298,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
   const searchKeyword = ref('')
   const selectedTags = ref([])
   const cachedAvailableTags = ref([])
-  const currentSort = ref({ field: 'created_at', order: 'desc' })
+  const currentSort = ref(initialSort)
   
   // 计算属性
   const filteredTasks = computed(() => {
@@ -720,9 +762,12 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
    * @param {Object} sortOption - 排序选项 { field, order }
    */
   const setSortOption = (sortOption) => {
+    console.log('🔄 useTaskData接收排序选项:', JSON.stringify(sortOption, null, 2))
     if (sortOption && sortOption.field && sortOption.order) {
       currentSort.value = { ...sortOption }
-      console.log('设置排序选项:', currentSort.value)
+      console.log('✅ useTaskData设置排序选项成功:', JSON.stringify(currentSort.value, null, 2))
+    } else {
+      console.log('❌ useTaskData排序选项验证失败 - 数据格式错误:', JSON.stringify(sortOption, null, 2))
     }
   }
 
