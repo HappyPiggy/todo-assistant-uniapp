@@ -1,0 +1,360 @@
+diff --git a/pages/todobooks/components/task/TaskSortPicker.vue b/pages/todobooks/components/task/TaskSortPicker.vue
+index 39ab96e..166940d 100644
+--- a/pages/todobooks/components/task/TaskSortPicker.vue
++++ b/pages/todobooks/components/task/TaskSortPicker.vue
+@@ -114,8 +114,8 @@ const selectSort = (option) => {
+ 
+ // 确认选择
+ const confirm = () => {
+-  console.log('确认排序选择:', tempSelectedSort.value)
+-  saveSortToLocal(tempSelectedSort.value)
++  console.log('🎯 确认排序选择:', JSON.stringify(tempSelectedSort.value, null, 2))
++  console.log('🎯 触发confirm事件，传递数据:', JSON.stringify(tempSelectedSort.value, null, 2))
+   emit('confirm', tempSelectedSort.value)
+ }
+ 
+@@ -127,46 +127,6 @@ const cancel = () => {
+   emit('cancel')
+ }
+ 
+-// 本地存储相关函数
+-const getSortStorageKey = () => {
+-  const userId = currentUserId.value
+-  if (!userId || !props.todorbookId) return null
+-  return `task_sort_${userId}_${props.todorbookId}`
+-}
+-
+-const saveSortToLocal = (sortOption) => {
+-  try {
+-    const storageKey = getSortStorageKey()
+-    if (storageKey) {
+-      const sortData = {
+-        sortOption: sortOption,
+-        timestamp: Date.now()
+-      }
+-      uni.setStorageSync(storageKey, JSON.stringify(sortData))
+-      console.log('排序偏好已保存到本地:', storageKey, sortData)
+-    }
+-  } catch (error) {
+-    console.error('保存排序偏好失败:', error)
+-  }
+-}
+-
+-const loadSortFromLocal = () => {
+-  try {
+-    const storageKey = getSortStorageKey()
+-    if (storageKey) {
+-      const sortDataStr = uni.getStorageSync(storageKey)
+-      if (sortDataStr) {
+-        const sortData = JSON.parse(sortDataStr)
+-        console.log('从本地加载排序偏好:', storageKey, sortData)
+-        return sortData.sortOption || getDefaultSort()
+-      }
+-    }
+-  } catch (error) {
+-    console.error('加载排序偏好失败:', error)
+-  }
+-  return getDefaultSort()
+-}
+-
+ const getDefaultSort = () => {
+   return { field: 'created_at', order: 'desc' }
+ }
+@@ -185,19 +145,12 @@ watch(currentUserId, (newUserId, oldUserId) => {
+   }
+ }, { immediate: false })
+ 
+-// 组件挂载时加载本地存储的排序偏好
++// 组件挂载时同步当前排序状态
+ onMounted(() => {
+-  const localSort = loadSortFromLocal()
+-  console.log('TaskSortPicker: 组件挂载，加载本地排序偏好:', localSort)
+-  
+-  // 只设置临时选择状态，不自动确认
+-  if (localSort) {
+-    tempSelectedSort.value = localSort
+-    console.log('TaskSortPicker: 已加载本地存储偏好到临时状态')
+-  } else {
+-    tempSelectedSort.value = { ...props.currentSort }
+-    console.log('TaskSortPicker: 使用当前排序偏好')
+-  }
++  console.log('🚀 TaskSortPicker组件挂载')
++  console.log('🚀 当前props.currentSort:', JSON.stringify(props.currentSort, null, 2))
++  tempSelectedSort.value = { ...props.currentSort }
++  console.log('🚀 组件挂载完成，tempSelectedSort已同步:', JSON.stringify(tempSelectedSort.value, null, 2))
+ })
+ </script>
+ 
+diff --git a/pages/todobooks/composables/useTaskData.js b/pages/todobooks/composables/useTaskData.js
+index 5f00dde..a843fc0 100644
+--- a/pages/todobooks/composables/useTaskData.js
++++ b/pages/todobooks/composables/useTaskData.js
+@@ -5,6 +5,7 @@ import { calculateUnreadCount } from '@/utils/commentUtils.js'
+ import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
+ import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+ import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
++import { currentUserId } from '@/store/storage.js'
+ 
+ /**
+  * 按标签筛选任务
+@@ -247,7 +248,47 @@ function searchTasks(tasks, keyword) {
+  * @param {Object} allTasks - 所有任务数据的响应式引用
+  * @returns {Object} 任务数据和操作方法
+  */
+-export function useTaskData(bookId, allTasks = null, bookData = null) {
++/**
++ * 获取排序存储键
++ * @param {string} userId - 用户ID
++ * @param {string} bookId - 项目册ID
++ * @returns {string|null} 存储键
++ */
++function getSortStorageKey(userId, bookId) {
++  if (!userId || !bookId) return null
++  return `task_sort_${userId}_${bookId}`
++}
++
++/**
++ * 从本地存储加载排序偏好
++ * @param {string} bookId - 项目册ID
++ * @returns {Object} 排序选项
++ */
++function loadSortFromStorage(bookId) {
++  try {
++    const userId = currentUserId.value
++    const storageKey = getSortStorageKey(userId, bookId)
++    
++    if (storageKey) {
++      const sortDataStr = uni.getStorageSync(storageKey)
++      if (sortDataStr) {
++        const sortData = JSON.parse(sortDataStr)
++        console.log('🎯 useTaskData从本地加载排序偏好:', JSON.stringify(sortData.sortOption, null, 2))
++        return sortData.sortOption || { field: 'created_at', order: 'desc' }
++      }
++    }
++  } catch (error) {
++    console.error('useTaskData加载排序偏好失败:', error)
++  }
++  
++  console.log('🎯 useTaskData使用默认排序偏好')
++  return { field: 'created_at', order: 'desc' }
++}
++
++export function useTaskData(initialBookId, allTasks = null, bookData = null) {
++  // 存储当前的bookId，支持运行时更新
++  const currentBookId = ref(initialBookId)
++  
+   // 响应式数据
+   const tasks = ref([])
+   const loading = ref(false)
+@@ -256,6 +297,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+   const searchKeyword = ref('')
+   const selectedTags = ref([])
+   const cachedAvailableTags = ref([])
++  // 初始化为默认排序，稍后通过initializeSortFromStorage设置
+   const currentSort = ref({ field: 'created_at', order: 'desc' })
+   
+   // 计算属性
+@@ -351,7 +393,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+    * @param {boolean} forceRefresh - 是否强制刷新
+    */
+   const loadAvailableTags = async (forceRefresh = false) => {
+-    if (!bookId) {
++    if (!currentBookId.value) {
+       console.warn('loadAvailableTags: bookId is required')
+       return
+     }
+@@ -361,11 +403,11 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+       const sourceData = allTasks?.value || tasks.value
+       if (Array.isArray(sourceData) && sourceData.length > 0) {
+         // 先缓存任务数据到标签服务
+-        tagService.cacheTaskData(bookId, sourceData)
++        tagService.cacheTaskData(currentBookId.value, sourceData)
+       }
+       
+       // 使用标签服务获取标签（支持缓存）
+-      const tags = await tagService.getBookTagsForFilter(bookId, sourceData, forceRefresh)
++      const tags = await tagService.getBookTagsForFilter(currentBookId.value, sourceData, forceRefresh)
+       cachedAvailableTags.value = tags
+       console.log('已缓存可用标签:', tags.length, '个')
+     } catch (error) {
+@@ -442,7 +484,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+       // await loadTasksCommentCounts(processedTasks)
+       
+       // 异步加载并缓存标签数据
+-      if (bookId) {
++      if (currentBookId.value) {
+         loadAvailableTags()
+       }
+       
+@@ -716,13 +758,49 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+   }
+ 
+   /**
+-   * 设置排序选项
++   * 保存排序选项到本地存储
++   * @param {Object} sortOption - 排序选项
++   */
++  const saveSortToStorage = (sortOption) => {
++    try {
++      const userId = currentUserId.value
++      const storageKey = getSortStorageKey(userId, currentBookId.value)
++      
++      if (storageKey) {
++        const sortData = {
++          sortOption: sortOption,
++          timestamp: Date.now()
++        }
++        console.log('💾 useTaskData保存排序偏好:', JSON.stringify(sortData, null, 2))
++        uni.setStorageSync(storageKey, JSON.stringify(sortData))
++        console.log('✅ useTaskData排序偏好已保存到本地:', storageKey)
++      } else {
++        console.log('❌ useTaskData保存失败 - 无法生成存储键')
++      }
++    } catch (error) {
++      console.error('❌ useTaskData保存排序偏好失败:', error)
++    }
++  }
++
++  /**
++   * 设置排序选项并保存到本地存储
+    * @param {Object} sortOption - 排序选项 { field, order }
+    */
+   const setSortOption = (sortOption) => {
++    console.log('🔄 useTaskData接收排序选项:', JSON.stringify(sortOption, null, 2))
+     if (sortOption && sortOption.field && sortOption.order) {
+-      currentSort.value = { ...sortOption }
+-      console.log('设置排序选项:', currentSort.value)
++      // 只保留排序相关的字段，移除UI相关字段
++      const cleanSortOption = {
++        field: sortOption.field,
++        order: sortOption.order
++      }
++      currentSort.value = { ...cleanSortOption }
++      console.log('✅ useTaskData设置排序选项成功:', JSON.stringify(currentSort.value, null, 2))
++      
++      // 保存到本地存储
++      saveSortToStorage(cleanSortOption)
++    } else {
++      console.log('❌ useTaskData排序选项验证失败 - 数据格式错误:', JSON.stringify(sortOption, null, 2))
+     }
+   }
+ 
+@@ -829,8 +907,8 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+     currentSort.value = { field: 'created_at', order: 'desc' }
+     
+     // 清除标签服务中的缓存
+-    if (bookId) {
+-      tagService.clearBookCache(bookId)
++    if (currentBookId.value) {
++      tagService.clearBookCache(currentBookId.value)
+     }
+     
+     // 清除评论缓存
+@@ -929,6 +1007,39 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+     }
+   }
+   
++  /**
++   * 更新当前bookId
++   * @param {string} newBookId - 新的项目册ID
++   */
++  const updateBookId = (newBookId) => {
++    console.log('📝 更新bookId:', { old: currentBookId.value, new: newBookId })
++    currentBookId.value = newBookId
++  }
++  
++  /**
++   * 初始化排序状态，从本地存储加载偏好
++   * 需要在bookId和currentUserId都准备好后调用
++   */
++  const initializeSortFromStorage = () => {
++    console.log('🚀 初始化排序状态 - bookId:', currentBookId.value, 'currentUserId:', currentUserId.value)
++    
++    if (!currentBookId.value || !currentUserId.value) {
++      console.log('⚠️ 初始化排序跳过 - 缺少必要参数')
++      return
++    }
++    
++    const savedSort = loadSortFromStorage(currentBookId.value)
++    console.log('🚀 加载到的排序偏好:', JSON.stringify(savedSort, null, 2))
++    
++    // 只有当加载的排序与当前不同时才更新
++    if (savedSort.field !== currentSort.value.field || savedSort.order !== currentSort.value.order) {
++      currentSort.value = { ...savedSort }
++      console.log('✅ 排序状态已更新:', JSON.stringify(currentSort.value, null, 2))
++    } else {
++      console.log('🚀 排序状态无需更新')
++    }
++  }
++  
+   return {
+     // 响应式数据
+     tasks,
+@@ -957,6 +1068,8 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
+     setSearchKeyword,
+     setSelectedTags,
+     setSortOption,
++    updateBookId,
++    initializeSortFromStorage,
+     resetState,
+     updateTaskOptimistic,
+     createTaskOptimistic,
+diff --git a/pages/todobooks/detail.vue b/pages/todobooks/detail.vue
+index 28f0f99..538878f 100644
+--- a/pages/todobooks/detail.vue
++++ b/pages/todobooks/detail.vue
+@@ -104,6 +104,7 @@ import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionShee
+ import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+ import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
+ import { usePinning } from '@/composables/usePinning.js'
++import { currentUserId } from '@/store/storage.js'
+ 
+ // 用于存储从路由获取的 bookId，初始为 null
+ let bookId = null
+@@ -139,6 +140,8 @@ const {
+   setSearchKeyword,
+   setSelectedTags,
+   setSortOption,
++  updateBookId,
++  initializeSortFromStorage,
+   taskStats,
+   overallProgress,
+   toggleTaskStatus,
+@@ -160,6 +163,20 @@ const {
+ watch(availableTags, (newTags) => {
+ }, { deep: true, immediate: true })
+ 
++// 监听用户切换，重新初始化排序状态
++watch(currentUserId, (newUserId, oldUserId) => {
++  if (newUserId && oldUserId && newUserId !== oldUserId && bookId) {
++    console.log('👤 用户切换，重新初始化排序状态', { oldUserId, newUserId, bookId })
++    // 用户切换后重新初始化排序状态
++    initializeSortFromStorage()
++  }
++  if (newUserId && !oldUserId && bookId) {
++    console.log('👤 用户ID现在可用，初始化排序状态', { newUserId, bookId })
++    // 从无用户ID到有用户ID，初始化排序状态
++    initializeSortFromStorage()
++  }
++}, { immediate: false })
++
+ // 归档状态检测
+ const isArchived = computed(() => {
+   return bookData.value?.is_archived === true || isFromArchive
+@@ -192,10 +209,16 @@ onLoad(async (options) => {
+     // 检查是否从归档管理页面进入
+     isFromArchive = options.from === 'archive' || options.archived === 'true'
+     
++    // 更新useTaskData中的bookId
++    updateBookId(bookId)
++    
+     // 先加载项目册详情（包含任务数据）
+     await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
+     initializeTasks(allTasks.value)
+     
++    // 在任务初始化后，初始化排序状态
++    initializeSortFromStorage()
++    
+     // 如果从列表页跳转过来，设置默认筛选
+     if (options.filter === 'all') {
+       setActiveFilter('all')
