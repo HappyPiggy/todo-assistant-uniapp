@@ -60,31 +60,42 @@
             <text class="task-title" :class="{ completed: task.status === 'completed' }">
               {{ task.title }}
             </text>
-            <!-- 标签 -->
-            <view 
-              v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
-              class="task-tags">
-              <view 
-                v-for="(tag, index) in task.tags.slice(0, 4)" 
-                :key="getTagKey(tag, index)" 
-                class="tag-item"
-                :style="{ backgroundColor: getTagColor(tag) }">
-                <text class="tag-text">{{ getTagName(tag) }}</text>
-              </view>
-              <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
+            <!-- 工程倒计时（到期日期）显示在title后 -->
+            <view v-if="task.due_date" class="countdown-inline" :class="{ overdue: isOverdue(task.due_date) }">
+              <uni-icons color="#999999" size="12" type="calendar" />
+              <text class="countdown-text">{{ formatDueDate(task.due_date) }}</text>
             </view>
           </view>
           
           <!-- 描述 -->
           <text v-if="task.description" class="task-description">{{ task.description }}</text>
           
-          <!-- 评论信息（item模式） -->
+          <!-- Item模式的底部信息栏：评论和标签 -->
           <view 
-            v-if="variant === 'item' && shouldShowCommentInfo" 
-            class="comment-hint comment-hint--item">
-            <uni-icons color="#ff9800" size="12" type="chatbubble" />
-            <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
-            <view v-if="hasUnreadComments" class="unread-dot"></view>
+            v-if="variant === 'item' && (shouldShowCommentInfo || (task.tags && Array.isArray(task.tags) && task.tags.length > 0))" 
+            class="item-bottom-info">
+            <!-- 评论信息 -->
+            <view 
+              v-if="shouldShowCommentInfo" 
+              class="comment-hint comment-hint--item">
+              <uni-icons color="#ff9800" size="12" type="chatbubble" />
+              <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
+              <view v-if="hasUnreadComments" class="unread-dot"></view>
+            </view>
+            
+            <!-- 标签 -->
+            <view 
+              v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
+              class="task-tags-right">
+              <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
+              <view 
+                v-for="(tag, index) in task.tags.slice(0, 4).reverse()" 
+                :key="getTagKey(tag, index)" 
+                class="tag-item"
+                :style="{ backgroundColor: getTagColor(tag) }">
+                <text class="tag-text">{{ getTagName(tag) }}</text>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -102,14 +113,8 @@
     </view>
 
     <!-- 元数据区域（仅card模式） -->
-    <view v-if="variant === 'card' && hasMetaInfo" class="task-meta">
+    <view v-if="variant === 'card' && (hasMetaInfo || (task.tags && Array.isArray(task.tags) && task.tags.length > 0))" class="task-meta">
       <view class="meta-left">
-        <!-- 到期日期 -->
-        <view v-if="task.due_date" class="due-date" :class="{ overdue: isOverdue(task.due_date) }">
-          <uni-icons color="#999999" size="14" type="calendar" />
-          <text class="due-text">{{ formatDueDate(task.due_date) }}</text>
-        </view>
-        
         <!-- 子任务进度 -->
         <view v-if="task.subtask_count > 0" class="subtasks">
           <uni-icons color="#999999" size="14" type="list" />
@@ -121,6 +126,20 @@
           <uni-icons color="#ff9800" size="14" type="chatbubble" />
           <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
           <view v-if="hasUnreadComments" class="unread-dot"></view>
+        </view>
+      </view>
+      
+      <!-- 标签区域 -->
+      <view 
+        v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
+        class="task-tags-right">
+        <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
+        <view 
+          v-for="(tag, index) in task.tags.slice(0, 4).reverse()" 
+          :key="getTagKey(tag, index)" 
+          class="tag-item"
+          :style="{ backgroundColor: getTagColor(tag) }">
+          <text class="tag-text">{{ getTagName(tag) }}</text>
         </view>
       </view>
     </view>
@@ -178,31 +197,42 @@
                   :class="{ 'wx-subtask-title-completed': subtask.status === 'completed' }">
                   {{ subtask.title }}
                 </text>
-                <!-- 标签 -->
-                <view 
-                  v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0" 
-                  class="wx-subtask-tags">
-                  <view 
-                    v-for="(tag, tagIndex) in subtask.tags.slice(0, 4)" 
-                    :key="getTagKey(tag, tagIndex)" 
-                    class="wx-subtask-tag-item"
-                    :style="{ backgroundColor: getTagColor(tag) }">
-                    <text class="wx-subtask-tag-text">{{ getTagName(tag) }}</text>
-                  </view>
-                  <text v-if="subtask.tags.length > 4" class="wx-subtask-more-tags">+{{ subtask.tags.length - 4 }}</text>
+                <!-- 工程倒计时（到期日期）显示在title后 -->
+                <view v-if="subtask.due_date" class="wx-subtask-countdown-inline" :class="{ overdue: isOverdue(subtask.due_date) }">
+                  <uni-icons color="#999999" size="10" type="calendar" />
+                  <text class="wx-subtask-countdown-text">{{ formatDueDate(subtask.due_date) }}</text>
                 </view>
               </view>
               
               <!-- 描述 -->
               <text v-if="subtask.description" class="wx-subtask-description">{{ subtask.description }}</text>
               
-              <!-- 评论信息 -->
+              <!-- 子任务底部信息栏：评论和标签 -->
               <view 
-                v-if="getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0" 
-                class="wx-subtask-comment-hint">
-                <uni-icons color="#ff9800" size="12" type="chatbubble" />
-                <text v-if="getWXSubtaskCommentCount(subtask) > 0" class="wx-subtask-comment-count">{{ getWXSubtaskCommentCount(subtask) }}条评论</text>
-                <view v-if="getSubtaskUnreadCount(subtask) > 0" class="wx-subtask-unread-dot"></view>
+                v-if="(getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0) || (subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0)" 
+                class="wx-subtask-bottom-info">
+                <!-- 评论信息 -->
+                <view 
+                  v-if="getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0" 
+                  class="wx-subtask-comment-hint">
+                  <uni-icons color="#ff9800" size="12" type="chatbubble" />
+                  <text v-if="getWXSubtaskCommentCount(subtask) > 0" class="wx-subtask-comment-count">{{ getWXSubtaskCommentCount(subtask) }}条评论</text>
+                  <view v-if="getSubtaskUnreadCount(subtask) > 0" class="wx-subtask-unread-dot"></view>
+                </view>
+                
+                <!-- 标签 -->
+                <view 
+                  v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0" 
+                  class="wx-subtask-tags-right">
+                  <text v-if="subtask.tags.length > 4" class="wx-subtask-more-tags">+{{ subtask.tags.length - 4 }}</text>
+                  <view 
+                    v-for="(tag, tagIndex) in subtask.tags.slice(0, 4).reverse()" 
+                    :key="getTagKey(tag, tagIndex)" 
+                    class="wx-subtask-tag-item"
+                    :style="{ backgroundColor: getTagColor(tag) }">
+                    <text class="wx-subtask-tag-text">{{ getTagName(tag) }}</text>
+                  </view>
+                </view>
               </view>
             </view>
           </view>
@@ -354,8 +384,7 @@ const shouldShowCommentInfo = computed(() => {
 })
 
 const hasMetaInfo = computed(() => {
-  return props.task.due_date || 
-         props.task.subtask_count > 0 || 
+  return props.task.subtask_count > 0 || 
          shouldShowCommentInfo.value
 })
 
@@ -685,10 +714,54 @@ const getTagColor = (tag) => {
   }
 }
 
+// 原来的 task-tags 样式保留用于其他可能的地方
 .task-tags {
   @include flex-start;
   gap: $margin-xs;
   flex-shrink: 0;
+}
+
+// Item模式底部信息栏：评论和标签
+.item-bottom-info {
+  @include flex-between;
+  align-items: center;
+  margin-top: $margin-sm;
+  gap: $margin-sm;
+}
+
+// 右侧标签容器样式（从右到左排列）
+.task-tags-right {
+  @include flex-start;
+  flex-direction: row-reverse;
+  gap: $margin-xs;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// 新增：倒计时内联样式
+.countdown-inline {
+  @include flex-start;
+  gap: 4rpx;
+  background-color: rgba(108, 117, 125, 0.1);
+  padding: 2rpx 6rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid rgba(108, 117, 125, 0.3);
+  margin-left: $margin-xs;
+  
+  &.overdue {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    
+    .countdown-text {
+      color: $error-color;
+    }
+  }
+}
+
+.countdown-text {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  font-weight: $font-weight-medium;
 }
 
 .tag-item {
@@ -779,26 +852,27 @@ const getTagColor = (tag) => {
   @include flex-start;
   align-items: center;
   gap: 4rpx;
-  background-color: rgba(255, 152, 0, 0.1);
-  padding: 4rpx 8rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid rgba(255, 152, 0, 0.3);
+  background-color: rgba(255, 152, 0, 0.05);
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(255, 152, 0, 0.2);
   
   &--item {
-    margin-top: $margin-xs;
+    margin-top: 0;
     align-self: flex-start;
   }
 }
 
 .comment-count {
   font-size: $font-size-xs;
-  color: $text-tertiary;
+  color: #ff9800;
   font-weight: $font-weight-medium;
   min-width: 16rpx;
   text-align: center;
   
   .comment-hint--item & {
     min-width: 12rpx;
+    font-size: $font-size-xs;
   }
 }
 
@@ -1008,10 +1082,54 @@ const getTagColor = (tag) => {
   }
 }
 
+// 原来的微信子任务标签样式保留
 .wx-subtask-tags {
   @include flex-start;
   gap: $margin-xs;
   flex-shrink: 0;
+}
+
+// 微信子任务底部信息栏：评论和标签
+.wx-subtask-bottom-info {
+  @include flex-between;
+  align-items: center;
+  margin-top: $margin-xs;
+  gap: $margin-sm;
+}
+
+// 微信子任务右侧标签容器样式（从右到左排列）
+.wx-subtask-tags-right {
+  @include flex-start;
+  flex-direction: row-reverse;
+  gap: $margin-xs;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// 新增：微信子任务倒计时内联样式
+.wx-subtask-countdown-inline {
+  @include flex-start;
+  gap: 3rpx;
+  background-color: rgba(108, 117, 125, 0.1);
+  padding: 1rpx 4rpx;
+  border-radius: 4rpx;
+  border: 1rpx solid rgba(108, 117, 125, 0.3);
+  margin-left: $margin-xs;
+  
+  &.overdue {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    
+    .wx-subtask-countdown-text {
+      color: $error-color;
+    }
+  }
+}
+
+.wx-subtask-countdown-text {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  font-weight: $font-weight-medium;
 }
 
 .wx-subtask-tag-item {
@@ -1100,17 +1218,17 @@ const getTagColor = (tag) => {
   @include flex-start;
   align-items: center;
   gap: 4rpx;
-  background-color: rgba(255, 152, 0, 0.1);
+  background-color: rgba(255, 152, 0, 0.05);
   padding: 4rpx 8rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid rgba(255, 152, 0, 0.3);
-  margin-top: $margin-xs;
+  border-radius: 10rpx;
+  border: 1rpx solid rgba(255, 152, 0, 0.2);
+  margin-top: 0;
   align-self: flex-start;
 }
 
 .wx-subtask-comment-count {
   font-size: $font-size-xs;
-  color: $text-tertiary;
+  color: #ff9800;
   font-weight: $font-weight-medium;
   min-width: 12rpx;
   text-align: center;
