@@ -48,9 +48,11 @@
         :active-filter="activeFilter"
         :available-tags="availableTags"
         :selected-tags="selectedTags"
+        :current-sort="currentSort"
         :todorbook-id="todorbookId"
         @filter-change="handleFilterChange"
         @tag-filter-change="handleTagFilterChange"
+        @sort-change="handleSortChange"
       />
       
       <!-- 任务列表内容区域 -->
@@ -171,6 +173,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  currentSort: {
+    type: Object,
+    default: () => ({ field: 'created_at', order: 'desc' })
+  },
   todorbookId: {
     type: String,
     required: true
@@ -218,6 +224,7 @@ const emit = defineEmits([
   // TaskFilter 相关事件
   'filterChange',
   'tagFilterChange',
+  'sortChange',
   // 滚动事件
   'scroll',
   // 下拉刷新事件
@@ -257,7 +264,7 @@ const unreadCountsCache = ref({})
 const fixedHeaderHeight = computed(() => {
   let height = 0
   if (props.bookData) height += 200 // BookHeader 实际高度更大
-  if (props.filterTabs) height += 60 // TaskFilter 实际高度
+  if (props.filterTabs) height += 65 // TaskFilter 实际高度（压缩后）
   return height
 })
 
@@ -475,6 +482,11 @@ const handleFilterChange = (filter) => {
 
 const handleTagFilterChange = (tags) => {
   emit('tagFilterChange', tags)
+}
+
+const handleSortChange = (sortOption) => {
+  console.log('VirtualTaskList: 排序变更', sortOption)
+  emit('sortChange', sortOption)
 }
 
 // 自定义滚动到顶部方法

@@ -28,6 +28,7 @@
         :filter-tabs="filterTabs"
         :available-tags="availableTags"
         :selected-tags="selectedTags"
+        :current-sort="currentSort"
         :todorbook-id="bookId"
         :refreshing="refreshing"
         :is-pinned="isPinned"
@@ -50,6 +51,7 @@
         @search-click="handleSearchClick"
         @filter-change="setActiveFilter"
         @tag-filter-change="setSelectedTags"
+        @sort-change="setSortOption"
         @scroll="handleScroll"
       />
     </view>
@@ -127,13 +129,16 @@ const {
   activeFilter,
   searchKeyword,
   selectedTags,
+  currentSort,
   filterTabs,
   availableTags,
   filteredTasks,
+  sortedTasks,
   initializeTasks,
   setActiveFilter,
   setSearchKeyword,
   setSelectedTags,
+  setSortOption,
   taskStats,
   overallProgress,
   toggleTaskStatus,
@@ -143,13 +148,13 @@ const {
   createTaskOptimistic
 } = useTaskData(null, allTasks, bookData)
 
-// 置顶功能
+// 置顶功能（基于排序后的任务）
 const { 
   sortedItems: sortedAndPinnedTasks, 
   isPinned, 
   togglePin, 
   refreshPinnedIds 
-} = usePinning('tasks', filteredTasks)
+} = usePinning('tasks', sortedTasks)
 
 // 监听availableTags变化
 watch(availableTags, (newTags) => {

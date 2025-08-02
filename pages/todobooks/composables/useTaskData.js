@@ -38,6 +38,141 @@ function filterTasksByTags(tasks, selectedTags) {
 }
 
 /**
+ * 按时间字段排序任务
+ * @param {Array} tasks - 任务数组
+ * @param {string} field - 排序字段 (created_at, updated_at)
+ * @param {string} order - 排序顺序 (asc, desc)
+ * @returns {Array} 排序后的任务数组
+ */
+function sortByTime(tasks, field, order) {
+  try {
+    if (!tasks || tasks.length === 0) return []
+    
+    const sortedArray = [...tasks]
+    
+    sortedArray.sort((a, b) => {
+      let aTime = a[field]
+      let bTime = b[field]
+      
+      // 处理updated_at为空的情况，使用created_at
+      if (field === 'updated_at') {
+        aTime = aTime || a.created_at
+        bTime = bTime || b.created_at
+      }
+      
+      // 转换为时间戳进行比较
+      const aTimestamp = new Date(aTime).getTime()
+      const bTimestamp = new Date(bTime).getTime()
+      
+      if (order === 'asc') {
+        return aTimestamp - bTimestamp
+      } else {
+        return bTimestamp - aTimestamp
+      }
+    })
+    
+    console.log(`按${field}${order === 'asc' ? '升序' : '降序'}排序完成，共${sortedArray.length}个任务`)
+    return sortedArray
+  } catch (error) {
+    console.error('时间排序失败:', error)
+    return tasks
+  }
+}
+
+/**
+ * 按Tag分组排序任务
+ * @param {Array} tasks - 任务数组
+ * @param {string} order - 排序顺序 (asc, desc)
+ * @returns {Array} 排序后的任务数组
+ */
+function sortByTags(tasks, order) {
+  try {
+    if (!tasks || tasks.length === 0) return []
+    
+    // 将任务按tag分组
+    const tagGroups = new Map()
+    const noTagTasks = []
+    
+    tasks.forEach(task => {
+      const firstTag = getFirstTag(task)
+      if (firstTag) {
+        const tagName = typeof firstTag === 'object' ? firstTag.name : firstTag
+        if (!tagGroups.has(tagName)) {
+          tagGroups.set(tagName, [])
+        }
+        tagGroups.get(tagName).push(task)
+      } else {
+        noTagTasks.push(task)
+      }
+    })
+    
+    // 按tag名称排序
+    const sortedTagNames = Array.from(tagGroups.keys()).sort((a, b) => {
+      return order === 'asc' ? a.localeCompare(b) : b.localeCompare(a)
+    })
+    
+    // 组装最终结果
+    const result = []
+    sortedTagNames.forEach(tagName => {
+      const groupTasks = tagGroups.get(tagName)
+      // 组内按创建时间降序排列
+      groupTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      result.push(...groupTasks)
+    })
+    
+    // 无tag任务放到最后，也按创建时间降序排列
+    noTagTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    result.push(...noTagTasks)
+    
+    console.log(`按Tag${order === 'asc' ? 'A-Z' : 'Z-A'}分组排序完成，共${result.length}个任务，${tagGroups.size}个Tag组`)
+    return result
+  } catch (error) {
+    console.error('Tag排序失败:', error)
+    return tasks
+  }
+}
+
+/**
+ * 获取任务的第一个标签
+ * @param {Object} task - 任务对象
+ * @returns {string|Object|null} 第一个标签
+ */
+function getFirstTag(task) {
+  try {
+    if (!task || !task.tags || !Array.isArray(task.tags) || task.tags.length === 0) {
+      return null
+    }
+    return task.tags[0]
+  } catch (error) {
+    console.error('获取第一个标签失败:', error, task)
+    return null
+  }
+}
+
+/**
+ * 应用排序逻辑
+ * @param {Array} tasks - 任务数组
+ * @param {Object} sortOption - 排序选项
+ * @returns {Array} 排序后的任务数组
+ */
+function applySorting(tasks, sortOption) {
+  if (!tasks || tasks.length === 0) return []
+  
+  const { field, order } = sortOption
+  
+  switch (field) {
+    case 'created_at':
+    case 'updated_at':
+      return sortByTime(tasks, field, order)
+    case 'tags':
+      return sortByTags(tasks, order)
+    default:
+      console.warn('未知的排序字段:', field)
+      return tasks
+  }
+}
+
+/**
  * 搜索任务函数
  * @param {Array} tasks - 任务数组
  * @param {string} keyword - 搜索关键词
@@ -121,6 +256,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
   const searchKeyword = ref('')
   const selectedTags = ref([])
   const cachedAvailableTags = ref([])
+  const currentSort = ref({ field: 'created_at', order: 'desc' })
   
   // 计算属性
   const filteredTasks = computed(() => {
@@ -137,6 +273,23 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
     }
     
     return filtered
+  })
+
+  // 排序后的任务列表（先过滤后排序）
+  const sortedTasks = computed(() => {
+    const startTime = performance.now()
+    const filtered = filteredTasks.value
+    const sorted = applySorting(filtered, currentSort.value)
+    const endTime = performance.now()
+    
+    const duration = endTime - startTime
+    if (duration > 500) {
+      console.warn(`排序耗时过长: ${duration.toFixed(2)}ms，任务数量: ${filtered.length}`)
+    } else {
+      console.log(`排序完成: ${duration.toFixed(2)}ms，任务数量: ${filtered.length}`)
+    }
+    
+    return sorted
   })
   
   const taskStats = computed(() => {
@@ -563,6 +716,17 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
   }
 
   /**
+   * 设置排序选项
+   * @param {Object} sortOption - 排序选项 { field, order }
+   */
+  const setSortOption = (sortOption) => {
+    if (sortOption && sortOption.field && sortOption.order) {
+      currentSort.value = { ...sortOption }
+      console.log('设置排序选项:', currentSort.value)
+    }
+  }
+
+  /**
    * 重置状态
    */
   /**
@@ -660,7 +824,9 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
     error.value = null
     activeFilter.value = 'all'
     searchKeyword.value = ''
+    selectedTags.value = []
     cachedAvailableTags.value = []
+    currentSort.value = { field: 'created_at', order: 'desc' }
     
     // 清除标签服务中的缓存
     if (bookId) {
@@ -771,9 +937,11 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
     activeFilter,
     searchKeyword,
     selectedTags,
+    currentSort,
     
     // 计算属性
     filteredTasks,
+    sortedTasks,
     taskStats,
     overallProgress,
     filterTabs,
@@ -788,6 +956,7 @@ export function useTaskData(bookId, allTasks = null, bookData = null) {
     setActiveFilter,
     setSearchKeyword,
     setSelectedTags,
+    setSortOption,
     resetState,
     updateTaskOptimistic,
     createTaskOptimistic,
