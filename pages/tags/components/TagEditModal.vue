@@ -49,6 +49,13 @@
 				</view>
 			</view>
 
+			<view class="delete-section">
+				<button class="delete-tag-btn" @click="handleDelete" :disabled="loading">
+					<uni-icons type="trash" size="20" color="#ff4444" />
+					<text class="delete-text">删除标签</text>
+				</button>
+			</view>
+
 			<view class="modal-actions">
 				<button class="cancel-btn" @click="handleCancel" :disabled="loading">
 					取消
@@ -87,7 +94,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
+const emit = defineEmits(['update:visible', 'confirm', 'cancel', 'delete'])
 
 // 模板引用
 const popup = ref()
@@ -169,6 +176,21 @@ const handleCancel = () => {
 	
 	emit('update:visible', false)
 	emit('cancel')
+}
+
+const handleDelete = () => {
+	if (loading.value) return
+	
+	if (!props.tag || !props.tag.id) {
+		uni.showToast({
+			title: '无法删除：标签数据无效',
+			icon: 'error'
+		})
+		return
+	}
+	
+	// 触发删除事件，由父组件处理删除逻辑
+	emit('delete', props.tag)
 }
 
 const handleConfirm = async () => {
@@ -372,6 +394,41 @@ defineExpose({
 }
 
 // 移除旧的tag预览样式，现在使用UniTag组件
+
+.delete-section {
+	padding: 20rpx 30rpx 10rpx;
+	border-top: 1rpx solid #f0f0f0;
+}
+
+.delete-tag-btn {
+	width: 100%;
+	height: 80rpx;
+	background-color: #fff5f5;
+	color: #ff4444;
+	border-radius: 16rpx;
+	font-size: 30rpx;
+	border: 1rpx solid #ffdddd;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 10rpx;
+	transition: all 0.2s ease;
+}
+
+.delete-tag-btn:active:not(:disabled) {
+	background-color: #ffeeee;
+	border-color: #ff4444;
+}
+
+.delete-tag-btn:disabled {
+	opacity: 0.6;
+}
+
+.delete-text {
+	color: #ff4444;
+	font-size: 30rpx;
+}
 
 .modal-actions {
 	padding: 20rpx 30rpx 30rpx;

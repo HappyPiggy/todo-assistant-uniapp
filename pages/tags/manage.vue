@@ -41,10 +41,12 @@
 			<!-- 预览 -->
 			<view class="preview-section" v-if="formData.name">
 				<view class="preview-label">预览效果：</view>
-				<UniTag 
-					:text="formData.name"
-					:color="formData.color"
-					size="medium" />
+				<view class="preview-tag-container">
+					<UniTag 
+						:text="formData.name"
+						:color="formData.color"
+						size="medium" />
+				</view>
 			</view>
 
 			<!-- 操作按钮 -->
@@ -80,10 +82,7 @@
 						size="medium" />
 					<view class="tag-actions">
 						<view class="edit-btn" @click.stop="startEditTag(tag)">
-							<uni-icons color="#ffffff" size="12" type="compose" />
-						</view>
-						<view class="delete-btn" @click.stop="deleteTag(tag)">
-							<uni-icons color="#ffffff" size="10" type="clear" />
+							<uni-icons color="#666666" size="14" type="compose" />
 						</view>
 					</view>
 				</view>
@@ -108,7 +107,8 @@
 			:color-options="colorOptions"
 			:available-tags="availableTags"
 			@confirm="saveTagEdit"
-			@cancel="cancelEditTag" />
+			@cancel="cancelEditTag"
+			@delete="deleteTag" />
 
 		<!-- 删除确认模态 -->
 		<TagDeleteConfirm

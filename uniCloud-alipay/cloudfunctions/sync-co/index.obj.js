@@ -2,11 +2,30 @@
 const uniID = require('uni-id-common')
 const crypto = require('crypto')
 
+// 引入标签同步模块
+const {
+  updateTagInTasks,
+  removeTagFromTasks
+} = require('./module/tag/index')
+
 module.exports = {
-  _before: function () {
+  _before: async function () {
+    const token = this.getUniIdToken()
+    if (!token) {
+      throw new Error('请登录后再访问')
+    }
+    
     this.uniID = uniID.createInstance({
       context: this.getCloudInfo()
     })
+    
+    const payload = await this.uniID.checkToken(token)
+    if (payload.code && payload.code > 0) {
+      throw new Error(payload.message || '登录状态无效')
+    }
+    
+    this.uid = payload.uid
+    this.db = uniCloud.database()
   },
 
   /**
@@ -469,5 +488,9 @@ module.exports = {
       .update(Date.now().toString())
       .digest('hex')
       .substring(0, 8)
-  }
+  },
+
+  // 标签同步接口
+  updateTagInTasks,
+  removeTagFromTasks
 }

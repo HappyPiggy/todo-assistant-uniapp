@@ -16,7 +16,7 @@ This is a modern task management application built with **uni-app + Vue 3 + uniC
 - **Authentication**: uni-id-pages authentication module
 
 ### Backend Architecture
-- **Cloud Platform**: uniCloud Aliyun version
+- **Cloud Platform**: uniCloud alipay version
 - **Database**: MongoDB (uniCloud DB)
 - **Cloud Functions**: Node.js Cloud Objects
 - **Authentication System**: uni-id-common

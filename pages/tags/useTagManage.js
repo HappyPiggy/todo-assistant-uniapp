@@ -302,6 +302,35 @@ export const useTagManage = () => {
           tagService.clearBookCache(bookId.value)
         }
         
+        // 同步更新所有任务中的标签
+        if (bookId.value && (originalTag.name !== updatedTag.name || originalTag.color !== updatedTag.color)) {
+          uni.showLoading({
+            title: '同步中...',
+            mask: true
+          })
+          
+          try {
+            const syncCo = uniCloud.importObject('sync-co')
+            const syncResult = await syncCo.updateTagInTasks(bookId.value, updatedTag.id, {
+              name: updatedTag.name,
+              color: updatedTag.color
+            })
+            
+            uni.hideLoading()
+            
+            if (syncResult.code === 0) {
+              console.log(`成功同步 ${syncResult.updatedCount} 个任务中的标签`)
+            } else {
+              console.error('标签同步失败:', syncResult.message)
+              // 不阻塞主流程，仅记录错误
+            }
+          } catch (syncError) {
+            uni.hideLoading()
+            console.error('调用标签同步云函数失败:', syncError)
+            // 不阻塞主流程
+          }
+        }
+        
         // 触发页面更新事件
         uni.$emit('tag-updated', updatedTag)
         
@@ -424,6 +453,32 @@ export const useTagManage = () => {
         // 清理相关缓存
         if (bookId.value) {
           tagService.clearBookCache(bookId.value)
+        }
+        
+        // 同步删除所有任务中的标签
+        if (bookId.value && dependencyCount.value > 0) {
+          uni.showLoading({
+            title: '同步删除中...',
+            mask: true
+          })
+          
+          try {
+            const syncCo = uniCloud.importObject('sync-co')
+            const syncResult = await syncCo.removeTagFromTasks(bookId.value, tagId)
+            
+            uni.hideLoading()
+            
+            if (syncResult.code === 0) {
+              console.log(`成功从 ${syncResult.updatedCount} 个任务中删除标签`)
+            } else {
+              console.error('标签删除同步失败:', syncResult.message)
+              // 不阻塞主流程，仅记录错误
+            }
+          } catch (syncError) {
+            uni.hideLoading()
+            console.error('调用标签删除云函数失败:', syncError)
+            // 不阻塞主流程
+          }
         }
         
         // 重置删除状态
