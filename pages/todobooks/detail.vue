@@ -30,13 +30,11 @@
         :selected-tags="selectedTags"
         :current-sort="currentSort"
         :todorbook-id="bookId"
-        :refreshing="refreshing"
         :is-pinned="isPinned"
         :toggle-pin="togglePin"
         :is-archived="isArchived"
         :can-edit="canEdit"
         @retry="refreshTasks"
-        @refresh="handleRefresh"
         @add-task="addTask"
         @task-click="handleTaskClick"
         @status-toggle="toggleTaskStatus"
@@ -92,7 +90,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onPullDownRefresh } from '@dcloudio/uni-app'
 
 import VirtualTaskList from '@/pages/todobooks/components/task/VirtualTaskList.vue'
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -197,7 +195,6 @@ const mainScrollHeight = ref(600) // 主滚动区域高度
 const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const showBackToTop = ref(false) // 返回顶部按钮显示状态
 const virtualTaskListRef = ref(null) // VirtualTaskList 组件引用
-const refreshing = ref(false) // 下拉刷新状态
 
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
@@ -293,20 +290,26 @@ const refreshTasks = async () => {
   await initializeTasks(allTasks.value)
 }
 
-// 处理下拉刷新
-const handleRefresh = async () => {
+// 处理下拉刷新（原生下拉）
+const handlePullDownRefresh = async () => {
   if (!bookId) return
   
-  refreshing.value = true
-  
   try {
+    console.log('触发下拉刷新')
+    
     // 清理评论缓存，确保获取最新数据
     if (virtualTaskListRef.value) {
-      console.log('detail.vue handleRefresh: 清理评论缓存')
+      console.log('detail.vue handlePullDownRefresh: 清理评论缓存')
       virtualTaskListRef.value.clearCommentCache()
     }
     
+    refreshPinnedIds() // 刷新置顶状态
     await refreshTasks()
+    
+    uni.showToast({
+      title: '刷新成功',
+      icon: 'success'
+    })
   } catch (error) {
     console.error('下拉刷新失败:', error)
     uni.showToast({
@@ -314,7 +317,7 @@ const handleRefresh = async () => {
       icon: 'none'
     })
   } finally {
-    refreshing.value = false
+    uni.stopPullDownRefresh()
   }
 }
 
@@ -509,6 +512,11 @@ const handleTaskParentChanged = async (eventData) => {
     await refreshTasks()
   }
 }
+
+// 注册原生下拉刷新生命周期
+onPullDownRefresh(() => {
+  handlePullDownRefresh()
+})
 
 // 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return。
 </script>
