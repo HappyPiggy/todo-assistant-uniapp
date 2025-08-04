@@ -7,26 +7,20 @@
         <text class="close-btn" @click="cancel">✕</text>
       </view>
       
-      <scroll-view class="sort-list" :scroll-y="true">
-        <view class="sort-section">
-          <text class="section-title">排序选项</text>
-          <view class="sort-items">
-            <view 
-              v-for="option in sortOptions"
-              :key="`${option.field}_${option.order}`"
-              class="sort-item"
-              :class="{ selected: isSortSelected(option) }"
-              @click="selectSort(option)"
-            >
-              <view class="sort-content">
-                <text class="sort-icon">{{ option.icon }}</text>
-                <text class="sort-label">{{ option.label }}</text>
-              </view>
-              <view v-if="isSortSelected(option)" class="check-icon">✓</view>
-            </view>
+      <view class="sort-list">
+        <view class="sort-grid">
+          <view 
+            v-for="option in sortOptions"
+            :key="`${option.field}_${option.order}`"
+            class="sort-item"
+            :class="{ selected: isSortSelected(option) }"
+            @click="selectSort(option)"
+          >
+            <text class="sort-label">{{ option.label }}</text>
+            <view v-if="isSortSelected(option)" class="check-icon">✓</view>
           </view>
         </view>
-      </scroll-view>
+      </view>
       
       <view class="popup-footer">
         <button class="cancel-btn" @click="cancel">取消</button>
@@ -62,38 +56,32 @@ const sortOptions = [
   { 
     field: 'created_at', 
     order: 'desc', 
-    label: '创建时间 (最新优先)',
-    icon: '🕒'
+    label: '最新创建'
   },
   { 
     field: 'created_at', 
     order: 'asc', 
-    label: '创建时间 (最早优先)',
-    icon: '🕒'
+    label: '最早创建'
   },
   { 
     field: 'updated_at', 
     order: 'desc', 
-    label: '更新时间 (最新优先)',
-    icon: '🔄'
+    label: '最新更新'
   },
   { 
     field: 'updated_at', 
     order: 'asc', 
-    label: '更新时间 (最早优先)',
-    icon: '🔄'
+    label: '最早更新'
   },
   { 
     field: 'tags', 
     order: 'asc', 
-    label: 'Tag类别 (A-Z)',
-    icon: '🏷️'
+    label: '标签 A-Z'
   },
   { 
     field: 'tags', 
     order: 'desc', 
-    label: 'Tag类别 (Z-A)',
-    icon: '🏷️'
+    label: '标签 Z-A'
   }
 ]
 
@@ -109,13 +97,10 @@ const isSortSelected = (option) => {
 // 选择排序选项
 const selectSort = (option) => {
   tempSelectedSort.value = { ...option }
-  console.log('选择排序选项:', option)
 }
 
 // 确认选择
 const confirm = () => {
-  console.log('🎯 确认排序选择:', JSON.stringify(tempSelectedSort.value, null, 2))
-  console.log('🎯 触发confirm事件，传递数据:', JSON.stringify(tempSelectedSort.value, null, 2))
   emit('confirm', tempSelectedSort.value)
 }
 
@@ -181,7 +166,9 @@ onMounted(() => {
   position: relative;
   background-color: $bg-white;
   border-radius: 16rpx 16rpx 0 0;
-  max-height: 60vh;
+  width: 90%;
+  max-width: 600rpx;
+  margin: 0 auto;
   @include flex-column;
   animation: slideUp 0.3s ease-out;
 }
@@ -197,7 +184,7 @@ onMounted(() => {
 
 .popup-header {
   @include flex-between;
-  padding: $padding-base;
+  padding: 24rpx;
   border-bottom: 1rpx solid $gray-200;
 }
 
@@ -219,34 +206,24 @@ onMounted(() => {
 }
 
 .sort-list {
-  flex: 1;
-  padding: $padding-base 0;
+  padding: 16rpx 24rpx;
 }
 
-.sort-section {
-  padding: 0 $padding-base;
-}
-
-.section-title {
-  font-size: $font-size-sm;
-  color: $text-secondary;
-  font-weight: $font-weight-medium;
-  margin-bottom: $margin-sm;
-  display: block;
-}
-
-.sort-items {
-  @include flex-column;
-  gap: $margin-xs;
+.sort-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12rpx;
 }
 
 .sort-item {
   @include flex-between;
-  padding: $padding-sm $padding-base;
+  padding: 24rpx 16rpx;
   background-color: $gray-50;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   transition: $transition-fast;
   cursor: pointer;
+  min-height: 60rpx;
+  position: relative;
   
   &.selected {
     background-color: rgba($primary-color, 0.1);
@@ -258,40 +235,32 @@ onMounted(() => {
   }
 }
 
-.sort-content {
-  @include flex-start;
+.sort-label {
+  font-size: $font-size-sm;
+  color: $text-primary;
+  font-weight: $font-weight-medium;
   flex: 1;
 }
 
-.sort-icon {
-  font-size: $font-size-base;
-  margin-right: $margin-sm;
-}
-
-.sort-label {
-  font-size: $font-size-base;
-  color: $text-primary;
-  font-weight: $font-weight-medium;
-}
-
 .check-icon {
-  font-size: $font-size-base;
+  font-size: $font-size-sm;
   color: $primary-color;
   font-weight: $font-weight-bold;
+  margin-left: 8rpx;
 }
 
 .popup-footer {
   @include flex-between;
-  padding: $padding-base;
+  padding: 20rpx 24rpx;
   border-top: 1rpx solid $gray-200;
-  gap: $margin-base;
+  gap: 16rpx;
 }
 
 .cancel-btn,
 .confirm-btn {
   flex: 1;
-  height: 80rpx;
-  border-radius: 12rpx;
+  height: 72rpx;
+  border-radius: 8rpx;
   font-size: $font-size-base;
   font-weight: $font-weight-medium;
   border: none;

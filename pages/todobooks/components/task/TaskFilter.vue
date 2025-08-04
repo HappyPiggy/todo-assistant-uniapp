@@ -99,7 +99,6 @@ const handleTagConfirm = (tags) => {
 }
 
 const handleSortChange = (sortOption) => {
-  console.log('TaskFilter: 排序变更', sortOption)
   emit('sortChange', sortOption)
 }
 </script>

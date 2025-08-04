@@ -164,12 +164,10 @@ watch(availableTags, (newTags) => {
 // 监听用户切换，重新初始化排序状态
 watch(currentUserId, (newUserId, oldUserId) => {
   if (newUserId && oldUserId && newUserId !== oldUserId && bookId) {
-    console.log('👤 用户切换，重新初始化排序状态', { oldUserId, newUserId, bookId })
     // 用户切换后重新初始化排序状态
     initializeSortFromStorage()
   }
   if (newUserId && !oldUserId && bookId) {
-    console.log('👤 用户ID现在可用，初始化排序状态', { newUserId, bookId })
     // 从无用户ID到有用户ID，初始化排序状态
     initializeSortFromStorage()
   }
@@ -183,7 +181,6 @@ const isArchived = computed(() => {
 // 编辑权限检查
 const canEdit = computed(() => {
   const result = !isArchived.value && !!bookData.value
-  console.log('canEdit计算:', { isArchived: isArchived.value, bookData: !!bookData.value, result })
   return result
 })
 
