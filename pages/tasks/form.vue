@@ -91,7 +91,7 @@
 							:color="getTagColor(tag)"
 							size="medium" />
 						<view class="remove-tag" @click="removeTag(index)">
-							<uni-icons color="#ffffff" size="14" type="clear" />
+							<uni-icons color="#ffffff" size="12" type="clear" />
 						</view>
 					</view>
 				</view>
@@ -582,21 +582,36 @@ uni.$on('updateTags', updateTaskTags)
 	position: relative;
 	display: inline-flex;
 	align-items: center;
+	margin: 4rpx 8rpx 4rpx 0;
 }
 
 .remove-tag {
 	position: absolute;
-	top: -8rpx;
-	right: -8rpx;
+	top: -4rpx;
+	right: -4rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	width: 24rpx;
 	height: 24rpx;
 	border-radius: 12rpx;
-	background-color: #ff4757;
-	border: 2rpx solid #ffffff;
+	background-color: rgba(255, 71, 87, 0.9);
+	border: 1rpx solid #ffffff;
+	backdrop-filter: blur(4rpx);
+	box-shadow: 0 2rpx 6rpx rgba(255, 71, 87, 0.25);
+	transition: all 0.2s ease;
 	z-index: 1;
+}
+
+.remove-tag:hover {
+	background-color: #ff4757;
+	box-shadow: 0 4rpx 12rpx rgba(255, 71, 87, 0.4);
+	transform: scale(1.1);
+}
+
+.remove-tag:active {
+	background-color: #ff3742;
+	transform: scale(0.95);
 }
 
 .empty-tags {
