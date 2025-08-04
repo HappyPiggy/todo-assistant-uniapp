@@ -69,6 +69,16 @@
 						:step="1">
 					</uni-easyinput>
 				</uni-forms-item>
+
+				<uni-forms-item name="actual_cost" label="实际花费（元）">
+					<uni-easyinput 
+						v-model="formData.actual_cost" 
+						type="number"
+						placeholder="任务实际花费金额（可选）"
+						:min="0"
+						:step="1">
+					</uni-easyinput>
+				</uni-forms-item>
 			</view>
 
 			<!-- 分类标签 -->
@@ -168,6 +178,7 @@ const formData = reactive({
 	due_date: null,
 	estimated_hours: '',
 	budget: '',
+	actual_cost: '',
 	tags: [],
 	parent_id: null
 })
@@ -299,6 +310,7 @@ const loadTaskData = async () => {
 				due_date: task.due_date || null,
 				estimated_hours: task.estimated_hours ? String(task.estimated_hours) : '',
 				budget: task.budget ? String(task.budget) : '',
+				actual_cost: task.actual_cost ? String(task.actual_cost) : '',
 				tags: task.tags || [],
 				parent_id: task.parent_id || null
 			})
@@ -402,6 +414,13 @@ const submitTask = async () => {
 		taskData.budget = parseInt(formData.budget)
 	} else if (isEditMode.value) {
 		taskData.budget = null
+	}
+
+	// 添加实际花费
+	if (formData.actual_cost) {
+		taskData.actual_cost = parseInt(formData.actual_cost)
+	} else if (isEditMode.value) {
+		taskData.actual_cost = null
 	}
 
 	// 检测是否有父任务

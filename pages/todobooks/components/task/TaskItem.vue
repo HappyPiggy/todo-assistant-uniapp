@@ -70,9 +70,9 @@
           <!-- 描述 -->
           <text v-if="task.description" class="task-description">{{ task.description }}</text>
           
-          <!-- Item模式的底部信息栏：评论和标签 -->
+          <!-- Item模式的底部信息栏：评论、预算和标签 -->
           <view 
-            v-if="variant === 'item' && (shouldShowCommentInfo || (task.tags && Array.isArray(task.tags) && task.tags.length > 0))" 
+            v-if="variant === 'item' && (shouldShowCommentInfo || shouldShowBudgetInfo || (task.tags && Array.isArray(task.tags) && task.tags.length > 0))" 
             class="item-bottom-info">
             <!-- 评论信息 -->
             <view 
@@ -81,6 +81,14 @@
               <uni-icons color="#ff9800" size="12" type="chatbubble" />
               <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
               <view v-if="hasUnreadComments" class="unread-dot"></view>
+            </view>
+            
+            <!-- 预算信息 -->
+            <view 
+              v-if="shouldShowBudgetInfo" 
+              class="budget-info budget-info--item">
+              <uni-icons color="#28a745" size="12" type="wallet" />
+              <text class="budget-text">{{ budgetDisplayText }}</text>
             </view>
             
             <!-- 标签 -->
@@ -125,6 +133,12 @@
           <uni-icons color="#ff9800" size="14" type="chatbubble" />
           <text v-if="commentCount > 0" class="comment-count">{{ commentDisplayText }}</text>
           <view v-if="hasUnreadComments" class="unread-dot"></view>
+        </view>
+        
+        <!-- 预算信息 -->
+        <view v-if="shouldShowBudgetInfo" class="budget-info">
+          <uni-icons color="#28a745" size="14" type="wallet" />
+          <text class="budget-text">{{ budgetDisplayText }}</text>
         </view>
       </view>
       
@@ -205,9 +219,9 @@
               <!-- 描述 -->
               <text v-if="subtask.description" class="wx-subtask-description">{{ subtask.description }}</text>
               
-              <!-- 子任务底部信息栏：评论和标签 -->
+              <!-- 子任务底部信息栏：评论、预算和标签 -->
               <view 
-                v-if="(getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0) || (subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0)" 
+                v-if="(getWXSubtaskCommentCount(subtask) > 0 || getSubtaskUnreadCount(subtask) > 0) || shouldShowSubtaskBudgetInfo(subtask) || (subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0)" 
                 class="wx-subtask-bottom-info">
                 <!-- 评论信息 -->
                 <view 
@@ -216,6 +230,14 @@
                   <uni-icons color="#ff9800" size="12" type="chatbubble" />
                   <text v-if="getWXSubtaskCommentCount(subtask) > 0" class="wx-subtask-comment-count">{{ getWXSubtaskCommentCount(subtask) }}条评论</text>
                   <view v-if="getSubtaskUnreadCount(subtask) > 0" class="wx-subtask-unread-dot"></view>
+                </view>
+                
+                <!-- 预算信息 -->
+                <view 
+                  v-if="shouldShowSubtaskBudgetInfo(subtask)" 
+                  class="wx-subtask-budget-info">
+                  <uni-icons color="#28a745" size="12" type="wallet" />
+                  <text class="wx-subtask-budget-text">{{ getSubtaskBudgetDisplayText(subtask) }}</text>
                 </view>
                 
                 <!-- 标签 -->
@@ -381,9 +403,41 @@ const shouldShowCommentInfo = computed(() => {
   }
 })
 
+// 预算相关计算属性
+const shouldShowBudgetInfo = computed(() => {
+  try {
+    const budget = props.task.budget || 0
+    const actualCost = props.task.actual_cost || 0
+    return budget > 0 || actualCost > 0
+  } catch (error) {
+    console.error('检查是否显示预算信息失败:', error)
+    return false
+  }
+})
+
+const budgetDisplayText = computed(() => {
+  try {
+    const budget = props.task.budget || 0
+    const actualCost = props.task.actual_cost || 0
+    
+    if (budget > 0 && actualCost > 0) {
+      return `¥${actualCost}/${budget}`
+    } else if (budget > 0) {
+      return `预算¥${budget}`
+    } else if (actualCost > 0) {
+      return `花费¥${actualCost}`
+    }
+    return ''
+  } catch (error) {
+    console.error('格式化预算显示文本失败:', error)
+    return ''
+  }
+})
+
 const hasMetaInfo = computed(() => {
   return props.task.subtask_count > 0 || 
-         shouldShowCommentInfo.value
+         shouldShowCommentInfo.value ||
+         shouldShowBudgetInfo.value
 })
 
 // 微信小程序专用：子任务显示条件计算属性
@@ -487,6 +541,37 @@ const getWXSubtaskCommentCount = (subtask) => {
 const getSubtaskUnreadCount = (subtask) => {
   // 这里可以根据实际需求实现子任务未读评论数的计算
   return 0
+}
+
+// 子任务预算相关方法
+const shouldShowSubtaskBudgetInfo = (subtask) => {
+  try {
+    const budget = subtask.budget || 0
+    const actualCost = subtask.actual_cost || 0
+    return budget > 0 || actualCost > 0
+  } catch (error) {
+    console.error('检查子任务预算信息失败:', error)
+    return false
+  }
+}
+
+const getSubtaskBudgetDisplayText = (subtask) => {
+  try {
+    const budget = subtask.budget || 0
+    const actualCost = subtask.actual_cost || 0
+    
+    if (budget > 0 && actualCost > 0) {
+      return `¥${actualCost}/${budget}`
+    } else if (budget > 0) {
+      return `预算¥${budget}`
+    } else if (actualCost > 0) {
+      return `花费¥${actualCost}`
+    }
+    return ''
+  } catch (error) {
+    console.error('格式化子任务预算显示文本失败:', error)
+    return ''
+  }
 }
 
 // 标签相关方法
@@ -843,6 +928,21 @@ const getTagColor = (tag) => {
   }
 }
 
+.budget-info {
+  @include flex-start;
+  align-items: center;
+  gap: 4rpx;
+  background-color: rgba(40, 167, 69, 0.05);
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(40, 167, 69, 0.2);
+  
+  &--item {
+    margin-top: 0;
+    align-self: flex-start;
+  }
+}
+
 .comment-count {
   font-size: $font-size-xs;
   color: #ff9800;
@@ -851,6 +951,19 @@ const getTagColor = (tag) => {
   text-align: center;
   
   .comment-hint--item & {
+    min-width: 12rpx;
+    font-size: $font-size-xs;
+  }
+}
+
+.budget-text {
+  font-size: $font-size-xs;
+  color: #28a745;
+  font-weight: $font-weight-medium;
+  min-width: 16rpx;
+  text-align: center;
+  
+  .budget-info--item & {
     min-width: 12rpx;
     font-size: $font-size-xs;
   }
@@ -1195,9 +1308,29 @@ const getTagColor = (tag) => {
   align-self: flex-start;
 }
 
+.wx-subtask-budget-info {
+  @include flex-start;
+  align-items: center;
+  gap: 4rpx;
+  background-color: rgba(40, 167, 69, 0.05);
+  padding: 4rpx 8rpx;
+  border-radius: 10rpx;
+  border: 1rpx solid rgba(40, 167, 69, 0.2);
+  margin-top: 0;
+  align-self: flex-start;
+}
+
 .wx-subtask-comment-count {
   font-size: $font-size-xs;
   color: #ff9800;
+  font-weight: $font-weight-medium;
+  min-width: 12rpx;
+  text-align: center;
+}
+
+.wx-subtask-budget-text {
+  font-size: $font-size-xs;
+  color: #28a745;
   font-weight: $font-weight-medium;
   min-width: 12rpx;
   text-align: center;
