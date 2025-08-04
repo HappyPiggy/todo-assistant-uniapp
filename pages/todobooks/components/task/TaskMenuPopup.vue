@@ -18,6 +18,15 @@
         
         <!-- 正常状态下显示所有操作 -->
         <template v-else-if="canEdit">
+          <view class="menu-item" @click="handleEdit">
+            <uni-icons color="#28a745" size="20" type="compose" />
+            <text class="menu-text">编辑任务</text>
+          </view>
+          <view class="menu-item" @click="handleViewDetail">
+            <uni-icons color="#007AFF" size="20" type="eye" />
+            <text class="menu-text">查看详情</text>
+          </view>
+
           <view class="menu-item" @click="handleTogglePin">
             <uni-icons 
               :color="isPinned ? '#FF6B6B' : '#007AFF'" 
@@ -25,14 +34,6 @@
               :type="isPinned ? 'star-filled' : 'star'" 
             />
             <text class="menu-text">{{ isPinned ? '取消置顶' : '置顶任务' }}</text>
-          </view>
-          <view class="menu-item" @click="handleViewDetail">
-            <uni-icons color="#007AFF" size="20" type="eye" />
-            <text class="menu-text">查看详情</text>
-          </view>
-          <view class="menu-item" @click="handleEdit">
-            <uni-icons color="#28a745" size="20" type="compose" />
-            <text class="menu-text">编辑任务</text>
           </view>
           <view class="menu-item danger" @click="handleDelete">
             <uni-icons color="#FF4757" size="20" type="trash" />

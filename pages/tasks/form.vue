@@ -634,6 +634,7 @@ uni.$on('updateTags', updateTaskTags)
 	border-top: 1rpx solid #e5e5e5;
 	display: flex;
 	gap: 20rpx;
+	z-index: 10;
 	/* #ifndef APP-NVUE */
 	padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
 	/* #endif */
