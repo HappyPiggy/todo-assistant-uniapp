@@ -105,7 +105,7 @@ const loading = ref(false)
 
 const formData = reactive({
 	name: '',
-	color: '#007AFF'
+	color: '#7BCCC4'
 })
 
 const rules = {
@@ -136,10 +136,10 @@ watch(() => props.visible, (newVisible) => {
 watch(() => props.tag, (newTag) => {
 	if (newTag) {
 		formData.name = newTag.name || ''
-		formData.color = newTag.color || '#007AFF'
+		formData.color = newTag.color || '#7BCCC4'
 	} else {
 		formData.name = ''
-		formData.color = '#007AFF'
+		formData.color = '#7BCCC4'
 	}
 }, { immediate: true })
 
@@ -173,7 +173,7 @@ const handleCancel = () => {
 	// 重置表单数据
 	if (props.tag) {
 		formData.name = props.tag.name || ''
-		formData.color = props.tag.color || '#007AFF'
+		formData.color = props.tag.color || '#7BCCC4'
 	}
 	
 	emit('update:visible', false)
@@ -470,7 +470,7 @@ defineExpose({
 .confirm-btn {
 	flex: 1;
 	height: 80rpx;
-	background-color: #007AFF;
+	background-color: #7BCCC4;
 	color: #ffffff;
 	border-radius: 16rpx;
 	font-size: 30rpx;

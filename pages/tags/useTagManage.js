@@ -23,22 +23,22 @@ export const useTagManage = () => {
   
   const formData = reactive({
     name: '',
-    color: '#007AFF'
+    color: '#7BCCC4'
   })
   
   const colorOptions = [
-    { name: '蓝色', value: '#007AFF' },
-    { name: '绿色', value: '#28a745' },
-    { name: '红色', value: '#dc3545' },
-    { name: '橙色', value: '#fd7e14' },
-    { name: '紫色', value: '#6f42c1' },
-    { name: '青色', value: '#17a2b8' },
-    { name: '粉色', value: '#e83e8c' },
-    { name: '黄色', value: '#ffc107' },
-    { name: '深绿', value: '#198754' },
-    { name: '深蓝', value: '#0d6efd' },
-    { name: '深紫', value: '#8031a8' },
-    { name: '深灰', value: '#6c757d' }
+    { name: '薄荷绿', value: '#7BCCC4' },
+    { name: '樱花粉', value: '#F8A5C2' },
+    { name: '薰衣草紫', value: '#C8A2C8' },
+    { name: '奶油黄', value: '#F6E96B' },
+    { name: '天空蓝', value: '#87CEEB' },
+    { name: '桃子粉', value: '#FFAB91' },
+    { name: '柠檬绿', value: '#B8E994' },
+    { name: '玫瑰金', value: '#E8A87C' },
+    { name: '淡紫色', value: '#B19CD9' },
+    { name: '珊瑚橙', value: '#FF8A65' },
+    { name: '青瓷蓝', value: '#81C7D4' },
+    { name: '米杏色', value: '#E8D5B7' }
   ]
   
   const rules = {
@@ -97,7 +97,7 @@ export const useTagManage = () => {
           allTagsMap.set(tag.id, {
             id: tag.id,
             name: tag.name,
-            color: tag.color || '#007AFF',
+            color: tag.color || '#7BCCC4',
             createdAt: tag.createdAt || new Date().toISOString(),
             source: 'local' // 标记来源
           })
@@ -114,7 +114,7 @@ export const useTagManage = () => {
               ...tag,
               source: 'task' // 标记来源
             })
-          } else if (existingTag.source === 'task' && tag.color !== '#007AFF') {
+          } else if (existingTag.source === 'task' && tag.color !== '#7BCCC4') {
             // 如果都是任务中的标签，但新的有颜色信息，则更新
             allTagsMap.set(existingTag.id, {
               ...existingTag,
@@ -147,7 +147,7 @@ export const useTagManage = () => {
             const newTag = {
               id: tag.id || `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               name: tag.name,
-              color: tag.color || '#007AFF',
+              color: tag.color || '#7BCCC4',
               createdAt: tag.createdAt || new Date().toISOString(),
               source: 'current_task'
             }
@@ -223,7 +223,7 @@ export const useTagManage = () => {
       
       // 清空表单
       formData.name = ''
-      formData.color = '#007AFF'
+      formData.color = '#7BCCC4'
       
       uni.showToast({
         title: '标签创建成功',
