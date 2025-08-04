@@ -187,16 +187,14 @@ onLoad((options) => {
   initializeData(options)
   
   // 监听标签相关事件
-  uni.$on('tag-deleted', (tagId) => {
-    console.log('[标签管理] 收到标签删除事件:', tagId)
+  uni.$on('tag-deleted', async (tagId) => {
     // 重新加载标签数据
-    loadAvailableTags()
+    await loadAvailableTags()
   })
   
-  uni.$on('tag-updated', (tag) => {
-    console.log('[标签管理] 收到标签编辑事件:', tag)
+  uni.$on('tag-updated', async (tag) => {
     // 重新加载标签数据
-    loadAvailableTags()
+    await loadAvailableTags()
   })
 })
 

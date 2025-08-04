@@ -1,4 +1,4 @@
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { currentUserId } from '@/store/storage.js'
 import { tagService } from '@/pages/tasks/composables/useTagService.js'
 
@@ -66,14 +66,12 @@ export const useTagManage = () => {
    */
   const loadTaskTags = async () => {
     if (!bookId.value) {
-      console.log('没有 bookId，无法加载任务标签')
       return []
     }
     
     try {
       // 使用标签服务获取标签，带缓存功能
       const tags = await tagService.getBookTags(bookId.value)
-      console.log('通过标签服务获取到标签:', tags.length, '个')
       return tags
     } catch (error) {
       console.error('加载任务标签失败:', error)
@@ -83,15 +81,12 @@ export const useTagManage = () => {
   
   const loadAvailableTags = async () => {
     try {
-      console.log('开始加载可用标签...')
       
       // 1. 从本地存储加载用户创建的标签
       const storedTags = uni.getStorageSync(`user_tags_${getCurrentUserId()}`) || []
-      console.log('本地存储标签:', storedTags.length, '个')
       
       // 2. 从任务中提取标签
       const taskTags = await loadTaskTags()
-      console.log('任务中的标签:', taskTags.length, '个')
       
       // 3. 合并标签（去重）
       const allTagsMap = new Map()
@@ -130,10 +125,14 @@ export const useTagManage = () => {
       })
       
       // 转换为数组并排序
-      availableTags.value = Array.from(allTagsMap.values())
+      // 重要：使用新数组赋值而不是修改现有数组，确保Vue能检测到变化
+      const newAvailableTags = Array.from(allTagsMap.values())
         .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
       
-      console.log('合并后的可用标签:', availableTags.value.length, '个')
+      // 先清空再赋值，强制触发Vue响应式更新
+      availableTags.value = []
+      await nextTick()
+      availableTags.value = newAvailableTags
       
       // 4. 处理当前任务的标签，确保它们都在可用标签列表中
       currentTags.value.forEach(tag => {
@@ -162,7 +161,7 @@ export const useTagManage = () => {
       })
       
       // 5. 初始化选中状态（当前任务已有的标签）
-      selectedTags.value = currentTags.value.map(tag => {
+      const newSelectedTags = currentTags.value.map(tag => {
         if (typeof tag === 'string') {
           // 处理旧格式的字符串标签
           const existingTag = availableTags.value.find(t => t.name === tag)
@@ -176,6 +175,8 @@ export const useTagManage = () => {
         }
         return null
       }).filter(id => id !== null)
+      
+      selectedTags.value = newSelectedTags
       
     } catch (error) {
       console.error('加载标签失败:', error)
@@ -192,7 +193,6 @@ export const useTagManage = () => {
     try {
       await formRef.validate()
     } catch (errors) {
-      console.log('表单验证失败:', errors)
       return
     }
 
@@ -325,7 +325,6 @@ export const useTagManage = () => {
             
             if (syncResult.code === 0) {
               const updatedCount = syncResult.data ? syncResult.data.updatedCount : 0
-              console.log(`成功同步 ${updatedCount} 个任务中的标签`)
             } else {
               console.error('标签同步失败:', syncResult.message)
               // 不阻塞主流程，仅记录错误
@@ -348,8 +347,6 @@ export const useTagManage = () => {
         
         // 重置编辑状态（放在最后，确保模态组件能正确关闭）
         cancelEditTag()
-        
-        console.log('标签编辑成功:', updatedTag.name)
         
       } catch (storageError) {
         // 存储失败时回滚数据
@@ -419,7 +416,6 @@ export const useTagManage = () => {
   
   const confirmDeleteTag = async (tagId) => {
     if (!tagId) {
-      console.error('confirmDeleteTag: tagId 为空')
       uni.showToast({
         title: '删除失败：标签ID无效',
         icon: 'error'
@@ -442,13 +438,25 @@ export const useTagManage = () => {
       // 备份要删除的标签数据（用于回滚）
       const deletedTag = { ...availableTags.value[index] }
       const selectedIndex = selectedTags.value.indexOf(tagId)
+      let currentTagIndex = -1
       
-      // 执行删除操作
+      // 立即从数组中移除，确保后续操作不会再引用这个标签
       availableTags.value.splice(index, 1)
       
       // 从选中列表中移除
       if (selectedIndex > -1) {
         selectedTags.value.splice(selectedIndex, 1)
+      }
+      
+      // 重要：同时从currentTags中移除，防止重新加载时又被选中
+      currentTagIndex = currentTags.value.findIndex(tag => {
+        if (typeof tag === 'object' && tag.id) {
+          return tag.id === tagId
+        }
+        return false
+      })
+      if (currentTagIndex > -1) {
+        currentTags.value.splice(currentTagIndex, 1)
       }
       
       try {
@@ -476,7 +484,6 @@ export const useTagManage = () => {
             
             if (syncResult.code === 0) {
               const updatedCount = syncResult.data ? syncResult.data.updatedCount : 0
-              console.log(`成功从 ${updatedCount} 个任务中删除标签`)
             } else {
               console.error('标签删除同步失败:', syncResult.message)
               // 不阻塞主流程，仅记录错误
@@ -499,18 +506,23 @@ export const useTagManage = () => {
         // 触发页面更新事件
         uni.$emit('tag-deleted', tagId)
         
+        // 重要：在这里重新加载数据，确保视图更新
+        await loadAvailableTags()
+        
         uni.showToast({
           title: '删除成功',
           icon: 'success'
         })
         
-        console.log('标签删除成功:', tagId)
         
       } catch (storageError) {
         // 存储失败时回滚数据
         availableTags.value.splice(index, 0, deletedTag)
         if (selectedIndex > -1) {
           selectedTags.value.splice(selectedIndex, 0, tagId)
+        }
+        if (currentTagIndex > -1) {
+          currentTags.value.splice(currentTagIndex, 0, deletedTag)
         }
         
         console.error('保存删除操作到本地存储失败:', storageError)
@@ -621,7 +633,6 @@ export const useTagManage = () => {
     } else {
       // 确保 currentTags 被初始化
       currentTags.value = []
-      console.log('未传递 currentTags 参数，初始化为空数组')
     }
     
     loadAvailableTags()

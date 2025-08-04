@@ -90,7 +90,6 @@ export function useTagService() {
     
     // 如果有缓存且不强制刷新，直接返回缓存
     if (!forceRefresh && tagCache.has(cacheKey)) {
-      console.log('从缓存返回标签:', cacheKey)
       return tagCache.get(cacheKey)
     }
     
@@ -99,7 +98,6 @@ export function useTagService() {
       
       // 如果没有提供任务数据，从云端加载
       if (!taskData) {
-        console.log('从云端加载任务数据以提取标签...')
         const todoBookCo = uniCloud.importObject('todobook-co')
         const result = await todoBookCo.getTodoBookDetail(bookId, {
           includeBasic: false,
@@ -120,7 +118,6 @@ export function useTagService() {
       
       // 缓存结果
       tagCache.set(cacheKey, extractedTags)
-      console.log('缓存标签数据:', cacheKey, extractedTags.length, '个标签')
       
       return extractedTags
     } catch (error) {
@@ -145,7 +142,6 @@ export function useTagService() {
     
     // 检查缓存
     if (!forceRefresh && tagCache.has(filterCacheKey)) {
-      console.log('从缓存返回筛选标签:', filterCacheKey)
       return tagCache.get(filterCacheKey)
     }
     
@@ -157,9 +153,7 @@ export function useTagService() {
         const taskCacheKey = `book_tasks_${bookId}`
         if (taskDataCache.has(taskCacheKey)) {
           taskData = taskDataCache.get(taskCacheKey)
-          console.log('从任务数据缓存获取数据')
         } else {
-          console.log('从云端加载任务数据以提取筛选标签...')
           const todoBookCo = uniCloud.importObject('todobook-co')
           const result = await todoBookCo.getTodoBookDetail(bookId, {
             includeBasic: false,
@@ -183,7 +177,6 @@ export function useTagService() {
       
       // 缓存结果
       tagCache.set(filterCacheKey, extractedTags)
-      console.log('缓存筛选标签数据:', filterCacheKey, extractedTags.length, '个标签')
       
       return extractedTags
     } catch (error) {
@@ -201,7 +194,6 @@ export function useTagService() {
     if (bookId && Array.isArray(tasks)) {
       const taskCacheKey = `book_tasks_${bookId}`
       taskDataCache.set(taskCacheKey, tasks)
-      console.log('缓存任务数据:', taskCacheKey, tasks.length, '个任务')
     }
   }
   
@@ -232,7 +224,6 @@ export function useTagService() {
       
       // 如果缓存中没有数据，从云端加载
       if (tasks.length === 0) {
-        console.log('从云端加载任务数据以分析标签使用情况...')
         const todoBookCo = uniCloud.importObject('todobook-co')
         const result = await todoBookCo.getTodoBookDetail(bookId, {
           includeBasic: false,
@@ -384,7 +375,6 @@ export function useTagService() {
       tagCache.delete(cacheKey)
       tagCache.delete(filterCacheKey)
       taskDataCache.delete(taskCacheKey)
-      console.log('清除标签缓存:', bookId)
     }
   }
   
@@ -394,7 +384,6 @@ export function useTagService() {
   const clearAllCache = () => {
     tagCache.clear()
     taskDataCache.clear()
-    console.log('清除所有标签缓存')
   }
   
   /**

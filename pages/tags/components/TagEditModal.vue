@@ -203,7 +203,6 @@ const handleConfirm = async () => {
 		}
 		await form.value.validate()
 	} catch (errors) {
-		console.log('表单验证失败:', errors)
 		
 		// 显示具体的验证错误
 		if (Array.isArray(errors) && errors.length > 0) {

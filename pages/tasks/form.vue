@@ -262,14 +262,12 @@ onUnmounted(() => {
 onMounted(() => {
 	// 监听标签删除事件
 	uni.$on('tag-deleted', (deletedTagId) => {
-		console.log('[任务表单] 收到标签删除事件:', deletedTagId)
 		// 从当前任务的标签中移除已删除的标签
 		formData.tags = formData.tags.filter(tag => tag.id !== deletedTagId)
 	})
 	
 	// 监听标签编辑事件
 	uni.$on('tag-updated', (editedTag) => {
-		console.log('[任务表单] 收到标签编辑事件:', editedTag)
 		// 更新当前任务中的标签信息
 		const index = formData.tags.findIndex(tag => tag.id === editedTag.id)
 		if (index !== -1) {
@@ -466,8 +464,6 @@ const openTagManager = () => {
 	const plainTags = JSON.parse(JSON.stringify(formData.tags))
 	const currentTagsStr = encodeURIComponent(JSON.stringify(plainTags))
 	let url = `/pages/tags/manage?bookId=${bookId}&currentTags=${currentTagsStr}`
-	
-	console.log('即将传递的标签数据:', JSON.stringify(plainTags, null, 2))
 	
 	// 编辑模式下传递taskId
 	if (isEditMode.value && taskId) {
