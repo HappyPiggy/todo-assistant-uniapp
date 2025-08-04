@@ -159,6 +159,8 @@ const close = () => {
 	if (popup.value) {
 		popup.value.close()
 	}
+	// 重置loading状态
+	loading.value = false
 }
 
 const selectColor = (color) => {
@@ -298,10 +300,16 @@ const handleConfirm = async () => {
 	}
 }
 
+// 暴露重置loading状态的方法
+const resetLoading = () => {
+	loading.value = false
+}
+
 // 暴露方法给父组件
 defineExpose({
 	open,
-	close
+	close,
+	resetLoading
 })
 </script>
 
