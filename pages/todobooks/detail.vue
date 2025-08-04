@@ -57,11 +57,12 @@
     <!-- 返回顶部按钮 -->
     <BackToTopButton 
       :visible="showBackToTop" 
+      :class="{ 'button-auto-fade': !backToTopVisible }"
       @scroll-to-top="scrollToTop" 
     />
 
     <!-- 浮动创建任务按钮 -->
-    <view v-if="canEdit" class="fab-container">
+    <view v-if="canEdit" class="fab-container" :class="{ 'button-auto-fade': !fabButtonVisible }">
       <view class="fab-button" @click="addTask">
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
@@ -191,6 +192,11 @@ const virtualListHeight = ref(600) // 虚拟滚动容器高度
 const mainScrollHeight = ref(600) // 主滚动区域高度
 const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const showBackToTop = ref(false) // 返回顶部按钮显示状态
+const showFabButton = ref(true) // 浮动创建按钮显示状态
+const fabButtonVisible = ref(true) // 浮动按钮透明度控制
+const backToTopVisible = ref(true) // 回到顶部按钮透明度控制
+const fabAutoHideTimer = ref(null) // 浮动按钮自动隐藏定时器
+const backToTopAutoHideTimer = ref(null) // 回到顶部按钮自动隐藏定时器
 const virtualTaskListRef = ref(null) // VirtualTaskList 组件引用
 
 // 使用 onLoad 安全地获取页面参数
@@ -235,6 +241,11 @@ onMounted(() => {
   hasInitialized.value = true
   calculateVirtualListHeight()
   
+  // 初始化浮动按钮的自动隐藏定时器
+  if (canEdit.value) {
+    startFabAutoHideTimer()
+  }
+  
   // 注册事件监听
   uni.$on('task-updated', updateTaskOptimistic)
   uni.$on('task-created', createTaskOptimistic)
@@ -270,8 +281,52 @@ onShow(() => {
 
 
 
+// 自动隐藏浮动按钮的函数
+const startFabAutoHideTimer = () => {
+  // 清除之前的定时器
+  if (fabAutoHideTimer.value) {
+    clearTimeout(fabAutoHideTimer.value)
+    fabAutoHideTimer.value = null
+  }
+  
+  // 显示按钮
+  fabButtonVisible.value = true
+  
+  // 2秒后隐藏
+  fabAutoHideTimer.value = setTimeout(() => {
+    fabButtonVisible.value = false
+    fabAutoHideTimer.value = null
+  }, 2000)
+}
+
+// 自动隐藏回到顶部按钮的函数
+const startBackToTopAutoHideTimer = () => {
+  // 清除之前的定时器
+  if (backToTopAutoHideTimer.value) {
+    clearTimeout(backToTopAutoHideTimer.value)
+    backToTopAutoHideTimer.value = null
+  }
+  
+  // 显示按钮
+  backToTopVisible.value = true
+  
+  // 2秒后隐藏
+  backToTopAutoHideTimer.value = setTimeout(() => {
+    backToTopVisible.value = false
+    backToTopAutoHideTimer.value = null
+  }, 2000)
+}
+
 // 页面卸载时清理
 onUnmounted(() => {
+  // 清理定时器
+  if (fabAutoHideTimer.value) {
+    clearTimeout(fabAutoHideTimer.value)
+  }
+  if (backToTopAutoHideTimer.value) {
+    clearTimeout(backToTopAutoHideTimer.value)
+  }
+  
   // 移除事件监听
   uni.$off('task-updated', updateTaskOptimistic)
   uni.$off('task-created', createTaskOptimistic)
@@ -339,8 +394,24 @@ const handleSearchOverlayClose = () => {
 // 滚动处理函数
 const handleScroll = (event) => {
   const scrollTop = event.detail.scrollTop
+  
   // 当滚动超过200px时显示返回顶部按钮（大约滚动过BookHeader后）
-  showBackToTop.value = scrollTop > 200
+  const shouldShowBackToTop = scrollTop > 200
+  if (shouldShowBackToTop !== showBackToTop.value) {
+    showBackToTop.value = shouldShowBackToTop
+    if (shouldShowBackToTop) {
+      // 显示回到顶部按钮时启动自动隐藏定时器
+      startBackToTopAutoHideTimer()
+    }
+  } else if (shouldShowBackToTop) {
+    // 滚动时重置回到顶部按钮的自动隐藏定时器
+    startBackToTopAutoHideTimer()
+  }
+  
+  // 滚动时重置浮动创建按钮的自动隐藏定时器
+  if (canEdit.value) {
+    startFabAutoHideTimer()
+  }
 }
 
 // 返回顶部函数（直接跳转，无动画）
@@ -568,6 +639,13 @@ onPullDownRefresh(() => {
     transform: scale(0.95);
     box-shadow: 0 4rpx 16rpx rgba(0, 122, 255, 0.4);
   }
+}
+
+/* 按钮自动隐藏动画 */
+.button-auto-fade {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
 }
 
 </style>
