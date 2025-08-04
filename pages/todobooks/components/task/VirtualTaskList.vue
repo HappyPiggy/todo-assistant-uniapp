@@ -20,14 +20,8 @@
       :enhanced="true"
       :enable-flex="true"
       :bounces="scrollConfig.bounces"
-      :refresher-enabled="scrollConfig.refresherEnabled"
-      :refresher-triggered="refreshing"
-      :refresher-threshold="scrollConfig.refresherThreshold"
-      :refresher-default-style="'black'"
       :scroll-top="scrollTop"
       @scroll="handleScroll"
-      @refresherrefresh="handleRefresh"
-      @refresherrestore="handleRefreshRestore"
       :style="{ height: containerHeight + 'px' }">
       
       <!-- 项目册头部信息 -->
@@ -181,11 +175,6 @@ const props = defineProps({
     type: String,
     required: true
   },
-  // 下拉刷新相关属性
-  refreshing: {
-    type: Boolean,
-    default: false
-  },
   // 置顶功能相关
   isPinned: {
     type: Function,
@@ -236,9 +225,7 @@ const currentTask = ref(null)
 
 // 滚动配置：直接关闭 bounces 以解决抖动问题
 const scrollConfig = ref({
-  bounces: false, // 关闭弹性效果，防止抖动
-  refresherEnabled: true, // 保持刷新功能
-  refresherThreshold: 45 // 刷新阈值
+  bounces: false // 关闭弹性效果，防止抖动
 })
 
 // 获取全局评论缓存实例
@@ -539,15 +526,6 @@ const clearTaskCommentCache = (taskId) => {
   console.log(`VirtualTaskList: 已清理任务 ${taskId} 的评论缓存`)
 }
 
-// 下拉刷新事件处理
-const handleRefresh = () => {
-  console.log('VirtualTaskList: 下拉刷新触发')
-  emit('refresh')
-}
-
-const handleRefreshRestore = () => {
-  console.log('VirtualTaskList: 下拉刷新完成')
-}
 
 // 暴露滚动控制方法和缓存管理方法
 defineExpose({
