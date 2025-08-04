@@ -9,8 +9,17 @@ export const useTagManage = () => {
   const currentTags = ref([])
   const selectedTags = ref([])
   const availableTags = ref([])
-  const editingTag = ref({})
-  const editTagName = ref('')
+  
+  // 编辑相关状态
+  const isEditMode = ref(false)
+  const editingTag = ref(null)
+  const editModalVisible = ref(false)
+  
+  // 删除确认相关状态
+  const deleteConfirmVisible = ref(false)
+  const deletingTag = ref(null)
+  const dependencyCount = ref(0)
+  const dependencyTasks = ref([])
   
   const formData = reactive({
     name: '',
@@ -245,84 +254,247 @@ export const useTagManage = () => {
     }
   }
   
-  const editTag = (tag, editPopupRef) => {
-    editingTag.value = tag
-    editTagName.value = tag.name
-    editPopupRef.open()
+  // 编辑功能
+  const startEditTag = (tag) => {
+    if (!tag) return
+    
+    editingTag.value = { ...tag }
+    editModalVisible.value = true
+    isEditMode.value = true
   }
   
-  const saveEditTag = async (newName) => {
-    const trimmedName = newName.trim()
-    if (!trimmedName || trimmedName.length > 5) {
+  const cancelEditTag = () => {
+    editingTag.value = null
+    editModalVisible.value = false
+    isEditMode.value = false
+  }
+  
+  const saveTagEdit = async (updatedTag) => {
+    if (!updatedTag || !editingTag.value) {
+      console.error('saveTagEdit: 缺少必要参数')
       uni.showToast({
-        title: '标签名称格式错误',
+        title: '参数错误',
         icon: 'error'
       })
       return
-    }
-
-    // 检查重名
-    if (availableTags.value.some(tag => tag.id !== editingTag.value.id && tag.name === trimmedName)) {
-      uni.showToast({
-        title: '标签名称已存在',
-        icon: 'error'
-      })
-      return
-    }
-
-    // 更新标签
-    const tagIndex = availableTags.value.findIndex(tag => tag.id === editingTag.value.id)
-    if (tagIndex > -1) {
-      availableTags.value[tagIndex].name = trimmedName
-      
-      // 保存到本地存储
-      uni.setStorageSync(`user_tags_${getCurrentUserId()}`, availableTags.value)
-      
-      uni.showToast({
-        title: '修改成功',
-        icon: 'success'
-      })
     }
     
-    closeEditDialog()
-  }
-  
-  const deleteTag = (tag) => {
-    uni.showModal({
-      title: '确认删除',
-      content: `确定要删除标签"${tag.name}"吗？`,
-      success: (res) => {
-        if (res.confirm) {
-          // 从列表中移除
-          const index = availableTags.value.findIndex(t => t.id === tag.id)
-          if (index > -1) {
-            availableTags.value.splice(index, 1)
-            
-            // 从选中列表中移除
-            const selectedIndex = selectedTags.value.indexOf(tag.id)
-            if (selectedIndex > -1) {
-              selectedTags.value.splice(selectedIndex, 1)
-            }
-            
-            // 保存到本地存储
-            uni.setStorageSync(`user_tags_${getCurrentUserId()}`, availableTags.value)
-            
-            uni.showToast({
-              title: '删除成功',
-              icon: 'success'
-            })
-          }
-        }
+    try {
+      // 更新标签在列表中的位置
+      const tagIndex = availableTags.value.findIndex(tag => tag.id === editingTag.value.id)
+      if (tagIndex === -1) {
+        throw new Error(`未找到ID为 ${editingTag.value.id} 的标签`)
       }
-    })
+      
+      // 备份原始数据用于回滚
+      const originalTag = { ...availableTags.value[tagIndex] }
+      
+      // 更新标签数据
+      availableTags.value[tagIndex] = { ...updatedTag }
+      
+      try {
+        // 保存到本地存储
+        const userTags = availableTags.value.filter(tag => tag.source === 'local')
+        uni.setStorageSync(`user_tags_${getCurrentUserId()}`, userTags)
+        
+        // 清理相关缓存
+        if (bookId.value) {
+          tagService.clearBookCache(bookId.value)
+        }
+        
+        // 触发页面更新事件
+        uni.$emit('tag-updated', updatedTag)
+        
+        // 显示成功提示
+        uni.showToast({
+          title: '标签修改成功',
+          icon: 'success'
+        })
+        
+        // 重置编辑状态（放在最后，确保模态组件能正确关闭）
+        cancelEditTag()
+        
+        console.log('标签编辑成功:', updatedTag.name)
+        
+      } catch (storageError) {
+        // 存储失败时回滚数据
+        availableTags.value[tagIndex] = originalTag
+        console.error('保存标签到本地存储失败:', storageError)
+        uni.showToast({
+          title: '保存失败，请检查存储空间',
+          icon: 'error'
+        })
+        throw storageError
+      }
+      
+    } catch (error) {
+      console.error('保存标签编辑失败:', error)
+      
+      // 根据错误类型显示不同提示
+      let errorMessage = '保存失败，请重试'
+      if (error.message && error.message.includes('未找到')) {
+        errorMessage = '标签已被删除或不存在'
+      } else if (error.message && error.message.includes('存储')) {
+        errorMessage = '存储空间不足，请清理后重试'
+      }
+      
+      uni.showToast({
+        title: errorMessage,
+        icon: 'error'
+      })
+      
+      throw error
+    }
   }
   
-  const closeEditDialog = (editPopupRef) => {
-    if (editPopupRef) {
-      editPopupRef.close()
+  // 智能删除功能
+  const checkTagDependencies = async (tagId) => {
+    if (!bookId.value || !tagId) return 0
+    
+    try {
+      // 使用tagService的新方法获取标签使用情况
+      const count = await tagService.getTagUsageCount(bookId.value, tagId)
+      const taskTitles = await tagService.getTasksUsingTag(bookId.value, tagId)
+      
+      // 限制显示的任务标题数量
+      dependencyTasks.value = taskTitles.slice(0, 5)
+      
+      return count
+    } catch (error) {
+      console.error('检查标签依赖失败:', error)
+      return 0
     }
-    editingTag.value = {}
-    editTagName.value = ''
+  }
+  
+  const startDeleteTag = async (tag) => {
+    if (!tag) return
+    
+    try {
+      deletingTag.value = tag
+      dependencyCount.value = await checkTagDependencies(tag.id)
+      deleteConfirmVisible.value = true
+    } catch (error) {
+      console.error('准备删除标签失败:', error)
+      uni.showToast({
+        title: '检查标签使用情况失败',
+        icon: 'error'
+      })
+    }
+  }
+  
+  const confirmDeleteTag = async (tagId) => {
+    if (!tagId) {
+      console.error('confirmDeleteTag: tagId 为空')
+      uni.showToast({
+        title: '删除失败：标签ID无效',
+        icon: 'error'
+      })
+      return
+    }
+    
+    try {
+      // 查找要删除的标签
+      const index = availableTags.value.findIndex(t => t.id === tagId)
+      if (index === -1) {
+        uni.showToast({
+          title: '标签不存在或已被删除',
+          icon: 'error'
+        })
+        cancelDeleteTag()
+        return
+      }
+      
+      // 备份要删除的标签数据（用于回滚）
+      const deletedTag = { ...availableTags.value[index] }
+      const selectedIndex = selectedTags.value.indexOf(tagId)
+      
+      // 执行删除操作
+      availableTags.value.splice(index, 1)
+      
+      // 从选中列表中移除
+      if (selectedIndex > -1) {
+        selectedTags.value.splice(selectedIndex, 1)
+      }
+      
+      try {
+        // 保存到本地存储（只保存用户创建的标签）
+        const userTags = availableTags.value.filter(tag => tag.source === 'local')
+        uni.setStorageSync(`user_tags_${getCurrentUserId()}`, userTags)
+        
+        // 清理相关缓存
+        if (bookId.value) {
+          tagService.clearBookCache(bookId.value)
+        }
+        
+        // 重置删除状态
+        cancelDeleteTag()
+        
+        // 触发页面更新事件
+        uni.$emit('tag-deleted', tagId)
+        
+        uni.showToast({
+          title: '删除成功',
+          icon: 'success'
+        })
+        
+        console.log('标签删除成功:', tagId)
+        
+      } catch (storageError) {
+        // 存储失败时回滚数据
+        availableTags.value.splice(index, 0, deletedTag)
+        if (selectedIndex > -1) {
+          selectedTags.value.splice(selectedIndex, 0, tagId)
+        }
+        
+        console.error('保存删除操作到本地存储失败:', storageError)
+        uni.showToast({
+          title: '删除失败：存储错误',
+          icon: 'error'
+        })
+        throw storageError
+      }
+      
+    } catch (error) {
+      console.error('删除标签失败:', error)
+      
+      // 根据错误类型显示不同提示
+      let errorMessage = '删除失败，请重试'
+      if (error.message && error.message.includes('存储')) {
+        errorMessage = '存储操作失败，请重试'
+      } else if (error.message && error.message.includes('网络')) {
+        errorMessage = '网络错误，请检查网络连接'
+      }
+      
+      uni.showToast({
+        title: errorMessage,
+        icon: 'error'
+      })
+      
+      // 确保删除状态被重置
+      cancelDeleteTag()
+      
+      throw error
+    }
+  }
+  
+  const cancelDeleteTag = () => {
+    deletingTag.value = null
+    dependencyCount.value = 0
+    dependencyTasks.value = []
+    deleteConfirmVisible.value = false
+  }
+  
+  // 保持原有的deleteTag方法作为简单删除的备用方案
+  const deleteTag = async (tag) => {
+    // 使用新的智能删除流程
+    await startDeleteTag(tag)
+  }
+  
+  // 缓存管理
+  const clearTagCaches = () => {
+    if (bookId.value) {
+      tagService.clearBookCache(bookId.value)
+    }
   }
   
   const confirmSelection = () => {
@@ -395,11 +567,20 @@ export const useTagManage = () => {
     currentTags,
     selectedTags,
     availableTags,
-    editingTag,
-    editTagName,
     formData,
     colorOptions,
     rules,
+    
+    // 编辑相关状态
+    isEditMode,
+    editingTag,
+    editModalVisible,
+    
+    // 删除确认相关状态
+    deleteConfirmVisible,
+    deletingTag,
+    dependencyCount,
+    dependencyTasks,
     
     // 计算属性
     canCreate,
@@ -411,11 +592,22 @@ export const useTagManage = () => {
     selectColor,
     createTag,
     toggleTagSelection,
-    editTag,
-    saveEditTag,
     deleteTag,
-    closeEditDialog,
     confirmSelection,
-    cancel
+    cancel,
+    
+    // 编辑功能
+    startEditTag,
+    cancelEditTag,
+    saveTagEdit,
+    
+    // 智能删除功能
+    startDeleteTag,
+    confirmDeleteTag,
+    cancelDeleteTag,
+    checkTagDependencies,
+    
+    // 缓存管理
+    clearTagCaches
   }
 }

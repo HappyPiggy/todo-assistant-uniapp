@@ -197,6 +197,13 @@ page {
   transform: scale(1.05);
 }
 
+.tag-item.editing {
+  border-color: #ffffff;
+  border-width: 4rpx;
+  box-shadow: 0 0 0 4rpx #007AFF, 0 4rpx 12rpx rgba(0, 122, 255, 0.2);
+  transform: scale(1.02);
+}
+
 .tag-name {
   font-size: 26rpx;
   color: #ffffff;
@@ -229,6 +236,18 @@ page {
   top: 2rpx;
   right: 2rpx;
   flex-direction: row;
+  gap: 4rpx;
+}
+
+.edit-btn {
+  width: 16rpx;
+  height: 16rpx;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
+  transition: opacity 0.15s ease;
 }
 
 .delete-btn {
@@ -240,6 +259,10 @@ page {
   background-color: transparent;
   border: none;
   transition: opacity 0.15s ease;
+}
+
+.edit-btn:active {
+  opacity: 0.7;
 }
 
 .delete-btn:active {

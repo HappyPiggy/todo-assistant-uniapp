@@ -206,6 +206,172 @@ export function useTagService() {
   }
   
   /**
+   * 获取缓存的任务数据
+   * @param {string} bookId - TodoBook ID
+   * @returns {Array} 缓存的任务数据，如果没有缓存则返回空数组
+   */
+  const getCachedTaskData = (bookId) => {
+    if (!bookId) return []
+    
+    const taskCacheKey = `book_tasks_${bookId}`
+    return taskDataCache.get(taskCacheKey) || []
+  }
+  
+  /**
+   * 获取标签使用次数
+   * @param {string} bookId - TodoBook ID
+   * @param {string} tagId - 标签ID或名称
+   * @returns {Promise<number>} 使用次数
+   */
+  const getTagUsageCount = async (bookId, tagId) => {
+    if (!bookId || !tagId) return 0
+    
+    try {
+      // 先尝试从缓存获取任务数据
+      let tasks = getCachedTaskData(bookId)
+      
+      // 如果缓存中没有数据，从云端加载
+      if (tasks.length === 0) {
+        console.log('从云端加载任务数据以分析标签使用情况...')
+        const todoBookCo = uniCloud.importObject('todobook-co')
+        const result = await todoBookCo.getTodoBookDetail(bookId, {
+          includeBasic: false,
+          includeMembers: false,
+          includeTasks: true
+        })
+        
+        if (result.code === 0 && result.data.tasks) {
+          tasks = result.data.tasks
+          // 缓存任务数据
+          cacheTaskData(bookId, tasks)
+        }
+      }
+      
+      let count = 0
+      
+      // 扫描任务统计标签使用次数
+      tasks.forEach(task => {
+        // 检查主任务标签
+        if (task.tags && Array.isArray(task.tags)) {
+          const hasTag = task.tags.some(tag => {
+            if (typeof tag === 'string') {
+              return tag === tagId
+            } else if (typeof tag === 'object' && tag !== null) {
+              return tag.id === tagId || tag.name === tagId
+            }
+            return false
+          })
+          
+          if (hasTag) {
+            count++
+          }
+        }
+        
+        // 检查子任务标签
+        if (task.subtasks && Array.isArray(task.subtasks)) {
+          task.subtasks.forEach(subtask => {
+            if (subtask.tags && Array.isArray(subtask.tags)) {
+              const hasTag = subtask.tags.some(tag => {
+                if (typeof tag === 'string') {
+                  return tag === tagId
+                } else if (typeof tag === 'object' && tag !== null) {
+                  return tag.id === tagId || tag.name === tagId
+                }
+                return false
+              })
+              
+              if (hasTag) {
+                count++
+              }
+            }
+          })
+        }
+      })
+      
+      return count
+    } catch (error) {
+      console.error('获取标签使用次数失败:', error)
+      return 0
+    }
+  }
+  
+  /**
+   * 获取使用特定标签的任务列表
+   * @param {string} bookId - TodoBook ID
+   * @param {string} tagId - 标签ID或名称
+   * @returns {Promise<Array>} 使用该标签的任务列表（包含任务标题）
+   */
+  const getTasksUsingTag = async (bookId, tagId) => {
+    if (!bookId || !tagId) return []
+    
+    try {
+      // 先尝试从缓存获取任务数据
+      let tasks = getCachedTaskData(bookId)
+      
+      // 如果缓存中没有数据，从云端加载
+      if (tasks.length === 0) {
+        const todoBookCo = uniCloud.importObject('todobook-co')
+        const result = await todoBookCo.getTodoBookDetail(bookId, {
+          includeBasic: false,
+          includeMembers: false,
+          includeTasks: true
+        })
+        
+        if (result.code === 0 && result.data.tasks) {
+          tasks = result.data.tasks
+          cacheTaskData(bookId, tasks)
+        }
+      }
+      
+      const matchingTasks = []
+      
+      // 扫描任务查找使用该标签的任务
+      tasks.forEach(task => {
+        // 检查主任务标签
+        if (task.tags && Array.isArray(task.tags)) {
+          const hasTag = task.tags.some(tag => {
+            if (typeof tag === 'string') {
+              return tag === tagId
+            } else if (typeof tag === 'object' && tag !== null) {
+              return tag.id === tagId || tag.name === tagId
+            }
+            return false
+          })
+          
+          if (hasTag && task.title) {
+            matchingTasks.push(task.title)
+          }
+        }
+        
+        // 检查子任务标签
+        if (task.subtasks && Array.isArray(task.subtasks)) {
+          task.subtasks.forEach(subtask => {
+            if (subtask.tags && Array.isArray(subtask.tags)) {
+              const hasTag = subtask.tags.some(tag => {
+                if (typeof tag === 'string') {
+                  return tag === tagId
+                } else if (typeof tag === 'object' && tag !== null) {
+                  return tag.id === tagId || tag.name === tagId
+                }
+                return false
+              })
+              
+              if (hasTag && subtask.title) {
+                matchingTasks.push(`${task.title} - ${subtask.title}`)
+              }
+            }
+          })
+        }
+      })
+      
+      return matchingTasks
+    } catch (error) {
+      console.error('获取使用标签的任务列表失败:', error)
+      return []
+    }
+  }
+  
+  /**
    * 清除指定BookId的缓存
    * @param {string} bookId - TodoBook ID
    */
@@ -248,6 +414,11 @@ export function useTagService() {
     getBookTags,
     getBookTagsForFilter,
     cacheTaskData,
+    getCachedTaskData,
+    
+    // 依赖分析
+    getTagUsageCount,
+    getTasksUsingTag,
     
     // 缓存管理
     clearBookCache,

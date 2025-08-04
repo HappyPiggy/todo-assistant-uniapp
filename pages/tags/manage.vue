@@ -67,11 +67,18 @@
 					v-for="tag in availableTags" 
 					:key="tag.id"
 					class="tag-item"
-					:class="{ selected: selectedTags.includes(tag.id), 'tap-feedback': tapFeedbackId === tag.id }"
+					:class="{ 
+						selected: selectedTags.includes(tag.id), 
+						'tap-feedback': tapFeedbackId === tag.id,
+						'editing': editingTag && editingTag.id === tag.id
+					}"
 					:style="{ backgroundColor: tag.color }"
 					@click="handleTagTap(tag)">
 					<text class="tag-name">{{ tag.name }}</text>
 					<view class="tag-actions">
+						<view class="edit-btn" @click.stop="startEditTag(tag)">
+							<uni-icons color="#ffffff" size="12" type="compose" />
+						</view>
 						<view class="delete-btn" @click.stop="deleteTag(tag)">
 							<uni-icons color="#ffffff" size="10" type="clear" />
 						</view>
@@ -91,6 +98,24 @@
 			</button>
 		</view>
 
+		<!-- 编辑标签模态 -->
+		<TagEditModal 
+			v-model:visible="editModalVisible"
+			:tag="editingTag"
+			:color-options="colorOptions"
+			:available-tags="availableTags"
+			@confirm="saveTagEdit"
+			@cancel="cancelEditTag" />
+
+		<!-- 删除确认模态 -->
+		<TagDeleteConfirm
+			v-model:visible="deleteConfirmVisible"
+			:tag="deletingTag"
+			:dependency-count="dependencyCount"
+			:dependency-tasks="dependencyTasks"
+			@confirm="confirmDeleteTag"
+			@cancel="cancelDeleteTag" />
+
 	</view>
 </template>
 
@@ -98,6 +123,8 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTagManage } from './useTagManage.js'
+import TagEditModal from './components/TagEditModal.vue'
+import TagDeleteConfirm from './components/TagDeleteConfirm.vue'
 
 const {
   // 响应式数据
@@ -110,6 +137,17 @@ const {
   colorOptions,
   rules,
   
+  // 编辑相关状态
+  isEditMode,
+  editingTag,
+  editModalVisible,
+  
+  // 删除确认相关状态
+  deleteConfirmVisible,
+  deletingTag,
+  dependencyCount,
+  dependencyTasks,
+  
   // 计算属性
   canCreate,
   
@@ -120,7 +158,17 @@ const {
   toggleTagSelection,
   deleteTag,
   confirmSelection,
-  cancel
+  cancel,
+  
+  // 编辑功能
+  startEditTag,
+  cancelEditTag,
+  saveTagEdit,
+  
+  // 智能删除功能
+  startDeleteTag,
+  confirmDeleteTag,
+  cancelDeleteTag
 } = useTagManage()
 
 // 模板引用
