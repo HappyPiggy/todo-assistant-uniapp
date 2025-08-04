@@ -109,17 +109,7 @@ page {
   margin-bottom: 16rpx;
 }
 
-.tag-preview {
-  align-self: flex-start;
-  padding: 12rpx 20rpx;
-  border-radius: 20rpx;
-}
-
-.tag-preview-text {
-  font-size: 26rpx;
-  color: #ffffff;
-  font-weight: 500;
-}
+// 移除旧的tag预览样式，现在使用UniTag组件
 
 /* 按钮 */
 .form-buttons {
@@ -204,19 +194,7 @@ page {
   transform: scale(1.02);
 }
 
-.tag-name {
-  font-size: 26rpx;
-  color: #ffffff;
-  font-weight: 500;
-  margin-right: 8rpx;
-  flex: 1;
-  transition: all 0.2s ease;
-}
-
-.tag-item.selected .tag-name {
-  font-weight: 600;
-  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.3);
-}
+// 移除旧的tag-name样式，现在使用UniTag组件
 
 .selected-icon {
   position: absolute;

@@ -41,9 +41,10 @@
 			<!-- 预览 -->
 			<view class="preview-section" v-if="formData.name">
 				<view class="preview-label">预览效果：</view>
-				<view class="tag-preview" :style="{ backgroundColor: formData.color }">
-					<text class="tag-preview-text">{{ formData.name }}</text>
-				</view>
+				<UniTag 
+					:text="formData.name"
+					:color="formData.color"
+					size="medium" />
 			</view>
 
 			<!-- 操作按钮 -->
@@ -72,9 +73,11 @@
 						'tap-feedback': tapFeedbackId === tag.id,
 						'editing': editingTag && editingTag.id === tag.id
 					}"
-					:style="{ backgroundColor: tag.color }"
 					@click="handleTagTap(tag)">
-					<text class="tag-name">{{ tag.name }}</text>
+					<UniTag
+						:text="tag.name"
+						:color="tag.color"
+						size="medium" />
 					<view class="tag-actions">
 						<view class="edit-btn" @click.stop="startEditTag(tag)">
 							<uni-icons color="#ffffff" size="12" type="compose" />
@@ -125,6 +128,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { useTagManage } from './useTagManage.js'
 import TagEditModal from './components/TagEditModal.vue'
 import TagDeleteConfirm from './components/TagDeleteConfirm.vue'
+import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 const {
   // 响应式数据

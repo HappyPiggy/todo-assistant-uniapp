@@ -299,7 +299,7 @@ page {
 	color: #ff4757;
 }
 
-/* 内联标签样式 */
+/* 内联标签样式 - 现在使用UniTag组件 */
 .inline-tags {
 	flex-direction: row;
 	flex-wrap: wrap;
@@ -307,39 +307,7 @@ page {
 	margin-top: 4rpx;
 }
 
-.inline-tag-item {
-	background-color: #f0f6ff;
-	padding: 6rpx 12rpx;
-	border-radius: 16rpx;
-	border: 1rpx solid rgba(255, 255, 255, 0.3);
-	flex-shrink: 0;
-}
-
-.inline-tag-text {
-	font-size: 22rpx;
-	color: #ffffff;
-	font-weight: 500;
-}
-
-/* 原标签区域样式（保留以防其他地方使用） */
-.tags-list {
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 12rpx;
-}
-
-.tag-item {
-	background-color: #f0f6ff;
-	padding: 12rpx 20rpx;
-	border-radius: 20rpx;
-	border: 1rpx solid rgba(255, 255, 255, 0.3);
-}
-
-.tag-text {
-	font-size: 26rpx;
-	color: #ffffff;
-	font-weight: 500;
-}
+// 移除旧的tag样式，现在使用UniTag组件
 
 /* 子任务区域 */
 .add-subtask {

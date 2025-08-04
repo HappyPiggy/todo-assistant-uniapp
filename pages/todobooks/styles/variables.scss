@@ -160,6 +160,25 @@ $subtask-indent: 20rpx;
 $subtask-connector-color: $border-color;
 $subtask-connector-width: 2rpx;
 
+// Tag组件相关变量
+$tag-default-color: #E5E5E5;
+$tag-text-color: #ffffff;
+$tag-border-color: rgba(255, 255, 255, 0.3);
+$tag-active-overlay: rgba(0, 0, 0, 0.1);
+
+// Tag尺寸配置
+$tag-small-padding: 4rpx 8rpx;
+$tag-small-radius: 8rpx;
+$tag-small-font: 20rpx;
+
+$tag-medium-padding: 8rpx 16rpx;
+$tag-medium-radius: 12rpx;
+$tag-medium-font: 24rpx;
+
+$tag-large-padding: 12rpx 20rpx;
+$tag-large-radius: 16rpx;
+$tag-large-font: 28rpx;
+
 // 断点（响应式）
 $breakpoint-xs: 480rpx;
 $breakpoint-sm-rpx: 640rpx;

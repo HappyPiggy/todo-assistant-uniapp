@@ -89,6 +89,12 @@
         }
     },
     {
+        "path": "pages/test-unitag",
+        "style": {
+            "navigationBarTitleText": "UniTag 组件测试"
+        }
+    },
+    {
         "path": "pages/settings/share-management",
         "style": {
             "navigationBarTitleText": "分享管理",

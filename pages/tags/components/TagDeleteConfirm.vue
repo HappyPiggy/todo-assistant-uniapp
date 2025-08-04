@@ -10,9 +10,10 @@
 
 			<view class="modal-content">
 				<view class="tag-info" v-if="tag">
-					<view class="tag-display" :style="{ backgroundColor: tag.color }">
-						<text class="tag-name">{{ tag.name }}</text>
-					</view>
+					<UniTag 
+						:text="tag.name"
+						:color="tag.color"
+						size="medium" />
 				</view>
 
 				<view class="warning-content">
@@ -62,6 +63,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 // Props
 const props = defineProps({
@@ -192,19 +194,7 @@ defineExpose({
 	margin-bottom: 30rpx;
 }
 
-.tag-display {
-	padding: 12rpx 20rpx;
-	border-radius: 20rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.tag-name {
-	font-size: 28rpx;
-	color: #ffffff;
-	font-weight: 500;
-}
+// 移除旧的tag显示样式，现在使用UniTag组件
 
 .warning-content {
 	text-align: center;

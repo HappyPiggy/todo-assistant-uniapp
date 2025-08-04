@@ -325,3 +325,79 @@
 @mixin priority-border($color, $width: $priority-border-width) {
   border-left: $width solid $color;
 }
+
+// Tag组件相关混入
+@mixin tag-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid $tag-border-color;
+  color: $tag-text-color;
+  font-weight: $font-weight-medium;
+  transition: $transition-fast;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.2;
+}
+
+@mixin tag-size($size: 'medium') {
+  @if $size == 'small' {
+    padding: $tag-small-padding;
+    border-radius: $tag-small-radius;
+    font-size: $tag-small-font;
+  } @else if $size == 'medium' {
+    padding: $tag-medium-padding;
+    border-radius: $tag-medium-radius;
+    font-size: $tag-medium-font;
+  } @else if $size == 'large' {
+    padding: $tag-large-padding;
+    border-radius: $tag-large-radius;
+    font-size: $tag-large-font;
+  }
+}
+
+@mixin tag-clickable {
+  cursor: pointer;
+  
+  &:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+@mixin tag-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  
+  &:active {
+    transform: none;
+    opacity: 0.5;
+  }
+  
+  &:hover {
+    opacity: 0.5;
+  }
+}
+
+@mixin tag-responsive {
+  @media (max-width: $breakpoint-xs) {
+    &.uni-tag--small {
+      padding: 3rpx 6rpx;
+      font-size: 18rpx;
+    }
+    
+    &.uni-tag--medium {
+      padding: 6rpx 12rpx;
+      font-size: 22rpx;
+    }
+    
+    &.uni-tag--large {
+      padding: 10rpx 16rpx;
+      font-size: 26rpx;
+    }
+  }
+}

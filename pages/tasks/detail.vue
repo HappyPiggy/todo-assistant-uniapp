@@ -14,13 +14,12 @@
 							<text class="task-title" :class="{ completed: task.status === 'completed' }">{{ task.title }}</text>
 							<!-- 标签直接显示在标题后面 -->
 							<view v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" class="inline-tags">
-								<view 
+								<UniTag
 									v-for="(tag, index) in task.tags" 
 									:key="getTagKey(tag, index)" 
-									class="inline-tag-item"
-									:style="{ backgroundColor: getTagColor(tag) }">
-									<text class="inline-tag-text">{{ getTagName(tag) }}</text>
-								</view>
+									:text="getTagName(tag)"
+									:color="getTagColor(tag)"
+									size="medium" />
 							</view>
 						</view>
 						<!-- 负责人信息单独一行 -->
@@ -390,6 +389,7 @@ import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
 import { useTaskUtils } from './composables/useTaskUtils.js'
 import { getCommentAvatar, getCommentAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
+import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null

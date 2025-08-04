@@ -88,13 +88,12 @@
               v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
               class="task-tags-right">
               <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
-              <view 
+              <UniTag
                 v-for="(tag, index) in task.tags.slice(0, 4).reverse()" 
                 :key="getTagKey(tag, index)" 
-                class="tag-item"
-                :style="{ backgroundColor: getTagColor(tag) }">
-                <text class="tag-text">{{ getTagName(tag) }}</text>
-              </view>
+                :text="getTagName(tag)"
+                :color="getTagColor(tag)"
+                size="small" />
             </view>
           </view>
         </view>
@@ -134,13 +133,12 @@
         v-if="task.tags && Array.isArray(task.tags) && task.tags.length > 0" 
         class="task-tags-right">
         <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
-        <view 
+        <UniTag
           v-for="(tag, index) in task.tags.slice(0, 4).reverse()" 
           :key="getTagKey(tag, index)" 
-          class="tag-item"
-          :style="{ backgroundColor: getTagColor(tag) }">
-          <text class="tag-text">{{ getTagName(tag) }}</text>
-        </view>
+          :text="getTagName(tag)"
+          :color="getTagColor(tag)"
+          size="small" />
       </view>
     </view>
 
@@ -225,13 +223,12 @@
                   v-if="subtask.tags && Array.isArray(subtask.tags) && subtask.tags.length > 0" 
                   class="wx-subtask-tags-right">
                   <text v-if="subtask.tags.length > 4" class="wx-subtask-more-tags">+{{ subtask.tags.length - 4 }}</text>
-                  <view 
+                  <UniTag
                     v-for="(tag, tagIndex) in subtask.tags.slice(0, 4).reverse()" 
                     :key="getTagKey(tag, tagIndex)" 
-                    class="wx-subtask-tag-item"
-                    :style="{ backgroundColor: getTagColor(tag) }">
-                    <text class="wx-subtask-tag-text">{{ getTagName(tag) }}</text>
-                  </view>
+                    :text="getTagName(tag)"
+                    :color="getTagColor(tag)"
+                    size="small" />
                 </view>
               </view>
             </view>
@@ -288,6 +285,7 @@ import { currentUserId } from '@/store/storage.js'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
 import { getTaskCommentCount } from '@/utils/commentUtils.js'
+import UniTag from '../common/UniTag.vue'
 
 const props = defineProps({
   task: {
@@ -558,14 +556,7 @@ const getTagColor = (tag) => {
       font-size: $font-size-base;
     }
     
-    .tag-item {
-      padding: 2rpx 6rpx;
-      border-radius: 6rpx;
-    }
-    
-    .tag-text {
-      font-size: $font-size-xs;
-    }
+    // 移除Item模式旧的tag样式，现在使用UniTag组件
     
     .task-description {
       font-size: $font-size-sm;
@@ -764,18 +755,7 @@ const getTagColor = (tag) => {
   font-weight: $font-weight-medium;
 }
 
-.tag-item {
-  padding: 4rpx 8rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.3);
-  @include flex-center;
-}
-
-.tag-text {
-  font-size: $font-size-xs;
-  color: #ffffff;
-  font-weight: $font-weight-medium;
-}
+// 移除旧的tag样式，现在使用UniTag组件
 
 .more-tags {
   font-size: $font-size-xs;
@@ -1132,18 +1112,7 @@ const getTagColor = (tag) => {
   font-weight: $font-weight-medium;
 }
 
-.wx-subtask-tag-item {
-  padding: 2rpx 6rpx;
-  border-radius: 6rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.3);
-  @include flex-center;
-}
-
-.wx-subtask-tag-text {
-  font-size: $font-size-xs;
-  color: #ffffff;
-  font-weight: $font-weight-medium;
-}
+// 移除微信小程序旧的tag样式，现在使用UniTag组件
 
 .wx-subtask-more-tags {
   font-size: $font-size-xs;

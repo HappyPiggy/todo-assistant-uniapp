@@ -85,9 +85,11 @@
 					<view 
 						v-for="(tag, index) in formData.tags" 
 						:key="getTagKey(tag, index)"
-						class="tag-item"
-						:style="{ backgroundColor: getTagColor(tag) }">
-						<text class="tag-text">{{ getTagName(tag) }}</text>
+						class="tag-with-delete">
+						<UniTag 
+							:text="getTagName(tag)"
+							:color="getTagColor(tag)"
+							size="medium" />
 						<view class="remove-tag" @click="removeTag(index)">
 							<uni-icons color="#ffffff" size="14" type="clear" />
 						</view>
@@ -139,6 +141,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
+import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null
@@ -557,28 +560,25 @@ uni.$on('updateTags', updateTaskTags)
 	gap: 16rpx;
 }
 
-.tag-item {
-	display: flex;
+.tag-with-delete {
+	position: relative;
+	display: inline-flex;
 	align-items: center;
-	padding: 8rpx 16rpx;
-	border-radius: 20rpx;
-	background-color: #f0f6ff;
-}
-
-.tag-text {
-	font-size: 24rpx;
-	color: #333333;
-	margin-right: 8rpx;
 }
 
 .remove-tag {
+	position: absolute;
+	top: -8rpx;
+	right: -8rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 32rpx;
-	height: 32rpx;
-	border-radius: 16rpx;
-	background-color: rgba(0, 0, 0, 0.2);
+	width: 24rpx;
+	height: 24rpx;
+	border-radius: 12rpx;
+	background-color: #ff4757;
+	border: 2rpx solid #ffffff;
+	z-index: 1;
 }
 
 .empty-tags {

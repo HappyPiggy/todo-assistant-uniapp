@@ -42,9 +42,10 @@
 				<!-- 实时预览 -->
 				<view class="preview-section" v-if="formData.name">
 					<view class="preview-label">预览效果：</view>
-					<view class="tag-preview" :style="{ backgroundColor: formData.color }">
-						<text class="tag-preview-text">{{ formData.name }}</text>
-					</view>
+					<UniTag 
+						:text="formData.name"
+						:color="formData.color"
+						size="medium" />
 				</view>
 			</view>
 
@@ -63,6 +64,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, nextTick } from 'vue'
+import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 // Props
 const props = defineProps({
@@ -369,17 +371,7 @@ defineExpose({
 	margin-bottom: 16rpx;
 }
 
-.tag-preview {
-	align-self: flex-start;
-	padding: 12rpx 20rpx;
-	border-radius: 20rpx;
-}
-
-.tag-preview-text {
-	font-size: 26rpx;
-	color: #ffffff;
-	font-weight: 500;
-}
+// 移除旧的tag预览样式，现在使用UniTag组件
 
 .modal-actions {
 	padding: 20rpx 30rpx 30rpx;
