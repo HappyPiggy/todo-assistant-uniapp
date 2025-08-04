@@ -200,7 +200,8 @@ export const useTagManage = () => {
       id: Date.now().toString(), // 简单的ID生成
       name: formData.name.trim(),
       color: formData.color,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      source: 'local' // 标记为本地创建的标签
     }
 
     // 检查是否重名
@@ -215,9 +216,10 @@ export const useTagManage = () => {
     // 添加到列表
     availableTags.value.push(newTag)
     
-    // 保存到本地存储
+    // 保存到本地存储（只保存本地创建的标签）
     try {
-      uni.setStorageSync(`user_tags_${getCurrentUserId()}`, availableTags.value)
+      const userTags = availableTags.value.filter(tag => tag.source === 'local')
+      uni.setStorageSync(`user_tags_${getCurrentUserId()}`, userTags)
       
       // 清空表单
       formData.name = ''
@@ -289,8 +291,11 @@ export const useTagManage = () => {
       // 备份原始数据用于回滚
       const originalTag = { ...availableTags.value[tagIndex] }
       
-      // 更新标签数据
-      availableTags.value[tagIndex] = { ...updatedTag }
+      // 更新标签数据，保留原有的 source 字段
+      availableTags.value[tagIndex] = { 
+        ...updatedTag,
+        source: originalTag.source // 保留原有的 source 字段
+      }
       
       try {
         // 保存到本地存储
@@ -319,7 +324,8 @@ export const useTagManage = () => {
             uni.hideLoading()
             
             if (syncResult.code === 0) {
-              console.log(`成功同步 ${syncResult.updatedCount} 个任务中的标签`)
+              const updatedCount = syncResult.data ? syncResult.data.updatedCount : 0
+              console.log(`成功同步 ${updatedCount} 个任务中的标签`)
             } else {
               console.error('标签同步失败:', syncResult.message)
               // 不阻塞主流程，仅记录错误
@@ -469,7 +475,8 @@ export const useTagManage = () => {
             uni.hideLoading()
             
             if (syncResult.code === 0) {
-              console.log(`成功从 ${syncResult.updatedCount} 个任务中删除标签`)
+              const updatedCount = syncResult.data ? syncResult.data.updatedCount : 0
+              console.log(`成功从 ${updatedCount} 个任务中删除标签`)
             } else {
               console.error('标签删除同步失败:', syncResult.message)
               // 不阻塞主流程，仅记录错误
@@ -483,6 +490,11 @@ export const useTagManage = () => {
         
         // 重置删除状态
         cancelDeleteTag()
+        
+        // 如果是从编辑弹窗删除的，也要关闭编辑弹窗
+        if (editModalVisible.value) {
+          cancelEditTag()
+        }
         
         // 触发页面更新事件
         uni.$emit('tag-deleted', tagId)

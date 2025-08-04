@@ -157,6 +157,7 @@ const {
   
   // 方法
   initializeData,
+  loadAvailableTags,
   selectColor,
   createTag,
   toggleTagSelection,
@@ -184,6 +185,26 @@ const tapFeedbackId = ref(null)
 // 页面生命周期
 onLoad((options) => {
   initializeData(options)
+  
+  // 监听标签相关事件
+  uni.$on('tag-deleted', (tagId) => {
+    console.log('[标签管理] 收到标签删除事件:', tagId)
+    // 重新加载标签数据
+    loadAvailableTags()
+  })
+  
+  uni.$on('tag-updated', (tag) => {
+    console.log('[标签管理] 收到标签编辑事件:', tag)
+    // 重新加载标签数据
+    loadAvailableTags()
+  })
+})
+
+// 页面卸载时移除事件监听
+import { onUnload } from '@dcloudio/uni-app'
+onUnload(() => {
+  uni.$off('tag-deleted')
+  uni.$off('tag-updated')
 })
 
 // 事件处理函数

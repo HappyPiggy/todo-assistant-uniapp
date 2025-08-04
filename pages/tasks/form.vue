@@ -254,6 +254,28 @@ onShow(() => {
 onUnmounted(() => {
 	// 清理事件监听
 	uni.$off('updateTags', updateTaskTags)
+	uni.$off('tag-deleted')
+	uni.$off('tag-updated')
+})
+
+// 监听标签相关事件
+onMounted(() => {
+	// 监听标签删除事件
+	uni.$on('tag-deleted', (deletedTagId) => {
+		console.log('[任务表单] 收到标签删除事件:', deletedTagId)
+		// 从当前任务的标签中移除已删除的标签
+		formData.tags = formData.tags.filter(tag => tag.id !== deletedTagId)
+	})
+	
+	// 监听标签编辑事件
+	uni.$on('tag-updated', (editedTag) => {
+		console.log('[任务表单] 收到标签编辑事件:', editedTag)
+		// 更新当前任务中的标签信息
+		const index = formData.tags.findIndex(tag => tag.id === editedTag.id)
+		if (index !== -1) {
+			formData.tags[index] = { ...editedTag }
+		}
+	})
 })
 
 // 加载任务数据（仅编辑模式）
