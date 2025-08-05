@@ -5,10 +5,12 @@
 const { generateUniqueShareCode } = require('./utils/share-code-generator')
 const { cloneTodoBook } = require('./utils/todobook-cloner')
 
-module.exports = async function createShare(todBookId, includeComments = false) {
+module.exports = async function createShare(todoBookId, includeComments = false) {
   try {
     const db = this.db
     const userId = this.uid
+    
+    console.log('createShare 接收到的参数:', { todoBookId: todoBookId, type: typeof todoBookId })
     
     // 1. 验证项目册存在并且用户有权限
     const bookCollection = db.collection('todobooks')
@@ -16,13 +18,13 @@ module.exports = async function createShare(todBookId, includeComments = false) 
     // 先尝试通过ID直接获取项目册（支持归档项目册）
     let bookResult
     try {
-      bookResult = await bookCollection.doc(todBookId).get()
+      bookResult = await bookCollection.doc(todoBookId).get()
       console.log('通过doc查询项目册 - 查询结果:', bookResult)
     } catch (docError) {
       console.log('doc查询失败，尝试where查询:', docError)
       // 如果doc查询失败，回退到where查询
       bookResult = await bookCollection.where({
-        _id: todBookId,
+        _id: todoBookId,
         creator_id: userId
       }).get()
       console.log('通过where查询项目册 - 查询结果:', bookResult)
@@ -30,15 +32,16 @@ module.exports = async function createShare(todBookId, includeComments = false) 
     
     // 检查项目册是否存在
     let originalBook
-    if (bookResult.data && bookResult.data.length > 0) {
+    if (bookResult.data && Array.isArray(bookResult.data) && bookResult.data.length > 0) {
+      // where查询或doc查询返回数组的情况
       originalBook = bookResult.data[0]
-    } else if (bookResult.data) {
-      // doc查询的情况
+    } else if (bookResult.data && !Array.isArray(bookResult.data)) {
+      // doc查询返回单个对象的情况
       originalBook = bookResult.data
     }
     
     if (!originalBook || !originalBook._id) {
-      console.log('项目册不存在 - 查询条件:', { _id: todBookId, creator_id: userId })
+      console.log('项目册不存在 - 查询条件:', { _id: todoBookId, creator_id: userId })
       console.log('查询结果:', bookResult)
       return {
         code: 1001,
@@ -78,7 +81,7 @@ module.exports = async function createShare(todBookId, includeComments = false) 
       if (sharedBookResult.data.length > 0) {
         const sharedBook = sharedBookResult.data[0]
         // 如果是从同一原始项目册创建的分享模板，则不允许重复分享
-        if (sharedBook.original_todobook_id === todBookId) {
+        if (sharedBook.original_todobook_id === todoBookId) {
           return {
             code: 1003,
             message: '已分享此项目册，无法再次分享。请先删除已有分享。'
@@ -99,7 +102,7 @@ module.exports = async function createShare(todBookId, includeComments = false) 
     const shareCode = await generateUniqueShareCode(db)
     
     // 5. 创建分享模板项目册
-    const sharedBookId = await cloneTodoBook(db, todBookId, {
+    const sharedBookId = await cloneTodoBook(db, todoBookId, {
       includeComments,
       isTemplate: true,
       templateCreatorId: userId

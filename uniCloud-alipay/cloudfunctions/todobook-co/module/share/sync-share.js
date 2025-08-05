@@ -4,10 +4,17 @@
 
 const { cloneTodoBook } = require('./utils/todobook-cloner')
 
-module.exports = async function syncShare(shareId) {
+module.exports = async function syncShare(params) {
   try {
     const db = this.db
     const userId = this.uid
+    
+    console.log('syncShare 接收到的参数:', params)
+    
+    // 处理参数：如果是对象则提取shareId，如果是字符串则直接使用
+    const shareId = typeof params === 'object' && params.shareId ? params.shareId : params
+    
+    console.log('解析后的shareId:', { shareId: shareId, type: typeof shareId })
     
     if (!shareId) {
       return {
@@ -20,14 +27,24 @@ module.exports = async function syncShare(shareId) {
     const shareCollection = db.collection('todobook_shares')
     const shareResult = await shareCollection.doc(shareId).get()
     
-    if (!shareResult.data || !shareResult.data._id) {
+    console.log('分享记录查询结果:', shareResult)
+    
+    // 处理doc查询结果格式
+    let shareData
+    if (shareResult.data && Array.isArray(shareResult.data) && shareResult.data.length > 0) {
+      // doc查询返回数组的情况
+      shareData = shareResult.data[0]
+    } else if (shareResult.data && !Array.isArray(shareResult.data)) {
+      // doc查询返回单个对象的情况
+      shareData = shareResult.data
+    }
+    
+    if (!shareData || !shareData._id) {
       return {
         code: 2002,
         message: '分享记录不存在'
       }
     }
-    
-    const shareData = shareResult.data
     
     // 2. 验证权限
     if (shareData.creator_id !== userId) {
@@ -61,14 +78,20 @@ module.exports = async function syncShare(shareId) {
     const bookCollection = db.collection('todobooks')
     const sharedBookResult = await bookCollection.doc(shareData.shared_todobook_id).get()
     
-    if (!sharedBookResult.data || !sharedBookResult.data._id) {
+    // 处理doc查询结果格式
+    let sharedBook
+    if (sharedBookResult.data && Array.isArray(sharedBookResult.data) && sharedBookResult.data.length > 0) {
+      sharedBook = sharedBookResult.data[0]
+    } else if (sharedBookResult.data && !Array.isArray(sharedBookResult.data)) {
+      sharedBook = sharedBookResult.data
+    }
+    
+    if (!sharedBook || !sharedBook._id) {
       return {
         code: 2004,
         message: '分享模板项目册不存在'
       }
     }
-    
-    const sharedBook = sharedBookResult.data
     const originalBookId = sharedBook.original_todobook_id
     
     if (!originalBookId) {
@@ -81,7 +104,15 @@ module.exports = async function syncShare(shareId) {
     // 5. 验证原始项目册是否存在
     const originalBookResult = await bookCollection.doc(originalBookId).get()
     
-    if (!originalBookResult.data || !originalBookResult.data._id) {
+    // 处理doc查询结果格式
+    let originalBook
+    if (originalBookResult.data && Array.isArray(originalBookResult.data) && originalBookResult.data.length > 0) {
+      originalBook = originalBookResult.data[0]
+    } else if (originalBookResult.data && !Array.isArray(originalBookResult.data)) {
+      originalBook = originalBookResult.data
+    }
+    
+    if (!originalBook || !originalBook._id) {
       return {
         code: 2002,
         message: '原始项目册已被删除，无法同步'

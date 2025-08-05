@@ -39,11 +39,19 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     const bookCollection = db.collection('todobooks')
     const originalBookResult = await bookCollection.doc(originalBookId).get()
     
-    if (!originalBookResult.data || !originalBookResult.data._id) {
-      throw new Error('原项目册不存在')
+    // 处理doc查询结果格式
+    let originalBook
+    if (originalBookResult.data && Array.isArray(originalBookResult.data) && originalBookResult.data.length > 0) {
+      // doc查询返回数组的情况
+      originalBook = originalBookResult.data[0]
+    } else if (originalBookResult.data && !Array.isArray(originalBookResult.data)) {
+      // doc查询返回单个对象的情况
+      originalBook = originalBookResult.data
     }
     
-    const originalBook = originalBookResult.data
+    if (!originalBook || !originalBook._id) {
+      throw new Error('原项目册不存在')
+    }
     
     let newBookId
     
