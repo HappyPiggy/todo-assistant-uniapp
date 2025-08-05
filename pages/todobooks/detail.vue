@@ -57,12 +57,12 @@
     <!-- 返回顶部按钮 -->
     <BackToTopButton 
       :visible="showBackToTop" 
-      :class="{ 'button-auto-fade': !backToTopVisible }"
+      :class="{ 'button-auto-fade': shouldAutoHideButtons && !backToTopVisible }"
       @scroll-to-top="scrollToTop" 
     />
 
     <!-- 浮动创建任务按钮 -->
-    <view v-if="canEdit" class="fab-container" :class="{ 'button-auto-fade': !fabButtonVisible }">
+    <view v-if="canEdit" class="fab-container" :class="{ 'button-auto-fade': shouldAutoHideButtons && !fabButtonVisible }">
       <view class="fab-button" @click="addTask">
         <uni-icons color="#ffffff" size="28" type="plus" />
       </view>
@@ -185,6 +185,11 @@ const canEdit = computed(() => {
   return result
 })
 
+// 是否需要自动隐藏按钮（任务数大于10时才启用自动隐藏）
+const shouldAutoHideButtons = computed(() => {
+  return sortedAndPinnedTasks.value && sortedAndPinnedTasks.value.length > 10
+})
+
 // 组件本地状态
 const currentTask = ref(null)
 const hasInitialized = ref(false) // 用于 onShow 判断是否为首次进入页面
@@ -241,8 +246,8 @@ onMounted(() => {
   hasInitialized.value = true
   calculateVirtualListHeight()
   
-  // 初始化浮动按钮的自动隐藏定时器
-  if (canEdit.value) {
+  // 初始化浮动按钮的自动隐藏定时器（仅在任务数大于10时）
+  if (canEdit.value && shouldAutoHideButtons.value) {
     startFabAutoHideTimer()
   }
   
@@ -399,17 +404,17 @@ const handleScroll = (event) => {
   const shouldShowBackToTop = scrollTop > 200
   if (shouldShowBackToTop !== showBackToTop.value) {
     showBackToTop.value = shouldShowBackToTop
-    if (shouldShowBackToTop) {
-      // 显示回到顶部按钮时启动自动隐藏定时器
+    if (shouldShowBackToTop && shouldAutoHideButtons.value) {
+      // 只有在任务数大于10时才启动自动隐藏定时器
       startBackToTopAutoHideTimer()
     }
-  } else if (shouldShowBackToTop) {
-    // 滚动时重置回到顶部按钮的自动隐藏定时器
+  } else if (shouldShowBackToTop && shouldAutoHideButtons.value) {
+    // 滚动时重置回到顶部按钮的自动隐藏定时器（仅在任务数大于10时）
     startBackToTopAutoHideTimer()
   }
   
-  // 滚动时重置浮动创建按钮的自动隐藏定时器
-  if (canEdit.value) {
+  // 滚动时重置浮动创建按钮的自动隐藏定时器（仅在任务数大于10时）
+  if (canEdit.value && shouldAutoHideButtons.value) {
     startFabAutoHideTimer()
   }
 }
