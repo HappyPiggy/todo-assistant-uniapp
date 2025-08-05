@@ -8,7 +8,8 @@
       [priorityClass]: true
     }"
     :style="{ marginLeft: level > 0 ? (level * 40) + 'rpx' : '0' }"
-    @click="handleClick">
+    @click="handleClick"
+    @longtap="handleLongPress">
     
     <!-- 主要内容区域 -->
     <view class="task-header">
@@ -171,7 +172,8 @@
           'wx-subtask-completed': subtask.status === 'completed',
           [getWXSubtaskPriorityClass(subtask)]: true
         }"
-        @click="handleSubtaskItemClick(subtask)">
+        @click="handleSubtaskItemClick(subtask)"
+        @longtap="handleSubtaskLongPress(subtask)">
         
         <!-- 连接线 -->
         <view class="wx-subtask-connector"></view>
@@ -307,6 +309,8 @@ import { currentUserId } from '@/store/storage.js'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
 import { getTaskCommentCount } from '@/utils/commentUtils.js'
+import { formatTaskInfo } from '../../utils/copyFormatters.js'
+import { useShareData } from '@/pages/settings/composables/useShareData.js'
 import UniTag from '../common/UniTag.vue'
 
 const props = defineProps({
@@ -483,6 +487,32 @@ const handleStatusToggle = () => {
 
 const handleMenuClick = () => {
   emit('menuClick', props.task)
+}
+const handleLongPress = () => {
+  const { copyToClipboard } = useShareData()
+  try {
+    const formattedText = formatTaskInfo(props.task)
+    copyToClipboard(formattedText, '已复制任务信息')
+  } catch (error) {
+    console.error('复制任务信息失败:', error)
+    uni.showToast({
+      title: '复制失败，请重试',
+      icon: 'error'
+    })
+  }
+}
+const handleSubtaskLongPress = (subtask) => {
+  const { copyToClipboard } = useShareData()
+  try {
+    const formattedText = formatTaskInfo(subtask)
+    copyToClipboard(formattedText, '已复制任务信息')
+  } catch (error) {
+    console.error('复制子任务信息失败:', error)
+    uni.showToast({
+      title: '复制失败，请重试',
+      icon: 'error'
+    })
+  }
 }
 
 const handleSubtaskStatusToggle = (subtask) => {

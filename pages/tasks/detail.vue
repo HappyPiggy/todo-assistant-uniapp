@@ -54,7 +54,7 @@
 				</view>
 				
 				<!-- 任务描述直接放在头部下方 -->
-				<view class="description-content" v-if="task.description">
+				<view class="description-content" v-if="task.description" @longtap="handleDescriptionLongPress">
 					<text class="description-text">{{ task.description }}</text>
 				</view>
 
@@ -210,7 +210,7 @@
 									<text class="comment-author">{{ comment.user_nickname || '用户' }}</text>
 									<text class="comment-time">{{ formatTime(comment.created_at) }}</text>
 								</view>
-								<text class="comment-content">{{ comment.content }}</text>
+								<text class="comment-content" @longtap="handleCommentLongPress(comment)">{{ comment.content }}</text>
 								
 								<!-- 评论操作 -->
 								<view v-if="canEdit" class="comment-actions">
@@ -254,7 +254,7 @@
 										<text class="comment-author">{{ reply.user_nickname || '用户' }}</text>
 										<text class="comment-time">{{ formatTime(reply.created_at) }}</text>
 									</view>
-									<text class="comment-content">{{ reply.content }}</text>
+									<text class="comment-content" @longtap="handleCommentLongPress(reply)">{{ reply.content }}</text>
 									
 									<!-- 回复操作 -->
 									<view v-if="canEdit" class="comment-actions">
@@ -389,6 +389,8 @@ import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
 import { useTaskUtils } from './composables/useTaskUtils.js'
 import { getCommentAvatar, getCommentAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
+import { useShareData } from '@/pages/settings/composables/useShareData.js'
+import { formatCommentInfo } from '@/pages/todobooks/utils/copyFormatters.js'
 import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 
 // 用于存储从路由获取的参数，初始为 null
@@ -610,6 +612,35 @@ const handleOpenSubtask = (subtask) => {
 
 const handleAddSubtask = () => {
 	addSubtask(bookId, taskId)
+}
+
+const handleDescriptionLongPress = () => {
+	if (!task.value?.description) return
+	
+	const { copyToClipboard } = useShareData()
+	try {
+		copyToClipboard(task.value.description, '已复制任务描述')
+	} catch (error) {
+		console.error('复制任务描述失败:', error)
+		uni.showToast({
+			title: '复制失败，请重试',
+			icon: 'error'
+		})
+	}
+}
+
+const handleCommentLongPress = (comment) => {
+	const { copyToClipboard } = useShareData()
+	try {
+		const formattedText = formatCommentInfo(comment)
+		copyToClipboard(formattedText, '已复制评论')
+	} catch (error) {
+		console.error('复制评论失败:', error)
+		uni.showToast({
+			title: '复制失败，请重试',
+			icon: 'error'
+		})
+	}
 }
 
 // 菜单操作
