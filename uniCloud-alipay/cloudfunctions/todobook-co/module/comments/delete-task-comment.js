@@ -6,12 +6,10 @@ const { ERROR_CODES } = require('../../common/constants')
 
 /**
  * 删除评论（软删除）
- * @param {Object} params 参数对象
- * @param {string} params.commentId 评论ID
+ * @param {string} commentId 评论ID
  * @returns {Object} 响应结果
  */
-async function deleteTaskComment(params) {
-  const { commentId } = params
+async function deleteTaskComment(commentId) {
   
   const { uid, db } = this
   

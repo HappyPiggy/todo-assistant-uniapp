@@ -2,7 +2,7 @@
  * 检查项目册的分享状态
  */
 
-module.exports = async function checkShareStatus({ todoBookId }) {
+module.exports = async function checkShareStatus(todoBookId) {
   try {
     const db = this.db
     const userId = this.uid

@@ -2,7 +2,7 @@
  * 删除项目册分享
  */
 
-module.exports = async function deleteShare({ shareId }) {
+module.exports = async function deleteShare(shareId) {
   try {
     const db = this.db
     const userId = this.uid

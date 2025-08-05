@@ -39,11 +39,11 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     const bookCollection = db.collection('todobooks')
     const originalBookResult = await bookCollection.doc(originalBookId).get()
     
-    if (originalBookResult.data.length === 0) {
+    if (!originalBookResult.data || !originalBookResult.data._id) {
       throw new Error('原项目册不存在')
     }
     
-    const originalBook = originalBookResult.data[0]
+    const originalBook = originalBookResult.data
     
     let newBookId
     

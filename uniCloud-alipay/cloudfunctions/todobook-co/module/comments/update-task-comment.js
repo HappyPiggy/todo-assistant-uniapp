@@ -9,13 +9,11 @@ const { ERROR_CODES } = require('../../common/constants')
 
 /**
  * 编辑评论
- * @param {Object} params 参数对象
- * @param {string} params.commentId 评论ID
- * @param {string} params.content 评论内容
+ * @param {string} commentId 评论ID
+ * @param {string} content 评论内容
  * @returns {Object} 响应结果
  */
-async function updateTaskComment(params) {
-  const { commentId, content } = params
+async function updateTaskComment(commentId, content) {
   
   const { uid, db } = this
   

@@ -10,14 +10,12 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
 
 /**
  * 获取任务评论列表（分页）
- * @param {Object} params 参数对象
- * @param {string} params.taskId 任务ID
- * @param {number} params.page 页码
- * @param {number} params.pageSize 每页大小
+ * @param {string} taskId 任务ID
+ * @param {number} page 页码
+ * @param {number} pageSize 每页大小
  * @returns {Object} 响应结果
  */
-async function getTaskComments(params) {
-  const { taskId, page = 1, pageSize = 20 } = params
+async function getTaskComments(taskId, page = 1, pageSize = 20) {
   
   const { uid, db } = this
   

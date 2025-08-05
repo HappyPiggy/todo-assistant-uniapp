@@ -4,7 +4,7 @@
 
 const { cloneTodoBook } = require('./utils/todobook-cloner')
 
-module.exports = async function syncShare({ shareId }) {
+module.exports = async function syncShare(shareId) {
   try {
     const db = this.db
     const userId = this.uid

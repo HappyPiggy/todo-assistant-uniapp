@@ -5,7 +5,7 @@
 const { generateUniqueShareCode } = require('./utils/share-code-generator')
 const { cloneTodoBook } = require('./utils/todobook-cloner')
 
-module.exports = async function createShare({ todBookId, includeComments = false }) {
+module.exports = async function createShare(todBookId, includeComments = false) {
   try {
     const db = this.db
     const userId = this.uid

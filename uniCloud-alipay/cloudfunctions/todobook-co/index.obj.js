@@ -38,7 +38,9 @@ const {
   deleteShare,
   getMyShares,
   importByCode,
-  getSharePreview
+  getSharePreview,
+  checkShareStatus,
+  syncShare
 } = require('./module/share/index')
 
 module.exports = {
@@ -79,67 +81,17 @@ module.exports = {
   leaveBook,
 
   // 评论管理接口
-  /**
-   * 获取任务评论列表（分页）
-   */
-  async getTaskComments(taskId, page = 1, pageSize = 20) {
-    return await getTaskComments.call(this, { taskId, page, pageSize })
-  },
-
-  /**
-   * 添加任务评论
-   */
-  async addTaskComment(taskId, content, parentCommentId = null) {
-    return await addTaskComment.call(this, { taskId, content, parentCommentId })
-  },
-
-  /**
-   * 编辑评论
-   */
-  async updateTaskComment(commentId, content) {
-    return await updateTaskComment.call(this, { commentId, content })
-  },
-
-  /**
-   * 删除评论
-   */
-  async deleteTaskComment(commentId) {
-    return await deleteTaskComment.call(this, { commentId })
-  },
+  getTaskComments,
+  addTaskComment,
+  updateTaskComment,
+  deleteTaskComment,
 
   // 分享管理接口
-  /**
-   * 创建分享
-   */
-  async createShare(todBookId, includeComments = false) {
-    return await createShare.call(this, { todBookId, includeComments })
-  },
-
-  /**
-   * 删除分享
-   */
-  async deleteShare(shareId) {
-    return await deleteShare.call(this, { shareId })
-  },
-
-  /**
-   * 获取我的分享列表
-   */
-  async getMyShares() {
-    return await getMyShares.call(this)
-  },
-
-  /**
-   * 通过分享码导入项目册
-   */
-  async importByCode(shareCode, allowDuplicate = false) {
-    return await importByCode.call(this, shareCode, allowDuplicate)
-  },
-
-  /**
-   * 获取分享预览
-   */
-  async getSharePreview(shareCode) {
-    return await getSharePreview.call(this, shareCode)
-  }
+  createShare,
+  deleteShare,
+  getMyShares,
+  importByCode,
+  getSharePreview,
+  checkShareStatus,
+  syncShare
 }

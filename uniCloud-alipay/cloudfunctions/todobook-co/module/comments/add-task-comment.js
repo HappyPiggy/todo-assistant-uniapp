@@ -10,14 +10,12 @@ const { ERROR_CODES, PERMISSION_TYPE } = require('../../common/constants')
 
 /**
  * 添加任务评论
- * @param {Object} params 参数对象
- * @param {string} params.taskId 任务ID
- * @param {string} params.content 评论内容
- * @param {string} params.parentCommentId 父评论ID（回复时使用）
+ * @param {string} taskId 任务ID
+ * @param {string} content 评论内容
+ * @param {string} parentCommentId 父评论ID（回复时使用）
  * @returns {Object} 响应结果
  */
-async function addTaskComment(params) {
-  const { taskId, content, parentCommentId = null } = params
+async function addTaskComment(taskId, content, parentCommentId = null) {
   
   const { uid, db } = this
   
