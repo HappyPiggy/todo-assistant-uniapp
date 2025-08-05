@@ -29,6 +29,24 @@
 			<text class="link" @click="toRegister">{{config.isAdmin ? '注册管理员账号': '注册账号'}}</text>
 			<!-- <text class="link" @click="toRegister" v-if="!config.isAdmin">注册账号</text> -->
 		</view>
+		
+		<!-- 第三方登录 -->
+		<view class="third-party-login" v-if="hasWeixinLogin">
+			<view class="divider">
+				<view class="line"></view>
+				<text class="divider-text">其他登录方式</text>
+				<view class="line"></view>
+			</view>
+			<view class="login-icons">
+				<view class="login-icon-item" @click="weixinLogin">
+					<image class="login-icon" src="/uni_modules/uni-id-pages/static/login/uni-fab-login/weixin.png" mode="aspectFit"></image>
+					<text class="login-icon-text">微信登录</text>
+				</view>
+			</view>
+		</view>
+		
+		<!-- 带选择框的隐私政策协议组件（用于微信登录） -->
+		<uni-id-pages-agreements v-if="false" scope="register" ref="weixinAgreements"></uni-id-pages-agreements>
 		<!-- 悬浮登录方式组件 -->
 		<!-- <uni-id-pages-fab-login ref="uniFabLogin"></uni-id-pages-fab-login> -->
 	</view>
@@ -36,6 +54,8 @@
 
 <script>
 	import mixin from '@/uni_modules/uni-id-pages/common/login-page.mixin.js';
+	import config from '@/uni_modules/uni-id-pages/config.js'
+	import {store,mutations} from '@/uni_modules/uni-id-pages/common/store.js'
 	const uniIdCo = uniCloud.importObject("uni-id-co", {
 		errorOptions: {
 			type: 'toast'
@@ -53,6 +73,12 @@
 				"focusPassword": false,
 				"logo": "/static/logo.png",
 				"uniIdRedirectUrl": "/pages/list/list"
+			}
+		},
+		computed: {
+			hasWeixinLogin() {
+				// 检查配置中是否包含微信登录
+				return config.loginTypes.includes('weixin')
 			}
 		},
 		onShow() {
@@ -142,6 +168,103 @@
 						console.error(e);
 					}
 				})
+			},
+			// 微信登录
+			async weixinLogin() {
+				// 判断是否需要弹出隐私协议授权框
+				let needAgreements = (config?.agreements?.scope || []).includes('register')
+				if (needAgreements && !this.agree) {
+					// 使用当前页面的协议组件
+					return this.$refs.agreements.popup(() => {
+						this.weixinLogin()
+					})
+				}
+				
+				// H5平台微信登录
+				// #ifdef H5
+				if (true) {
+					let ua = window.navigator.userAgent.toLowerCase();
+					let isWeixin = ua.match(/MicroMessenger/i) == 'micromessenger'
+					
+					// #ifdef VUE2
+					const baseUrl = process.env.BASE_URL
+					// #endif
+					// #ifdef VUE3
+					const baseUrl = import.meta.env.BASE_URL
+					// #endif
+					
+					let redirectUrl = location.protocol +
+						'//' +
+						location.host +
+						baseUrl.replace(/\/$/, '') +
+						(window.location.href.includes('#')?'/#':'') +
+						'/uni_modules/uni-id-pages/pages/login/login-withoutpwd?is_weixin_redirect=true&type=weixin'
+					
+					if (isWeixin) {
+						// 在微信公众号内
+						return window.open(`https://open.weixin.qq.com/connect/oauth2/authorize?appid=${config.appid.weixin.h5}&redirect_uri=${encodeURIComponent(redirectUrl)}&response_type=code&scope=snsapi_userinfo&state=STATE&connect_redirect=1#wechat_redirect`);
+					} else {
+						// 非微信公众号内
+						return location.href = `https://open.weixin.qq.com/connect/qrconnect?appid=${config.appid.weixin.web}&redirect_uri=${encodeURIComponent(redirectUrl)}&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect`
+					}
+				}
+				// #endif
+				
+				// 非H5平台微信登录
+				// #ifndef H5
+				uni.showLoading({
+					mask: true
+				})
+				
+				uni.login({
+					provider: 'weixin',
+					onlyAuthorize: true,
+					success: async e => {
+						this.loginByWeixin({
+							code: e.code
+						})
+					},
+					fail: async (err) => {
+						console.error(JSON.stringify(err));
+						uni.showModal({
+							content: `登录失败; code: ${err.errCode || -1}`,
+							confirmText: "知道了",
+							showCancel: false
+						});
+						uni.hideLoading()
+					}
+				})
+				// #endif
+			},
+			// 执行微信登录
+			loginByWeixin(params) {
+				const uniIdCo = uniCloud.importObject("uni-id-co", {
+					customUI: true
+				})
+				uniIdCo.loginByWeixin(params).then(result => {
+					uni.showToast({
+						title: '登录成功',
+						icon: 'none',
+						duration: 2000
+					});
+					// #ifdef H5
+					result.loginType = 'weixin'
+					// #endif
+					this.loginSuccess({
+						...result,
+						uniIdRedirectUrl: this.uniIdRedirectUrl
+					})
+				})
+				.catch(e => {
+					uni.showModal({
+						content: e.message,
+						confirmText: "知道了",
+						showCancel: false
+					});
+				})
+				.finally(e => {
+					uni.hideLoading()
+				})
 			}
 		}
 	}
@@ -173,5 +296,71 @@
 
 	.link {
 		font-size: 12px;
+	}
+	
+	/* 第三方登录样式 */
+	.third-party-login {
+		margin-top: 50px;
+	}
+	
+	.divider {
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: row;
+		align-items: center;
+		margin: 20px 0;
+	}
+	
+	.line {
+		flex: 1;
+		height: 1px;
+		background-color: #e4e4e4;
+	}
+	
+	.divider-text {
+		padding: 0 15px;
+		color: #999;
+		font-size: 12px;
+	}
+	
+	.login-icons {
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		padding: 10px 0;
+	}
+	
+	.login-icon-item {
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 0 20px;
+		cursor: pointer;
+		transition: opacity 0.3s;
+	}
+	
+	.login-icon-item:active {
+		opacity: 0.6;
+	}
+	
+	.login-icon {
+		width: 45px;
+		height: 45px;
+		border-radius: 50%;
+		border: 1px solid #f6f6f6;
+	}
+	
+	.login-icon-text {
+		margin-top: 8px;
+		font-size: 12px;
+		color: #666;
+		text-align: center;
 	}
 </style>
