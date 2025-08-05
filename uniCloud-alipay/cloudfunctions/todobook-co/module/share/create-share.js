@@ -91,7 +91,7 @@ module.exports = async function createShare(todoBookId, includeComments = false)
     }
     
     // 3. 检查用户分享数量限制（最多2个）
-    if (existingShareResult.total >= 2) {
+    if (existingShareResult.data.length >= 2) {
       return {
         code: 1002,
         message: '最多只能同时分享2个项目册，请先删除现有分享'
