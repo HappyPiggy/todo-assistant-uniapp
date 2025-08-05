@@ -43,6 +43,10 @@ const {
   syncShare
 } = require('./module/share/index')
 
+const {
+  exportTodoBookData
+} = require('./module/export/index')
+
 module.exports = {
   _before: async function () {
     const token = this.getUniIdToken();  
@@ -93,5 +97,8 @@ module.exports = {
   importByCode,
   getSharePreview,
   checkShareStatus,
-  syncShare
+  syncShare,
+
+  // 导出管理接口
+  exportTodoBookData
 }

@@ -1,0 +1,9 @@
+{
+  "name": "auth-co",
+  "version": "1.0.0",
+  "description": "认证云对象",
+  "main": "index.obj.js",
+  "dependencies": {
+    "uni-id-common": "^1.0.0"
+  }
+}

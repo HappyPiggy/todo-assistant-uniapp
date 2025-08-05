@@ -41,6 +41,12 @@
               <text class="action-text">数据统计</text>
             </view>
 
+            <!-- 导出数据 -->
+            <view class="action-item" @click="handleExportAction">
+              <uni-icons color="#17a2b8" size="20" type="download" />
+              <text class="action-text">导出数据</text>
+            </view>
+
             <!-- 置顶功能 (仅列表页显示) -->
             <view v-if="showPin" class="action-item" @click="handlePinAction">
               <uni-icons 
@@ -137,7 +143,7 @@ const popupRef = ref(null)
 const shareDialogRef = ref(null)
 
 // 组合式函数
-const { archiveTodoBook, deleteTodoBook } = useBookData()
+const { archiveTodoBook, deleteTodoBook, exportTodoBookData } = useBookData()
 const { isPinned, togglePin } = usePinning('todobooks')
 
 // 权限检查
@@ -225,6 +231,45 @@ const handleShareAction = () => {
           icon: "none"
         })
       }
+}
+
+const handleExportAction = async () => {
+  close() // 关闭action sheet
+  
+  // 显示确认对话框
+  uni.showModal({
+    title: '导出数据',
+    content: '将导出项目册的完整数据到剪切板，包括所有任务和子任务信息。确定要继续吗？',
+    success: async (res) => {
+      if (res.confirm) {
+        await performExport()
+      }
+    }
+  })
+}
+
+const performExport = async () => {
+  try {
+    uni.showLoading({ title: '正在导出数据...' })
+    
+    await exportTodoBookData(props.bookData._id)
+    
+    uni.hideLoading()
+    uni.showToast({
+      title: '数据已复制到剪切板',
+      icon: 'success'
+    })
+    
+    emit('action-completed', { type: 'export', success: true })
+  } catch (error) {
+    uni.hideLoading()
+    console.error('导出失败:', error)
+    uni.showToast({
+      title: error.message || '导出失败',
+      icon: 'error'
+    })
+    emit('action-completed', { type: 'export', success: false, error })
+  }
 }
 
 const handleArchiveAction = async () => {

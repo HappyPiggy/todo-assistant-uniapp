@@ -343,6 +343,35 @@ export function useBookData() {
     }
   }
 
+  /**
+   * 导出项目册完整数据
+   * @param {string} bookId - 项目册ID
+   * @returns {Promise<void>}
+   */
+  const exportTodoBookData = async (bookId) => {
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.exportTodoBookData(bookId)
+      
+      if (result.code === 0) {
+        // 格式化导出数据为易读的JSON
+        const exportData = JSON.stringify(result.data, null, 2)
+        
+        // 复制到剪切板
+        await uni.setClipboardData({
+          data: exportData
+        })
+        
+        console.log('数据导出成功，已复制到剪切板')
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (error) {
+      console.error('导出项目册数据失败:', error)
+      throw error
+    }
+  }
+
   // 统计计算属性
   // 时序图数据 - 已完成任务的时间线
   const timelineData = computed(() => {
@@ -566,6 +595,9 @@ export function useBookData() {
     
     // 统计方法
     loadStatisticsData,
-    refreshStatistics
+    refreshStatistics,
+    
+    // 导出方法
+    exportTodoBookData
   }
 }
