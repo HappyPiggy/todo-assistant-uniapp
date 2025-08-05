@@ -1,6 +1,12 @@
 /**
  * 项目册克隆工具
  * 用于创建分享模板和导入项目册
+ * 
+ * ⚠️ 重要提醒：
+ * 当修改 todoitems.schema.json 中的字段时，请同步更新此文件中的克隆逻辑
+ * 确保所有需要在分享时保留的字段都被正确复制
+ * 
+ * @see /uniCloud-alipay/database/todoitems.schema.json
  */
 
 /**
@@ -159,6 +165,9 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
         tags: originalTask.tags || [],
         due_date: originalTask.due_date,
         estimated_hours: originalTask.estimated_hours || 0,
+        // 财务相关字段
+        budget: originalTask.budget || null,
+        actual_cost: originalTask.actual_cost || 0,
         level: originalTask.level || 0,
         parent_id: originalTask.parent_id || null,
         sort_order: originalTask.sort_order || 0,

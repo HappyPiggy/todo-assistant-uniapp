@@ -1,4 +1,5 @@
 {
+	"$comment": "TodoItem数据模式。注意：修改字段时请同步更新 /uniCloud-alipay/cloudfunctions/todobook-co/module/share/utils/todobook-cloner.js 中的克隆逻辑",
 	"bsonType": "object",
 	"required": ["todobook_id", "title", "creator_id", "created_at"],
 	"permission": {
