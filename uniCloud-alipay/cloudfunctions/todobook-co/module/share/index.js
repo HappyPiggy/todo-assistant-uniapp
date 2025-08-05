@@ -8,5 +8,7 @@ module.exports = {
   deleteShare: require('./delete-share.js'),
   getMyShares: require('./get-my-shares.js'),
   importByCode: require('./import-by-code.js'),
-  getSharePreview: require('./get-share-preview.js')
+  getSharePreview: require('./get-share-preview.js'),
+  checkShareStatus: require('./check-share-status.js'),
+  syncShare: require('./sync-share.js')
 }

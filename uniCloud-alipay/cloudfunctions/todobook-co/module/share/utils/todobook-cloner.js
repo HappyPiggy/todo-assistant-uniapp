@@ -19,6 +19,8 @@
  * @param {string} options.templateCreatorId - 模板创建者ID
  * @param {string} options.newCreatorId - 新项目册创建者ID
  * @param {string} options.titleSuffix - 标题后缀
+ * @param {string} options.targetBookId - 目标项目册ID（用于更新现有项目册）
+ * @param {boolean} options.updateExisting - 是否更新现有项目册
  * @returns {Promise<string>} 新项目册ID
  */
 async function cloneTodoBook(db, originalBookId, options = {}) {
@@ -27,7 +29,9 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     isTemplate = false,
     templateCreatorId = null,
     newCreatorId = null,
-    titleSuffix = ''
+    titleSuffix = '',
+    targetBookId = null,
+    updateExisting = false
   } = options
 
   try {
@@ -41,41 +45,62 @@ async function cloneTodoBook(db, originalBookId, options = {}) {
     
     const originalBook = originalBookResult.data[0]
     
-    // 2. 创建新项目册
-    const newBookData = {
-      title: originalBook.title + titleSuffix,
-      description: originalBook.description || '',
-      color: originalBook.color || '#007AFF',
-      icon: originalBook.icon || 'folder',
-      is_shared: false,
-      share_type: 'private',
-      member_count: 1,
-      item_count: 0,
-      completed_count: 0,
-      sort_order: 0,
-      is_archived: false,
-      is_share_template: isTemplate,
-      created_at: new Date(),
-      updated_at: new Date(),
-      last_activity_at: new Date()
-    }
+    let newBookId
     
-    // 如果是分享模板，记录原始项目册ID用于重复分享检查
-    if (isTemplate) {
-      newBookData.original_todobook_id = originalBookId
+    // 2. 创建或更新项目册
+    if (updateExisting && targetBookId) {
+      // 更新现有项目册
+      newBookId = targetBookId
+      
+      // 更新项目册基本信息
+      const updateData = {
+        title: originalBook.title,
+        description: originalBook.description || '',
+        color: originalBook.color || '#007AFF',
+        icon: originalBook.icon || 'folder',
+        updated_at: new Date(),
+        last_activity_at: new Date()
+      }
+      
+      await bookCollection.doc(newBookId).update(updateData)
+      
+    } else {
+      // 创建新项目册
+      const newBookData = {
+        title: originalBook.title + titleSuffix,
+        description: originalBook.description || '',
+        color: originalBook.color || '#007AFF',
+        icon: originalBook.icon || 'folder',
+        is_shared: false,
+        share_type: 'private',
+        member_count: 1,
+        item_count: 0,
+        completed_count: 0,
+        sort_order: 0,
+        is_archived: false,
+        is_share_template: isTemplate,
+        created_at: new Date(),
+        updated_at: new Date(),
+        last_activity_at: new Date()
+      }
+      
+      // 如果是分享模板，记录原始项目册ID用于重复分享检查
+      if (isTemplate) {
+        newBookData.original_todobook_id = originalBookId
+      }
+      
+      // 设置创建者
+      if (isTemplate && templateCreatorId) {
+        newBookData.template_creator_id = templateCreatorId
+        newBookData.template_created_at = new Date()
+        // 分享模板不设置creator_id，表示不属于任何用户
+      } else if (newCreatorId) {
+        newBookData.creator_id = newCreatorId
+      }
+      
+      const newBookResult = await bookCollection.add(newBookData)
+      newBookId = newBookResult.id
     }
-    
-    // 设置创建者
-    if (isTemplate && templateCreatorId) {
-      newBookData.template_creator_id = templateCreatorId
-      newBookData.template_created_at = new Date()
-      // 分享模板不设置creator_id，表示不属于任何用户
-    } else if (newCreatorId) {
-      newBookData.creator_id = newCreatorId
-    }
-    
-    const newBookResult = await bookCollection.add(newBookData)
-    const newBookId = newBookResult.id
     
     // 3. 获取并克隆任务
     const taskCollection = db.collection('todoitems')

@@ -3,14 +3,22 @@
     <view class="share-dialog">
       <!-- 对话框标题 -->
       <view class="dialog-header">
-        <text class="dialog-title">分享项目册</text>
+        <text class="dialog-title">{{ dialogTitle }}</text>
         <view class="close-btn" @click="close">
           <uni-icons color="#999999" size="20" type="closeempty" />
         </view>
       </view>
 
-      <!-- 分享设置 -->
-      <view v-if="!shareResult" class="dialog-content">
+      <!-- 加载中 -->
+      <view v-if="isCheckingStatus" class="dialog-content">
+        <view class="loading-container">
+          <uni-loading color="#007AFF" />
+          <text class="loading-text">检查分享状态...</text>
+        </view>
+      </view>
+
+      <!-- 分享设置（未分享） -->
+      <view v-else-if="!shareResult && shareStatus && !shareStatus.isShared" class="dialog-content">
         <view class="project-info">
           <view class="project-icon" :style="{ backgroundColor: todoBokData?.color || '#007AFF' }">
             <uni-icons color="#ffffff" size="24" :type="todoBokData?.icon || 'folder'" />
@@ -33,6 +41,43 @@
           <view class="setting-desc">
             <text class="desc-text">开启后，项目册中的任务评论也会被包含在分享中</text>
           </view>
+        </view>
+      </view>
+
+      <!-- 同步选项（已分享） -->
+      <view v-else-if="!shareResult && shareStatus && shareStatus.isShared" class="dialog-content">
+        <view class="project-info">
+          <view class="project-icon" :style="{ backgroundColor: todoBokData?.color || '#007AFF' }">
+            <uni-icons color="#ffffff" size="24" :type="todoBokData?.icon || 'folder'" />
+          </view>
+          <view class="project-details">
+            <text class="project-name">{{ todoBokData?.title || '项目册' }}</text>
+            <text class="project-desc">{{ todoBokData?.description || '暂无描述' }}</text>
+          </view>
+        </view>
+
+        <view class="share-status-section">
+          <view class="status-item">
+            <text class="status-label">分享码</text>
+            <text class="status-value">{{ shareStatus.shareInfo.shareCode }}</text>
+          </view>
+          <view class="status-item">
+            <text class="status-label">上次同步时间</text>
+            <text class="status-value">{{ formatSyncTime(shareStatus.shareInfo.lastSyncAt) }}</text>
+          </view>
+          <view class="status-item">
+            <text class="status-label">同步次数</text>
+            <text class="status-value">{{ shareStatus.shareInfo.syncCount || 0 }}次</text>
+          </view>
+        </view>
+
+        <view v-if="!shareStatus.shareInfo.canSync" class="sync-limit-tips">
+          <uni-icons color="#ff9500" size="16" type="info-filled" />
+          <text class="tips-text">{{ getSyncLimitMessage() }}</text>
+        </view>
+
+        <view class="sync-desc">
+          <text class="desc-text">同步将更新云端分享内容为最新版本，分享码保持不变</text>
         </view>
       </view>
 
@@ -68,7 +113,13 @@
 
       <!-- 操作按钮 -->
       <view class="dialog-actions">
-        <view v-if="!shareResult" class="action-buttons">
+        <!-- 检查状态中 -->
+        <view v-if="isCheckingStatus" class="single-action">
+          <button class="cancel-btn" @click="close">取消</button>
+        </view>
+        
+        <!-- 创建分享按钮 -->
+        <view v-else-if="!shareResult && shareStatus && !shareStatus.isShared" class="action-buttons">
           <button class="cancel-btn" @click="close">取消</button>
           <button 
             class="confirm-btn" 
@@ -78,6 +129,20 @@
             {{ loading ? '创建中...' : '确认分享' }}
           </button>
         </view>
+        
+        <!-- 同步按钮 -->
+        <view v-else-if="!shareResult && shareStatus && shareStatus.isShared" class="action-buttons">
+          <button class="cancel-btn" @click="close">取消</button>
+          <button 
+            class="confirm-btn" 
+            :disabled="syncLoading || !shareStatus.shareInfo.canSync"
+            @click="handleSyncShare"
+          >
+            {{ syncLoading ? '同步中...' : '同步到云端' }}
+          </button>
+        </view>
+        
+        <!-- 完成按钮 -->
         <view v-else class="single-action">
           <button class="done-btn" @click="close">完成</button>
         </view>
@@ -97,22 +162,51 @@ const props = defineProps({
 })
 
 // 组合式函数
-const { createShare, copyToClipboard } = useShareData()
+const { createShare, checkShareStatus, syncShare, copyToClipboard } = useShareData()
 
 // 响应式数据
 const popupRef = ref(null)
 const includeComments = ref(false)
 const loading = ref(false)
 const shareResult = ref(null)
+const shareStatus = ref(null) // 分享状态信息
+const isCheckingStatus = ref(false) // 检查状态中
+const syncLoading = ref(false) // 同步中
+
+// 计算属性
+const dialogTitle = computed(() => {
+  if (isCheckingStatus.value) {
+    return '分享项目册'
+  }
+  if (shareStatus.value?.isShared) {
+    return '同步项目册'
+  }
+  return '分享项目册'
+})
 
 // 方法
-const open = () => {
+const open = async () => {
   // 重置状态
   includeComments.value = false
   loading.value = false
   shareResult.value = null
+  shareStatus.value = null
+  isCheckingStatus.value = true
   
+  // 先打开弹窗
   popupRef.value?.open()
+  
+  // 检查分享状态
+  try {
+    const status = await checkShareStatus(props.todoBokId)
+    shareStatus.value = status
+  } catch (error) {
+    console.error('检查分享状态失败:', error)
+    // 如果检查失败，默认显示创建分享界面
+    shareStatus.value = { isShared: false }
+  } finally {
+    isCheckingStatus.value = false
+  }
 }
 
 const close = () => {
@@ -159,6 +253,88 @@ const handleCreateShare = async () => {
 const copyShareCode = () => {
   if (shareResult.value?.share_code) {
     copyToClipboard(shareResult.value.share_code, '分享码已复制')
+  }
+}
+
+const handleSyncShare = async () => {
+  if (!shareStatus.value?.shareInfo?.shareId) {
+    uni.showToast({
+      title: '分享信息不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  syncLoading.value = true
+
+  try {
+    const result = await syncShare(shareStatus.value.shareInfo.shareId)
+    
+    // 同步成功，显示结果
+    shareResult.value = {
+      share_code: shareStatus.value.shareInfo.shareCode,
+      syncedAt: result.syncedAt
+    }
+    
+    uni.showToast({
+      title: '同步成功',
+      icon: 'success'
+    })
+  } catch (error) {
+    console.error('同步失败:', error)
+    
+    if (error.code === 2001) {
+      // 时间限制错误，显示特殊提示
+      const hours = Math.ceil((error.data.nextSyncTime - new Date()) / (1000 * 60 * 60))
+      uni.showToast({
+        title: `请在${hours}小时后重试`,
+        icon: 'none',
+        duration: 3000
+      })
+    }
+  } finally {
+    syncLoading.value = false
+  }
+}
+
+const formatSyncTime = (timestamp) => {
+  if (!timestamp) {
+    return '从未同步'
+  }
+  
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now - date
+  
+  // 转换为小时
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  
+  if (hours < 1) {
+    const minutes = Math.floor(diff / (1000 * 60))
+    return minutes < 1 ? '刚刚' : `${minutes}分钟前`
+  } else if (hours < 24) {
+    return `${hours}小时前`
+  } else {
+    const days = Math.floor(hours / 24)
+    return `${days}天前`
+  }
+}
+
+const getSyncLimitMessage = () => {
+  if (!shareStatus.value?.shareInfo?.nextSyncTime) {
+    return '同步频率限制'
+  }
+  
+  const nextTime = new Date(shareStatus.value.shareInfo.nextSyncTime)
+  const now = new Date()
+  const diff = nextTime - now
+  
+  const hours = Math.ceil(diff / (1000 * 60 * 60))
+  
+  if (hours > 0) {
+    return `${hours}小时后可同步`
+  } else {
+    return '即将可以同步'
   }
 }
 
@@ -405,6 +581,84 @@ defineExpose({
     &:active {
       background-color: #0056CC;
     }
+  }
+  
+  .cancel-btn {
+    width: 100%;
+    height: 44px;
+    background-color: #f8f9fa;
+    color: #666666;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    
+    &:active {
+      background-color: #e9ecef;
+    }
+  }
+}
+
+.loading-container {
+  text-align: center;
+  padding: 40px 0;
+  
+  .loading-text {
+    display: block;
+    margin-top: 12px;
+    font-size: 14px;
+    color: #666666;
+  }
+}
+
+.share-status-section {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  
+  .status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      font-size: 14px;
+      color: #666666;
+    }
+    
+    .status-value {
+      font-size: 14px;
+      color: #333333;
+      font-weight: 500;
+    }
+  }
+}
+
+.sync-limit-tips {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: #fff7e6;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  
+  .tips-text {
+    font-size: 14px;
+    color: #ff9500;
+    margin-left: 8px;
+  }
+}
+
+.sync-desc {
+  .desc-text {
+    font-size: 12px;
+    color: #999999;
+    line-height: 1.4;
   }
 }
 </style>

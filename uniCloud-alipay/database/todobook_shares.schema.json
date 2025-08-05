@@ -56,6 +56,18 @@
 			"bsonType": "timestamp",
 			"description": "最后导入时间",
 			"title": "最后导入时间"
+		},
+		"last_sync_at": {
+			"bsonType": "timestamp",
+			"description": "最后同步时间",
+			"title": "最后同步时间"
+		},
+		"sync_count": {
+			"bsonType": "int",
+			"minimum": 0,
+			"default": 0,
+			"description": "同步次数",
+			"title": "同步次数"
 		}
 	}
 }

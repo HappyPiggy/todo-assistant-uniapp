@@ -183,6 +183,70 @@ export function useShareData() {
   }
 
   /**
+   * 检查项目册的分享状态
+   * @param {string} todoBookId - 项目册ID
+   * @returns {Promise<Object>} 分享状态信息
+   */
+  const checkShareStatus = async (todoBookId) => {
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.checkShareStatus({ todoBookId })
+      
+      if (result.code === 0) {
+        return result.data
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (err) {
+      console.error('检查分享状态失败:', err)
+      error.value = err.message
+      throw err
+    }
+  }
+
+  /**
+   * 同步分享内容到云端
+   * @param {string} shareId - 分享ID
+   * @returns {Promise<Object>} 同步结果
+   */
+  const syncShare = async (shareId) => {
+    try {
+      const todoBookCo = uniCloud.importObject('todobook-co')
+      const result = await todoBookCo.syncShare({ shareId })
+      
+      if (result.code === 0) {
+        uni.showToast({
+          title: '同步成功',
+          icon: 'success'
+        })
+        return result.data
+      } else if (result.code === 2001) {
+        // 时间限制错误
+        const err = new Error(result.message)
+        err.code = result.code
+        err.data = result.data
+        throw err
+      } else {
+        throw new Error(result.message)
+      }
+    } catch (err) {
+      console.error('同步分享失败:', err)
+      error.value = err.message
+      
+      // 对于非时间限制错误，显示toast
+      if (err.code !== 2001) {
+        uni.showToast({
+          title: err.message,
+          icon: 'none',
+          duration: 3000
+        })
+      }
+      
+      throw err
+    }
+  }
+
+  /**
    * 复制文本到剪贴板
    * @param {string} text - 要复制的文本
    * @param {string} successMsg - 成功提示消息
@@ -276,6 +340,8 @@ export function useShareData() {
     loadMyShares,
     importByShareCode,
     getSharePreview,
+    checkShareStatus,
+    syncShare,
     copyToClipboard
   }
 }
