@@ -96,8 +96,6 @@
 import { defineProps, computed } from 'vue'
 import VirtualTaskList from './VirtualTaskList.vue'
 
-const emit = defineEmits(['task-click'])
-
 const props = defineProps({
   timelineData: {
     type: Array,
