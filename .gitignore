@@ -69,3 +69,6 @@ coverage/
 
 # Claude配置文件
 .claude/settings.local.json
+
+# uni-id配置文件（包含敏感信息）
+uni_modules/uni-config-center/uniCloud/cloudfunctions/common/uni-config-center/uni-id/config.json

@@ -12,7 +12,9 @@
       <!-- 加载中 -->
       <view v-if="isCheckingStatus" class="dialog-content">
         <view class="loading-container">
-          <uni-loading color="#007AFF" />
+          <view class="loading-icon">
+            <text class="loading-spinner">⟳</text>
+          </view>
           <text class="loading-text">检查分享状态...</text>
         </view>
       </view>
@@ -602,12 +604,26 @@ defineExpose({
   text-align: center;
   padding: 40px 0;
   
+  .loading-icon {
+    margin-bottom: 12px;
+    
+    .loading-spinner {
+      font-size: 24px;
+      color: #007AFF;
+      animation: spin 1s linear infinite;
+    }
+  }
+  
   .loading-text {
     display: block;
-    margin-top: 12px;
     font-size: 14px;
     color: #666666;
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .share-status-section {
