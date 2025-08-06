@@ -425,11 +425,11 @@ const budgetDisplayText = computed(() => {
     const actualCost = props.task.actual_cost || 0
     
     if (budget > 0 && actualCost > 0) {
-      return `¥${actualCost}/${budget}`
+      return `${actualCost}/${budget}`
     } else if (budget > 0) {
-      return `预算¥${budget}`
+      return `预算${budget}`
     } else if (actualCost > 0) {
-      return `花费¥${actualCost}`
+      return `花费${actualCost}`
     }
     return ''
   } catch (error) {
@@ -591,11 +591,11 @@ const getSubtaskBudgetDisplayText = (subtask) => {
     const actualCost = subtask.actual_cost || 0
     
     if (budget > 0 && actualCost > 0) {
-      return `¥${actualCost}/${budget}`
+      return `${actualCost}/${budget}`
     } else if (budget > 0) {
-      return `预算¥${budget}`
+      return `预算${budget}`
     } else if (actualCost > 0) {
-      return `花费¥${actualCost}`
+      return `花费${actualCost}`
     }
     return ''
   } catch (error) {

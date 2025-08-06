@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, watch } from 'vue'
+import { ref, computed, defineProps, defineEmits, watch, nextTick } from 'vue'
 import PieChartCanvas from './PieChartCanvas.vue'
 import PieChartCenter from './PieChartCenter.vue'
 import ExpenseTagList from './ExpenseTagList.vue'
@@ -110,7 +110,7 @@ const canvasReady = ref(false)
 
 // 错误状态
 const error = ref(null)
-const loading = ref(false) // 改为默认不加载状态
+const loading = ref(true) // 默认为加载状态，等待数据
 
 // Canvas 尺寸计算
 const canvasWidth = computed(() => props.width)
@@ -275,22 +275,51 @@ const handleCanvasReady = () => {
   }
 }
 
-// 监听数据变化，重置选中状态
+// 监听数据变化，重置选中状态和管理加载状态
 watch(() => props.expenseData, (newData, oldData) => {
   try {
+    console.log('EnhancedExpensePieChart - 监听到数据变化:', {
+      newData: newData?.length || 0,
+      oldData: oldData?.length || 0
+    })
+    
     if (!newData || newData.length === 0) {
+      // 数据为空时的处理
       selectedSegment.value = null
       centerMode.value = 'total'
+      loading.value = true // 保持加载状态
       error.value = null
     } else {
-      // 清除之前的错误状态
-      if (error.value) {
-        error.value = null
-      }
+      // 有数据时的处理
+      selectedSegment.value = null
+      centerMode.value = 'total'
+      loading.value = false // 取消加载状态
+      error.value = null
+      
+      // 延迟触发重绘，确保组件完全渲染
+      setTimeout(() => {
+        nextTick(() => {
+          if (canvasRef.value && canvasRef.value.redraw) {
+            console.log('延迟重绘：数据更新，触发Canvas重绘')
+            canvasRef.value.redraw()
+          }
+        })
+      }, 100) // 延迟100ms
+      
+      // 如果100ms后仍未成功，再次尝试
+      setTimeout(() => {
+        nextTick(() => {
+          if (canvasRef.value && canvasRef.value.redraw) {
+            console.log('二次重绘：确保图表显示')
+            canvasRef.value.redraw()
+          }
+        })
+      }, 300) // 延迟300ms
     }
   } catch (err) {
     console.error('数据变化监听出错:', err)
     error.value = '数据处理错误'
+    loading.value = false
   }
 }, { deep: true, immediate: true })
 

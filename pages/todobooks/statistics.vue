@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
@@ -126,27 +126,31 @@ const contentWrapperStyle = computed(() => {
 // Tab切换处理
 const handleTabChange = (tabKey) => {
   if (tabKey !== activeTab.value) {
-    // 添加震动反馈（如果设备支持）
-    if (uni.vibrateShort) {
-      uni.vibrateShort({
-        type: 'light'
-      })
+    // 已移除震动反馈
+    
+    // 如果切换到消费统计，确保数据已加载
+    if (tabKey === 'expense') {
+      // 检查是否需要重新加载数据
+      const needsDataLoad = !expenseData.value.totalBudget && !expenseData.value.totalActualCost
+      const needsTagGroups = !tagGroups.value || tagGroups.value.length === 0
+      
+      if (needsDataLoad || needsTagGroups) {
+        // 先设置loading状态，然后加载数据
+        console.log('切换到消费统计Tab，正在加载数据...')
+        loadExpenseData()
+        
+        // 使用nextTick确保数据更新后再切换tab
+        nextTick(() => {
+          activeTab.value = tabKey
+          console.log('数据加载完成，切换到Tab:', tabKey)
+        })
+        return
+      }
     }
     
+    // 正常情况下直接切换
     activeTab.value = tabKey
     console.log('切换到Tab:', tabKey)
-    
-    // 如果切换到消费统计，确保数据已加载并等待数据准备
-    if (tabKey === 'expense') {
-      if (!expenseData.value.totalBudget && !expenseData.value.totalActualCost) {
-        loadExpenseData()
-      }
-      // 确保标签组数据也已准备好
-      if (expenseResult.value && (!tagGroups.value || tagGroups.value.length === 0)) {
-        const defaultView = 'actual' // 默认显示实际支出
-        tagGroups.value = expenseResult.value.actualTagGroups
-      }
-    }
   }
 }
 

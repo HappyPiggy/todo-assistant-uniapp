@@ -57,12 +57,12 @@ export const formatTaskInfo = (task) => {
   
   // 预算
   if (task.budget !== null && task.budget !== undefined) {
-    lines.push(`【预算】¥${task.budget}`)
+    lines.push(`【预算】${task.budget}`)
   }
   
   // 实际花费
   if (task.actual_cost !== null && task.actual_cost !== undefined) {
-    lines.push(`【实际花费】¥${task.actual_cost}`)
+    lines.push(`【实际花费】${task.actual_cost}`)
   }
   
   // 创建时间

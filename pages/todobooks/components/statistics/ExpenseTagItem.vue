@@ -63,8 +63,8 @@ const emit = defineEmits(['click'])
 
 // 格式化金额显示
 const formatAmount = (amount) => {
-  if (!amount && amount !== 0) return '¥0.00'
-  return '¥' + Number(amount).toLocaleString('zh-CN', {
+  if (!amount && amount !== 0) return '0.00'
+  return '' + Number(amount).toLocaleString('zh-CN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
@@ -73,14 +73,7 @@ const formatAmount = (amount) => {
 
 // 处理点击事件
 const handleClick = () => {
-  // 添加触觉反馈
-  try {
-    uni.vibrateShort({
-      type: 'light'
-    })
-  } catch (e) {
-    console.log('设备不支持触觉反馈')
-  }
+  // 已移除震动反馈
   
   emit('click', props.item)
 }

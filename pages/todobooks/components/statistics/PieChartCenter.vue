@@ -4,13 +4,13 @@
       <!-- 总支出模式 -->
       <view v-if="centerMode === 'total'" key="total" class="center-content">
         <text class="center-label">总支出</text>
-        <text class="center-value">¥{{ animatedTotalAmount }}</text>
+        <text class="center-value">{{ animatedTotalAmount }}</text>
       </view>
       
       <!-- 单个类别模式 -->
       <view v-else-if="selectedCategory" key="category" class="center-content">
         <text class="center-label">{{ selectedCategory.tagName }}</text>
-        <text class="center-value">¥{{ animatedCategoryAmount }}</text>
+        <text class="center-value">{{ animatedCategoryAmount }}</text>
       </view>
     </transition>
   </view>
@@ -100,7 +100,7 @@ const animateNumber = (fromValue, toValue, duration, callback) => {
 // 更新总金额显示
 const updateTotalAmount = (newAmount, animate = false) => {
   if (animate) {
-    const currentAmount = parseFloat(animatedTotalAmount.value.replace(/[,¥]/g, '')) || 0
+    const currentAmount = parseFloat(animatedTotalAmount.value.replace(/[,]/g, '')) || 0
     animateNumber(currentAmount, newAmount, props.animationDuration, (value) => {
       animatedTotalAmount.value = value
     })
@@ -112,7 +112,7 @@ const updateTotalAmount = (newAmount, animate = false) => {
 // 更新类别金额显示
 const updateCategoryAmount = (newAmount, animate = false) => {
   if (animate) {
-    const currentAmount = parseFloat(animatedCategoryAmount.value.replace(/[,¥]/g, '')) || 0
+    const currentAmount = parseFloat(animatedCategoryAmount.value.replace(/[,]/g, '')) || 0
     animateNumber(currentAmount, newAmount, props.animationDuration, (value) => {
       animatedCategoryAmount.value = value
     })

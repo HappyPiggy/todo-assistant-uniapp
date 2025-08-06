@@ -9,7 +9,7 @@
     <!-- 中心显示总额 -->
     <view class="chart-center">
       <text class="center-label">{{ viewMode === 'actual' ? '总支出' : '总预算' }}</text>
-      <text class="center-value">¥{{ formatAmount(totalAmount) }}</text>
+      <text class="center-value">{{ formatAmount(totalAmount) }}</text>
     </view>
   </view>
 </template>

@@ -67,14 +67,41 @@ const totalAmount = computed(() => {
   return props.chartData.reduce((sum, item) => sum + (item.amount || 0), 0)
 })
 
-// 初始化Canvas上下文
-const initCanvas = () => {
+// 初始化Canvas上下文 - 改进版本
+const initCanvas = (retryCount = 0) => {
   try {
+    console.log(`PieChartCanvas - 尝试初始化Canvas (第${retryCount + 1}次)`)
     ctx.value = uni.createCanvasContext(canvasId)
-    emit('canvas-ready')
-    return true
+    
+    if (ctx.value) {
+      console.log('PieChartCanvas - Canvas上下文初始化成功')
+      emit('canvas-ready')
+      
+      // 初始化成功后，如果有数据就立即绘制
+      setTimeout(() => {
+        if (props.chartData && props.chartData.length > 0) {
+          console.log('PieChartCanvas - 初始化完成，开始绘制图表')
+          drawPieChart(true) // 首次绘制使用动画
+        }
+      }, 100)
+      
+      return true
+    } else {
+      throw new Error('createCanvasContext 返回了 null 或 undefined')
+    }
   } catch (error) {
-    console.error('Canvas初始化失败:', error)
+    console.error(`Canvas初始化失败 (第${retryCount + 1}次):`, error)
+    
+    // 最多重试3次，每次间隔更长
+    if (retryCount < 3) {
+      const delay = (retryCount + 1) * 200 // 200ms, 400ms, 600ms
+      console.log(`PieChartCanvas - ${delay}ms后重试初始化`)
+      setTimeout(() => {
+        initCanvas(retryCount + 1)
+      }, delay)
+    } else {
+      console.error('PieChartCanvas - Canvas初始化重试次数用尽，放弃初始化')
+    }
     return false
   }
 }
@@ -89,11 +116,19 @@ const drawPieChart = (withAnimation = false) => {
   
   if (!ctx.value) {
     console.error('PieChartCanvas - Canvas上下文不存在，尝试重新初始化')
-    if (initCanvas()) {
-      // 重新调用绘制
-      setTimeout(() => drawPieChart(withAnimation), 100)
+    // 直接重新创建上下文，不依赖initCanvas的重试逻辑
+    try {
+      ctx.value = uni.createCanvasContext(canvasId)
+      if (ctx.value) {
+        console.log('PieChartCanvas - 重新初始化Canvas成功，继续绘制')
+      } else {
+        console.error('PieChartCanvas - 重新初始化失败，Canvas上下文为空')
+        return
+      }
+    } catch (err) {
+      console.error('PieChartCanvas - 重新初始化出错:', err)
+      return
     }
-    return
   }
   
   // 清除之前的定时器
@@ -250,6 +285,14 @@ const drawPieChartCore = (animationProgress = 1) => {
   ctx.value.fill()
   
   ctx.value.draw()
+  
+  // uni-app某些平台需要调用update确保绘制内容显示
+  setTimeout(() => {
+    if (ctx.value && ctx.value.update) {
+      ctx.value.update()
+      console.log('PieChartCanvas - 调用Canvas update方法')
+    }
+  }, 50)
 }
 
 // 绘制延伸标签
@@ -441,14 +484,13 @@ watch([() => props.canvasWidth, () => props.canvasHeight], () => {
 onMounted(() => {
   console.log('PieChartCanvas 挂载完成')
   
-  nextTick(() => {
-    if (initCanvas()) {
-      // 延迟绘制，确保Canvas准备就绪，首次加载使用动画
-      setTimeout(() => {
-        drawPieChart(true) // 首次绘制使用动画
-      }, 100)
-    }
-  })
+  // 使用更长的延迟确保DOM完全渲染
+  setTimeout(() => {
+    nextTick(() => {
+      console.log('PieChartCanvas - 开始初始化Canvas')
+      initCanvas() // 初始化过程中会自动处理重试和后续绘制
+    })
+  }, 300) // 增加到300ms延迟
 })
 
 // 清理动画资源

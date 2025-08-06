@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
+import { ref, computed, defineProps, defineEmits, onMounted, watch } from 'vue'
 import EnhancedExpensePieChart from './EnhancedExpensePieChart.vue'
 
 const props = defineProps({
@@ -161,14 +161,18 @@ const handleSegmentClick = (segmentId, segmentData) => {
   
   // 可以在这里添加额外的处理逻辑
   // 例如：跳转到任务详情、显示详细分析等
-  uni.vibrateShort({
-    type: 'light'
-  })
+  // 已移除震动反馈
 }
 
 // 处理图表准备就绪事件
 const handleChartReady = () => {
 }
+
+// 监听tagGroups数据变化，确保图表组件能及时响应
+watch(() => props.tagGroups, (newTagGroups) => {
+  console.log('StatisticsExpenseTab - tagGroups数据变化:', newTagGroups?.length || 0)
+  // 数据变化时，可以在这里进行额外的处理
+}, { deep: true })
 
 // 恢复用户偏好
 onMounted(() => {
@@ -176,6 +180,11 @@ onMounted(() => {
   if (savedMode && ['actual', 'budget'].includes(savedMode)) {
     viewMode.value = savedMode
   }
+  
+  // 组件挂载后，主动触发一次视图切换事件
+  // 确保父组件知道当前视图模式并加载对应数据
+  console.log('StatisticsExpenseTab - 挂载完成，触发初始视图模式:', viewMode.value)
+  emit('view-change', viewMode.value)
 })
 </script>
 
