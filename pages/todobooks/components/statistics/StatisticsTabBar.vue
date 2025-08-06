@@ -107,6 +107,14 @@ const handleTabClick = (tabKey) => {
       // 添加点击反馈
       &:active {
         transform: scale(0.95);
+        opacity: 0.8;
+        transition: all 0.1s ease;
+      }
+      
+      // 触摸高亮效果
+      &:hover {
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
       }
     }
   }

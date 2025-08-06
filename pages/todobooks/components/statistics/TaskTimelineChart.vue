@@ -11,8 +11,16 @@
       <text class="empty-text">暂无已完成任务</text>
     </view>
     
-    <!-- 时序图内容 -->
-    <scroll-view v-else scroll-y class="timeline-container" :style="{ height: containerHeight }">
+    <!-- 虚拟滚动时序图（大数据量） -->
+    <VirtualTaskList 
+      v-else-if="enableVirtualScroll && timelineData && timelineData.length > 0"
+      :items="timelineData"
+      :container-height="containerHeight"
+      @task-click="handleTaskClick"
+    />
+    
+    <!-- 普通时序图内容（小数据量） -->
+    <scroll-view v-else-if="!enableVirtualScroll && timelineData && timelineData.length > 0" scroll-y class="timeline-container" :style="{ height: containerHeight }">
       <view class="timeline-content">
         <!-- 时间轴线 -->
         <view class="timeline-line"></view>
@@ -86,6 +94,7 @@
 
 <script setup>
 import { defineProps, computed } from 'vue'
+import VirtualTaskList from './VirtualTaskList.vue'
 
 const emit = defineEmits(['task-click'])
 

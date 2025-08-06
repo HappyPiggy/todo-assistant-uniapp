@@ -125,8 +125,20 @@ const contentWrapperStyle = computed(() => {
 // Tab切换处理
 const handleTabChange = (tabKey) => {
   if (tabKey !== activeTab.value) {
+    // 添加震动反馈（如果设备支持）
+    if (uni.vibrateShort) {
+      uni.vibrateShort({
+        type: 'light'
+      })
+    }
+    
     activeTab.value = tabKey
     console.log('切换到Tab:', tabKey)
+    
+    // 如果切换到消费统计，确保数据已加载
+    if (tabKey === 'expense' && (!expenseData.value.totalBudget && !expenseData.value.totalActualCost)) {
+      loadExpenseData()
+    }
   }
 }
 
@@ -228,4 +240,34 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 @import '@/pages/todobooks/styles/statistics.scss';
+
+// Tab内容切换动画
+.tab-panel {
+  &:not(.active) {
+    display: none;
+    opacity: 0;
+  }
+  
+  &.active {
+    display: block;
+    animation: fadeInUp 0.3s ease-in-out;
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 滑动切换时的过渡效果
+.tab-content {
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
 </style>

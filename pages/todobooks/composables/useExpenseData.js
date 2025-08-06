@@ -7,6 +7,12 @@ export function useExpenseData() {
   // 原始任务数据
   const tasks = ref([])
   
+  // 缓存计算结果
+  const cachedResults = new Map()
+  const cacheKey = (taskList, mode) => {
+    return `${taskList.length}_${mode}_${taskList[0]?._id || ''}`
+  }
+  
   // 计算总预算和总支出
   const calculateTotals = (taskList) => {
     let totalBudget = 0
@@ -26,8 +32,14 @@ export function useExpenseData() {
     }
   }
   
-  // 按标签分组统计
+  // 按标签分组统计（带缓存）
   const groupByTags = (taskList, mode = 'actual') => {
+    // 检查缓存
+    const key = cacheKey(taskList, mode)
+    if (cachedResults.has(key)) {
+      return cachedResults.get(key)
+    }
+    
     const tagMap = new Map()
     
     taskList.forEach(task => {
@@ -99,6 +111,15 @@ export function useExpenseData() {
       const amount = mode === 'budget' ? group.budget : group.actualCost
       group.percentage = total > 0 ? ((amount / total) * 100).toFixed(1) : '0'
     })
+    
+    // 缓存结果
+    cachedResults.set(key, groups)
+    
+    // 限制缓存大小
+    if (cachedResults.size > 10) {
+      const firstKey = cachedResults.keys().next().value
+      cachedResults.delete(firstKey)
+    }
     
     return groups
   }

@@ -2,6 +2,77 @@
 @import './variables.scss';
 @import './mixins.scss';
 
+// 统一的卡片样式
+@mixin stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+}
+
+// 统一的标题样式
+@mixin section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+// 统一的空状态样式
+@mixin empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  
+  .empty-icon {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 12px;
+  }
+  
+  .empty-text {
+    font-size: 14px;
+    color: #999;
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .empty-hint {
+    font-size: 12px;
+    color: #bbb;
+    display: block;
+  }
+}
+
+// 优先级颜色定义
+$priority-colors: (
+  urgent: #ff4d4f,
+  high: #ff7a45,
+  medium: #ffa940,
+  low: #52c41a
+);
+
+// 生成优先级样式
+@each $level, $color in $priority-colors {
+  .priority-#{$level} {
+    color: $color;
+    
+    &-badge {
+      background: lighten($color, 35%);
+      color: darken($color, 10%);
+    }
+    
+    &-dot {
+      background: $color;
+    }
+  }
+}
+
 .statistics-page {
   min-height: 100vh;
   background-color: $bg-secondary;

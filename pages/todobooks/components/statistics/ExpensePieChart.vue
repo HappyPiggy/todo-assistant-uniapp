@@ -43,9 +43,26 @@ const formatAmount = (amount) => {
   return (amount / 100).toFixed(2)
 }
 
-// 绘制饼图
+// 防抖定时器
+let drawTimer = null
+
+// 绘制饼图（带防抖）
 const drawPieChart = () => {
   if (!props.chartData || props.chartData.length === 0) return
+  
+  // 清除之前的定时器
+  if (drawTimer) {
+    clearTimeout(drawTimer)
+  }
+  
+  // 防抖处理，确保在500ms内完成渲染
+  drawTimer = setTimeout(() => {
+    drawPieChartCore()
+  }, 50)
+}
+
+// 核心绘制逻辑
+const drawPieChartCore = () => {
   
   const ctx = uni.createCanvasContext(canvasId)
   const centerX = canvasWidth.value / 2
