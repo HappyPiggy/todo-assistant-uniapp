@@ -32,58 +32,34 @@
           class="timeline-item"
           @click="handleTaskClick(task)"
         >
-          <!-- 时间节点 -->
-          <view class="timeline-node" :class="getNodeClass(task)">
-            <view class="node-dot" :style="{ backgroundColor: getNodeColor(task) }"></view>
-            <view class="node-index">{{ task.index }}</view>
+          <!-- 时间信息区域（左侧） -->
+          <view class="timeline-time">
+            <text class="time-text">{{ formatCompletedTime(task.completedAt) }}</text>
           </view>
           
-          <!-- 任务信息卡片 -->
+          <!-- 中间的连接点 -->
+          <view class="timeline-node">
+            <view class="node-dot"></view>
+          </view>
+          
+          <!-- 任务信息卡片（右侧） -->
           <view class="task-card">
-            <!-- 任务标题 -->
-            <text class="task-title">{{ task.title }}</text>
-            
-            <!-- 完成时间 -->
-            <text class="task-time">{{ formatCompletedTime(task.completedAt) }}</text>
-            
-            <!-- 任务详情 -->
-            <view class="task-details">
-              <!-- 优先级 -->
-              <view class="detail-item priority">
-                <uni-tag 
-                  :text="getPriorityText(task.priority)" 
-                  :type="getPriorityType(task.priority)"
-                  size="small"
-                ></uni-tag>
-              </view>
-              
-              <!-- 层级 -->
-              <view class="detail-item level">
-                <text class="level-text">{{ getLevelText(task.level) }}</text>
-              </view>
-              
-              <!-- 工时信息 -->
-              <view class="detail-item hours" v-if="task.actualHours > 0 || task.estimatedHours > 0">
-                <text class="hours-text">
-                  {{ task.actualHours || 0 }}h
-                  <text v-if="task.estimatedHours > 0" class="estimated">
-                    /{{ task.estimatedHours }}h
-                  </text>
-                </text>
-              </view>
+            <!-- 第一行：任务标题 -->
+            <view class="task-title-row">
+              <text class="task-title">{{ task.title }}</text>
             </view>
             
-            <!-- 标签 -->
+            <!-- 第二行：标签 -->
             <view class="task-tags" v-if="task.tags && task.tags.length > 0">
               <view 
-                v-for="(tag, tagIndex) in task.tags.slice(0, 2)" 
+                v-for="(tag, tagIndex) in task.tags.slice(0, 4)" 
                 :key="tagIndex"
                 class="tag-item"
                 :style="{ backgroundColor: getTagColor(tag) }"
               >
                 <text class="tag-text">{{ getTagText(tag) }}</text>
               </view>
-              <text v-if="task.tags.length > 2" class="more-tags">+{{ task.tags.length - 2 }}</text>
+              <text v-if="task.tags.length > 4" class="more-tags">+{{ task.tags.length - 4 }}</text>
             </view>
           </view>
         </view>
@@ -233,10 +209,10 @@ const getTagColor = (tag) => {
 @import '@/pages/todobooks/styles/mixins.scss';
 
 .timeline-chart {
-  @include card-style;
   padding: 0;
   position: relative;
   overflow: hidden;
+  background: transparent;
 }
 
 .loading-container,
@@ -260,106 +236,142 @@ const getTagColor = (tag) => {
 
 .timeline-content {
   position: relative;
-  padding-left: 36rpx;
+  padding-left: 0;
   min-height: 100%;
 }
 
 .timeline-line {
   position: absolute;
-  left: 24rpx;
+  left: 160rpx;
   top: 0;
   bottom: 0;
-  width: 1rpx;
-  background: linear-gradient(to bottom, $primary-color 0%, rgba(0, 122, 255, 0.6) 50%, rgba(0, 122, 255, 0.2) 100%);
+  width: 2rpx;
+  background: linear-gradient(to bottom, 
+    rgba(102, 126, 234, 0.8) 0%, 
+    rgba(118, 75, 162, 0.6) 50%, 
+    rgba(240, 147, 251, 0.3) 100%);
   z-index: 1;
+  box-shadow: 0 0 8rpx rgba(102, 126, 234, 0.2);
 }
 
 .timeline-item {
   position: relative;
-  margin-bottom: 12rpx;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+  animation: slide-in 0.5s ease-out backwards;
+  
+  @for $i from 1 through 20 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.05}s;
+    }
+  }
   
   &:last-child {
-    margin-bottom: 8rpx;
+    margin-bottom: 16rpx;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.timeline-time {
+  width: 140rpx;
+  text-align: right;
+  padding-right: 16rpx;
+  padding-top: 8rpx;
+  
+  .time-text {
+    font-size: 22rpx;
+    font-weight: 500;
+    color: rgba(102, 126, 234, 0.8);
+    line-height: 1.2;
+    display: block;
   }
 }
 
 .timeline-node {
-  position: absolute;
-  left: -36rpx;
-  top: 3rpx;
+  width: 24rpx;
   @include flex-center;
-  flex-direction: column;
   z-index: 2;
+  padding-top: 12rpx;
   
   .node-dot {
-    width: 8rpx;
-    height: 8rpx;
+    width: 12rpx;
+    height: 12rpx;
     border-radius: 50%;
-    border: 1rpx solid #ffffff;
-    box-shadow: 0 0 0 1rpx rgba(255, 255, 255, 0.8), 0 1rpx 3rpx rgba(0,0,0,0.1);
-    margin-bottom: 2rpx;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: 3rpx solid #ffffff;
+    box-shadow: 
+      0 0 0 2rpx rgba(102, 126, 234, 0.3),
+      0 3rpx 10rpx rgba(102, 126, 234, 0.2);
+    animation: node-glow 3s ease-in-out infinite;
   }
   
-  .node-index {
-    font-size: 16rpx;
-    color: $text-tertiary;
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 0rpx 3rpx;
-    border-radius: 3rpx;
-    border: 0.5rpx solid rgba(0, 0, 0, 0.06);
-    min-width: 18rpx;
-    text-align: center;
-    line-height: 1;
-    backdrop-filter: blur(4rpx);
-    font-weight: $font-weight-medium;
+  @keyframes node-glow {
+    0%, 100% {
+      box-shadow: 
+        0 0 0 2rpx rgba(102, 126, 234, 0.3),
+        0 3rpx 10rpx rgba(102, 126, 234, 0.2);
+    }
+    50% {
+      box-shadow: 
+        0 0 0 4rpx rgba(102, 126, 234, 0.2),
+        0 4rpx 15rpx rgba(102, 126, 234, 0.3);
+    }
   }
 }
 
 .task-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-  border-radius: 6rpx;
-  padding: 8rpx 10rpx;
-  border: 0.5rpx solid rgba(0, 0, 0, 0.04);
+  flex: 1;
+  margin-left: 16rpx;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.9) 100%);
+  backdrop-filter: blur(15rpx);
+  border-radius: 12rpx;
+  padding: 16rpx 18rpx;
+  border: 1rpx solid rgba(102, 126, 234, 0.15);
   box-shadow: 
-    0 1rpx 3rpx rgba(0, 0, 0, 0.02),
-    0 0 0 0.5rpx rgba(255, 255, 255, 0.8) inset;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100%;
-  max-width: calc(100vw - 120rpx);
-  box-sizing: border-box;
-  backdrop-filter: blur(10rpx);
+    0 4rpx 20rpx rgba(102, 126, 234, 0.08),
+    0 0 0 1rpx rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
   
+  &:hover,
   &:active {
-    transform: translateY(-0.5rpx) scale(0.995);
+    transform: translateY(-2rpx) translateX(4rpx);
     box-shadow: 
-      0 2rpx 8rpx rgba(0, 0, 0, 0.06),
-      0 0 0 0.5rpx rgba(0, 122, 255, 0.1) inset;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+      0 8rpx 30rpx rgba(102, 126, 234, 0.15),
+      0 0 0 1rpx rgba(102, 126, 234, 0.2) inset;
+    border-color: rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 255, 0.95) 100%);
   }
 }
 
-.task-title {
-  font-size: 22rpx;
-  color: $text-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: 2rpx;
-  line-height: 1.25;
-  @include text-line-clamp(1);
-  word-break: break-all;
-  letter-spacing: -0.2rpx;
+.task-title-row {
+  margin-bottom: 10rpx;
+  
+  .task-title {
+    font-size: 28rpx;
+    color: #333;
+    font-weight: 600;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+    word-break: break-word;
+    letter-spacing: 0.3rpx;
+  }
 }
 
-.task-time {
-  font-size: 16rpx;
-  color: rgba(107, 114, 126, 0.8);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-  display: block;
-  margin-bottom: 4rpx;
-  @include text-truncate;
-  font-weight: $font-weight-medium;
-  letter-spacing: 0.2rpx;
-}
 
 .task-details {
   @include flex-start;
@@ -411,37 +423,41 @@ const getTagColor = (tag) => {
 }
 
 .task-tags {
-  @include flex-start;
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 2rpx;
+  gap: 8rpx;
   max-width: 100%;
   overflow: hidden;
-  margin-top: 2rpx;
 }
 
 .tag-item {
-  padding: 1rpx 4rpx;
-  border-radius: 3rpx;
-  border: 0.5rpx solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0.5rpx 1rpx rgba(0, 0, 0, 0.1);
+  padding: 3rpx 10rpx;
+  border-radius: 14rpx;
+  opacity: 0.9;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    opacity: 1;
+    transform: scale(1.05);
+  }
   
   .tag-text {
-    font-size: 14rpx;
+    font-size: 20rpx;
     color: #ffffff;
-    font-weight: $font-weight-medium;
-    text-shadow: 0 0.5rpx 1rpx rgba(0, 0, 0, 0.2);
-    letter-spacing: -0.1rpx;
+    font-weight: 500;
+    text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.1);
   }
 }
 
 .more-tags {
-  font-size: 14rpx;
-  color: rgba(107, 114, 126, 0.6);
-  padding: 1rpx 3rpx;
-  background: rgba(107, 114, 126, 0.04);
-  border-radius: 3rpx;
+  font-size: 18rpx;
+  color: rgba(102, 126, 234, 0.7);
+  padding: 3rpx 8rpx;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 14rpx;
   white-space: nowrap;
-  font-weight: $font-weight-medium;
+  font-weight: 500;
 }
 
 // 优先级节点样式
@@ -483,67 +499,46 @@ const getTagColor = (tag) => {
     padding: 8rpx 6rpx;
   }
   
-  .timeline-content {
-    padding-left: 32rpx;
+  .timeline-line {
+    left: 120rpx;
   }
   
-  .timeline-line {
-    left: 20rpx;
+  .timeline-time {
+    width: 100rpx;
+    padding-right: 12rpx;
+    
+    .time-text {
+      font-size: 20rpx;
+    }
   }
   
   .timeline-node {
-    left: -32rpx;
-    top: 2rpx;
+    width: 20rpx;
     
     .node-dot {
-      width: 6rpx;
-      height: 6rpx;
-      margin-bottom: 1rpx;
-    }
-    
-    .node-index {
-      font-size: 14rpx;
-      padding: 0rpx 2rpx;
-      min-width: 16rpx;
+      width: 10rpx;
+      height: 10rpx;
+      border-width: 2rpx;
     }
   }
   
   .task-card {
-    max-width: calc(100vw - 100rpx);
-    padding: 6rpx 8rpx;
-  }
-  
-  .task-title {
-    font-size: 20rpx;
-    margin-bottom: 1rpx;
-  }
-  
-  .task-time {
-    font-size: 14rpx;
-    margin-bottom: 3rpx;
-  }
-  
-  .task-details {
-    gap: 2rpx;
-    margin-bottom: 3rpx;
-  }
-  
-  .detail-item {
-    &.level .level-text,
-    &.hours .hours-text {
-      font-size: 12rpx;
-      padding: 0.5rpx 2rpx;
+    margin-left: 12rpx;
+    padding: 14rpx 16rpx;
+    
+    .task-title {
+      font-size: 26rpx;
     }
-  }
-  
-  .tag-item {
-    .tag-text {
-      font-size: 12rpx;
+    
+    .tag-item {
+      .tag-text {
+        font-size: 18rpx;
+      }
     }
-  }
-  
-  .more-tags {
-    font-size: 12rpx;
+    
+    .more-tags {
+      font-size: 16rpx;
+    }
   }
 }
 
@@ -553,61 +548,49 @@ const getTagColor = (tag) => {
     padding: 6rpx 4rpx;
   }
   
-  .timeline-content {
-    padding-left: 28rpx;
+  .timeline-line {
+    left: 100rpx;
   }
   
-  .timeline-line {
-    left: 18rpx;
+  .timeline-time {
+    width: 80rpx;
+    padding-right: 10rpx;
+    
+    .time-text {
+      font-size: 18rpx;
+    }
   }
   
   .timeline-node {
-    left: -28rpx;
+    width: 18rpx;
     
     .node-dot {
-      width: 5rpx;
-      height: 5rpx;
-    }
-    
-    .node-index {
-      font-size: 12rpx;
-      padding: 0rpx 1rpx;
-      min-width: 14rpx;
+      width: 8rpx;
+      height: 8rpx;
+      border-width: 2rpx;
     }
   }
   
   .task-card {
-    max-width: calc(100vw - 80rpx);
-    padding: 4rpx 6rpx;
-  }
-  
-  .task-title {
-    font-size: 18rpx;
-  }
-  
-  .task-time {
-    font-size: 12rpx;
-  }
-  
-  .task-details {
-    gap: 1rpx;
-  }
-  
-  .detail-item {
-    &.level .level-text,
-    &.hours .hours-text {
-      font-size: 10rpx;
+    margin-left: 10rpx;
+    padding: 12rpx 14rpx;
+    
+    .task-title {
+      font-size: 24rpx;
     }
-  }
-  
-  .tag-item {
-    .tag-text {
-      font-size: 10rpx;
+    
+    .tag-item {
+      padding: 2rpx 8rpx;
+      
+      .tag-text {
+        font-size: 16rpx;
+      }
     }
-  }
-  
-  .more-tags {
-    font-size: 10rpx;
+    
+    .more-tags {
+      font-size: 14rpx;
+      padding: 2rpx 6rpx;
+    }
   }
 }
 </style>

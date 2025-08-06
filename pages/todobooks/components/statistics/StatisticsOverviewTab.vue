@@ -20,6 +20,24 @@
             <text class="stat-label">完成率</text>
           </view>
         </view>
+        
+        <!-- 新增的项目信息行 -->
+        <view class="book-info-row">
+          <view class="info-item">
+            <uni-icons type="calendar" size="18" color="#667eea"></uni-icons>
+            <view class="info-content">
+              <text class="info-label">创建时间</text>
+              <text class="info-value">{{ formatCreateTime }}</text>
+            </view>
+          </view>
+          <view class="info-item">
+            <uni-icons type="person-filled" size="18" color="#764ba2"></uni-icons>
+            <view class="info-content">
+              <text class="info-label">参与人员</text>
+              <text class="info-value">{{ memberCount }} 人</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -87,11 +105,35 @@ const completionRate = computed(() => {
   return Math.round((completedTasks.value / totalTasks.value) * 100)
 })
 
+// 格式化创建时间
+const formatCreateTime = computed(() => {
+  if (!props.bookData.created_at) return '未知'
+  const date = new Date(props.bookData.created_at)
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${year}年${month}月${day}日`
+})
+
+// 成员数量
+const memberCount = computed(() => {
+  // 如果有members字段，返回成员数量
+  if (props.bookData.members && Array.isArray(props.bookData.members)) {
+    return props.bookData.members.length
+  }
+  // 如果有member_count字段
+  if (props.bookData.member_count !== undefined) {
+    return props.bookData.member_count
+  }
+  // 默认至少有1个人（创建者）
+  return 1
+})
+
 // 时间线数据
 const timelineData = computed(() => {
   return props.tasksData
     .filter(task => task.status === 'completed' && task.completed_at)
-    .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+    .sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at)) // 改为正序，最早完成的在前
     .map((task, index) => ({
       ...task,
       index: index + 1,
@@ -123,19 +165,46 @@ const handleTaskClick = (task) => {
   padding: 16px;
   
   .info-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.95) 100%);
+    backdrop-filter: blur(20rpx);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 
+      0 10px 40px rgba(102, 126, 234, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+      border-radius: 20px;
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s ease;
+    }
+    
+    &:hover::before {
+      opacity: 0.3;
+    }
     
     .card-header {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       
       .card-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #333;
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 0.5px;
       }
     }
     
@@ -149,17 +218,94 @@ const handleTaskClick = (task) => {
           flex-direction: column;
           align-items: center;
           flex: 1;
+          padding: 12px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.5);
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+          
+          &:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+          }
           
           .stat-value {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            color: #007aff;
-            margin-bottom: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            animation: pulse 2s ease-in-out infinite;
           }
           
           .stat-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+        }
+      }
+    }
+    
+    .book-info-row {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(102, 126, 234, 0.1);
+      display: flex;
+      justify-content: space-around;
+      gap: 16px;
+      
+      .info-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px 18px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        flex: 1;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.8);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.12);
+        }
+        
+        .info-content {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          align-items: center;
+          text-align: center;
+          
+          .info-label {
             font-size: 12px;
             color: #666;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+          }
+          
+          .info-value {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.3px;
           }
         }
       }
@@ -167,19 +313,33 @@ const handleTaskClick = (task) => {
   }
   
   .timeline-section {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(15rpx);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    
     .section-header {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(102, 126, 234, 0.1);
       
       .section-title {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 600;
-        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
       
       .section-subtitle {
-        font-size: 12px;
-        color: #999;
-        margin-left: 8px;
+        font-size: 13px;
+        color: rgba(0, 0, 0, 0.5);
+        margin-left: 12px;
+        font-style: italic;
       }
     }
     
