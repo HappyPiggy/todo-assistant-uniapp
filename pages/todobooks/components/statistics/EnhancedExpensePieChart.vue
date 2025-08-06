@@ -254,7 +254,6 @@ const handleRetry = () => {
       canvasRef.value.redraw()
     }
     
-    console.log('重试初始化增强版饼图')
   } catch (err) {
     console.error('重试失败:', err)
     error.value = '重试失败，请刷新页面'
@@ -265,12 +264,10 @@ const handleRetry = () => {
 // Canvas 准备就绪处理
 const handleCanvasReady = () => {
   try {
-    console.log('Canvas准备就绪，数据长度:', enhancedChartData.value.length)
     canvasReady.value = true
     loading.value = false
     error.value = null
     emit('chart-ready')
-    console.log('增强版饼图初始化完成')
   } catch (err) {
     console.error('Canvas准备就绪处理失败:', err)
     error.value = 'Canvas初始化失败'
@@ -281,13 +278,6 @@ const handleCanvasReady = () => {
 // 监听数据变化，重置选中状态
 watch(() => props.expenseData, (newData, oldData) => {
   try {
-    console.log('EnhancedExpensePieChart - expenseData 变化:', {
-      newData: newData,
-      oldData: oldData,
-      newDataLength: newData?.length,
-      enhancedChartDataLength: enhancedChartData.value.length
-    })
-    
     if (!newData || newData.length === 0) {
       selectedSegment.value = null
       centerMode.value = 'total'

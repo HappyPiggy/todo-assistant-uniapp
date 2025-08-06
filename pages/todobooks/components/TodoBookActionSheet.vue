@@ -28,17 +28,18 @@
               <uni-icons color="#007AFF" size="20" type="compose" />
               <text class="action-text">编辑</text>
             </view>
-            
-            <!-- 成员管理 -->
-            <view class="action-item" @click="handleMembersAction">
-              <uni-icons color="#28a745" size="20" type="staff" />
-              <text class="action-text">成员管理</text>
-            </view>
-            
+                        
             <!-- 数据统计 -->
             <view class="action-item" @click="handleStatisticsAction">
               <uni-icons color="#17a2b8" size="20" type="bars" />
               <text class="action-text">数据统计</text>
+            </view>
+
+
+            <!-- 成员管理 -->
+            <view class="action-item" @click="handleMembersAction">
+              <uni-icons color="#28a745" size="20" type="staff" />
+              <text class="action-text">成员管理</text>
             </view>
 
             <!-- 导出数据 -->

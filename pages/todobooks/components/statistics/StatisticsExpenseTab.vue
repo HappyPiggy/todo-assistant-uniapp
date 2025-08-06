@@ -168,7 +168,6 @@ const handleSegmentClick = (segmentId, segmentData) => {
 
 // 处理图表准备就绪事件
 const handleChartReady = () => {
-  console.log('统计页面：图表准备就绪')
 }
 
 // 恢复用户偏好
@@ -182,7 +181,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .statistics-expense-tab {
-  padding: 16px;
+  padding: 16px 30rpx;
   
   .expense-summary-card {
     background: #fff;

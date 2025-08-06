@@ -162,7 +162,7 @@ const handleTaskClick = (task) => {
 
 <style lang="scss" scoped>
 .statistics-overview-tab {
-  padding: 16px;
+  padding: 16px 30rpx;
   
   .info-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.95) 100%);

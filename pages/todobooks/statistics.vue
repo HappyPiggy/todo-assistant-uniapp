@@ -3,7 +3,6 @@
     <!-- 页面标题区 -->
     <view class="page-header">
       <text class="page-title">{{ bookData.title || '项目册' }} - 数据统计</text>
-      <text class="page-subtitle">{{ `共${totalTasks}个任务，${completedTasks}个已完成` }}</text>
     </view>
 
     <!-- 加载状态 -->
@@ -210,9 +209,6 @@ const handleTouchEnd = (e) => {
 // 加载并计算消费数据
 const loadExpenseData = () => {
   if (allTasks.value && allTasks.value.length > 0) {
-    console.log('=== 开始计算消费数据 ===')
-    console.log('任务数据:', JSON.stringify(allTasks.value.slice(0, 2), null, 2)) // 只显示前两个任务的详细信息
-    
     const result = calculateExpenseData(allTasks.value)
     expenseResult.value = result // 存储完整结果
     expenseData.value = {
@@ -221,13 +217,6 @@ const loadExpenseData = () => {
     }
     // 默认显示实际支出的标签组
     tagGroups.value = result.actualTagGroups
-    
-    console.log('消费数据计算完成:', {
-      totalBudget: result.totalBudget,
-      totalActualCost: result.totalActualCost,
-      actualTagGroups: result.actualTagGroups.length,
-      budgetTagGroups: result.budgetTagGroups.length
-    })
   }
 }
 
@@ -236,7 +225,6 @@ const handleExpenseViewChange = (viewMode) => {
   console.log('视图切换到:', viewMode)
   if (expenseResult.value) {
     tagGroups.value = viewMode === 'budget' ? expenseResult.value.budgetTagGroups : expenseResult.value.actualTagGroups
-    console.log('更新标签组数据:', tagGroups.value.length)
   }
 }
 

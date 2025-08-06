@@ -134,8 +134,8 @@ $priority-colors: (
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20rpx);
   border-radius: 20rpx;
-  padding: 24rpx;
-  margin-bottom: $margin-base;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
   text-align: center;
   box-shadow: 
     0 8rpx 32rpx rgba(0, 0, 0, 0.1),
@@ -185,18 +185,22 @@ $priority-colors: (
     touch-action: pan-y;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20rpx;
-    padding: 2rpx;
+    padding: 0;
+    margin: 0 calc(-1 * #{$padding-base}); // 负边距让内容扩展到页面边缘
     backdrop-filter: blur(5rpx);
     
     .tab-content-wrapper {
       position: relative;
       width: 100%;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0; // 移除wrapper的padding
       
       .tab-panel {
         width: 100%;
         min-height: auto;
         overflow: visible;
+        padding: 0;
+        margin: 0;
         
         &:not(.active) {
           display: none;

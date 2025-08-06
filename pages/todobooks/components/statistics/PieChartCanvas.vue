@@ -81,15 +81,6 @@ const initCanvas = () => {
 
 // 绘制饼图（带防抖和动画）
 const drawPieChart = (withAnimation = false) => {
-  console.log('PieChartCanvas - drawPieChart 调用:', {
-    chartData: props.chartData,
-    chartDataLength: props.chartData?.length,
-    withAnimation,
-    canvasWidth: props.canvasWidth,
-    canvasHeight: props.canvasHeight,
-    ctxExists: !!ctx.value
-  })
-  
   if (!props.chartData || props.chartData.length === 0) {
     console.log('PieChartCanvas - 无数据，绘制空图表')
     drawEmptyChart()

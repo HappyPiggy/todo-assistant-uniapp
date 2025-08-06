@@ -43,14 +43,10 @@ export function useExpenseData() {
   
   // 按标签分组统计（带缓存）
   const groupByTags = (taskList, mode = 'actual') => {
-    console.log(`=== groupByTags开始 ===`)
-    console.log(`模式: ${mode}`)
-    console.log(`任务数量: ${taskList.length}`)
     
     // 检查缓存
     const key = cacheKey(taskList, mode)
     if (cachedResults.has(key)) {
-      console.log(`使用缓存数据: ${key}`)
       return cachedResults.get(key)
     }
     
@@ -63,10 +59,6 @@ export function useExpenseData() {
       // 获取任务的标签
       const taskTags = task.tags || []
       
-      console.log(`任务${index}: ${task.title}`)
-      console.log(`  预算: ${task.budget || 0}`)
-      console.log(`  实际支出: ${task.actual_cost || 0}`)
-      console.log(`  标签: ${JSON.stringify(taskTags)}`)
       
       if (taskTags.length === 0) {
         // 无标签的任务归类到"未分类"
@@ -111,7 +103,6 @@ export function useExpenseData() {
           // 每个标签都应该完整统计分配给它的任务金额
           const taskBudget = task.budget || 0
           const taskActualCost = task.actual_cost || 0
-          console.log(`  添加到标签 "${tagName}": 预算+${taskBudget}, 支出+${taskActualCost}`)
           group.budget += taskBudget
           group.actualCost += taskActualCost
           
@@ -130,14 +121,11 @@ export function useExpenseData() {
       return sum + (mode === 'budget' ? group.budget : group.actualCost)
     }, 0)
     
-    console.log(`=== 标签统计结果 (${mode}模式) ===`)
-    console.log(`总计: ${total}`)
     
     // 计算每个标签的百分比
     groups.forEach(group => {
       const amount = mode === 'budget' ? group.budget : group.actualCost
       group.percentage = total > 0 ? ((amount / total) * 100).toFixed(1) : '0'
-      console.log(`标签 "${group.tagName}": ${mode === 'budget' ? '预算' : '支出'}=${amount}, 百分比=${group.percentage}%, 任务数=${group.taskCount}`)
     })
     
     // 缓存结果

@@ -62,7 +62,7 @@ const handleTabClick = (tabKey) => {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   overflow: hidden;
 
   .tab-container {
@@ -76,7 +76,7 @@ const handleTabClick = (tabKey) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 16px 8px;
+      padding: 12px 8px;
       cursor: pointer;
       transition: all 0.3s ease;
       position: relative;
@@ -92,8 +92,8 @@ const handleTabClick = (tabKey) => {
       }
 
       .tab-icon {
-        font-size: 20px;
-        margin-bottom: 4px;
+        font-size: 18px;
+        margin-bottom: 2px;
         transition: transform 0.3s ease;
       }
 
