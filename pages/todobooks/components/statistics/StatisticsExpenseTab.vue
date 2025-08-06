@@ -32,37 +32,20 @@
       </view>
     </view>
 
-    <!-- 标签支出饼图 -->
+    <!-- 增强版标签支出饼图（包含列表） -->
     <view v-if="hasTagData" class="chart-section">
       <view class="section-header">
         <text class="section-title">{{ viewMode === 'actual' ? '支出' : '预算' }}分布</text>
       </view>
-      <ExpensePieChart 
-        :chart-data="currentChartData"
-        :view-mode="viewMode"
+      
+      
+      <EnhancedExpensePieChart 
+        :expense-data="enhancedExpenseData"
+        :width="chartSize"
+        :height="chartSize"
+        @segment-click="handleSegmentClick"
+        @chart-ready="handleChartReady"
       />
-    </view>
-
-    <!-- 标签详细列表 -->
-    <view v-if="hasTagData" class="tag-list-section">
-      <view class="section-header">
-        <text class="section-title">标签明细</text>
-      </view>
-      <view class="tag-list">
-        <view v-for="(tag, index) in sortedTagGroups" :key="tag.tagId || index" class="tag-item">
-          <view class="tag-header">
-            <view class="tag-name-wrapper">
-              <view class="tag-color" :style="{ backgroundColor: tag.tagColor || '#999' }"></view>
-              <text class="tag-name">{{ tag.tagName || '未分类' }}</text>
-            </view>
-            <text class="tag-percentage">{{ tag.percentage }}%</text>
-          </view>
-          <view class="tag-details">
-            <text class="tag-amount">¥{{ formatAmount(tag[viewMode === 'actual' ? 'actualCost' : 'budget']) }}</text>
-            <text class="tag-count">{{ tag.taskCount }}个任务</text>
-          </view>
-        </view>
-      </view>
     </view>
 
     <!-- 无标签提示 -->
@@ -75,7 +58,7 @@
 
 <script setup>
 import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
-import ExpensePieChart from './ExpensePieChart.vue'
+import EnhancedExpensePieChart from './EnhancedExpensePieChart.vue'
 
 const props = defineProps({
   expenseData: {
@@ -97,7 +80,11 @@ const viewMode = ref('actual')
 const totalBudget = computed(() => props.expenseData.totalBudget || 0)
 const totalExpense = computed(() => props.expenseData.totalActualCost || 0)
 const isOverBudget = computed(() => totalExpense.value > totalBudget.value)
-const hasTagData = computed(() => props.tagGroups && props.tagGroups.length > 0)
+const hasTagData = computed(() => {
+  const result = props.tagGroups && props.tagGroups.length > 0
+  console.log('StatisticsExpenseTab - hasTagData:', result, 'tagGroups:', props.tagGroups)
+  return result
+})
 
 // 排序后的标签组（按当前视图模式的金额从高到低）
 const sortedTagGroups = computed(() => {
@@ -106,14 +93,51 @@ const sortedTagGroups = computed(() => {
   return [...props.tagGroups].sort((a, b) => (b[field] || 0) - (a[field] || 0))
 })
 
-// 当前图表数据
-const currentChartData = computed(() => {
-  return sortedTagGroups.value.map(tag => ({
-    name: tag.tagName || '未分类',
-    value: tag[viewMode.value === 'actual' ? 'actualCost' : 'budget'] || 0,
+// 增强版图表数据
+const enhancedExpenseData = computed(() => {
+  console.log('计算增强版图表数据:', {
+    tagGroups: props.tagGroups,
+    sortedTagGroups: sortedTagGroups.value,
+    viewMode: viewMode.value
+  })
+  
+  if (!sortedTagGroups.value || sortedTagGroups.value.length === 0) {
+    console.log('无标签数据，返回空数组')
+    return []
+  }
+  
+  const result = sortedTagGroups.value.map(tag => ({
+    id: tag.tagId || `tag_${Date.now()}_${Math.random()}`,
+    tagId: tag.tagId,
+    tagName: tag.tagName || '未分类',
+    amount: tag[viewMode.value === 'actual' ? 'actualCost' : 'budget'] || 0,
+    count: tag.taskCount || 0,
     color: tag.tagColor || '#999',
-    percentage: tag.percentage || 0
+    tasks: tag.tasks || []
   }))
+  
+  console.log('增强版图表数据结果:', result)
+  return result
+})
+
+// 图表尺寸（响应式）
+const chartSize = computed(() => {
+  // 根据屏幕尺寸自适应，进一步增大图表尺寸
+  try {
+    const systemInfo = uni.getSystemInfoSync()
+    const screenWidth = systemInfo.windowWidth
+    
+    // 根据不同屏幕尺寸设置不同的图表大小，再增大30-40px
+    if (screenWidth <= 375) {
+      return 320 // 小屏设备 (280 -> 320)
+    } else if (screenWidth <= 414) {
+      return 360 // 中等屏幕 (320 -> 360) 
+    } else {
+      return Math.min(screenWidth - 40, 400) // 大屏设备 (360 -> 400)
+    }
+  } catch (e) {
+    return 360 // 默认尺寸 (320 -> 360)
+  }
 })
 
 // 格式化金额
@@ -129,6 +153,22 @@ const handleViewSwitch = (mode) => {
   
   // 保存用户偏好
   uni.setStorageSync('expense_view_mode', mode)
+}
+
+// 处理扇形点击事件
+const handleSegmentClick = (segmentId, segmentData) => {
+  console.log('统计页面：扇形被点击', { segmentId, segmentData })
+  
+  // 可以在这里添加额外的处理逻辑
+  // 例如：跳转到任务详情、显示详细分析等
+  uni.vibrateShort({
+    type: 'light'
+  })
+}
+
+// 处理图表准备就绪事件
+const handleChartReady = () => {
+  console.log('统计页面：图表准备就绪')
 }
 
 // 恢复用户偏好
@@ -179,7 +219,7 @@ onMounted(() => {
           }
           
           .expense-value {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             color: #333;
             
@@ -230,8 +270,7 @@ onMounted(() => {
   }
   
   .chart-section {
-    margin-bottom: 20px;
-    
+    // 增强版组件包含自己的样式
     .section-header {
       margin-bottom: 12px;
       
@@ -239,80 +278,6 @@ onMounted(() => {
         font-size: 16px;
         font-weight: 600;
         color: #333;
-      }
-    }
-  }
-  
-  .tag-list-section {
-    .section-header {
-      margin-bottom: 12px;
-      
-      .section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-      }
-    }
-    
-    .tag-list {
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
-      
-      .tag-item {
-        padding: 12px 16px;
-        border-bottom: 1px solid #f0f0f0;
-        
-        &:last-child {
-          border-bottom: none;
-        }
-        
-        .tag-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          
-          .tag-name-wrapper {
-            display: flex;
-            align-items: center;
-            
-            .tag-color {
-              width: 12px;
-              height: 12px;
-              border-radius: 50%;
-              margin-right: 8px;
-            }
-            
-            .tag-name {
-              font-size: 14px;
-              font-weight: 500;
-              color: #333;
-            }
-          }
-          
-          .tag-percentage {
-            font-size: 14px;
-            font-weight: 600;
-            color: #007aff;
-          }
-        }
-        
-        .tag-details {
-          display: flex;
-          justify-content: space-between;
-          padding-left: 20px;
-          
-          .tag-amount {
-            font-size: 12px;
-            color: #666;
-          }
-          
-          .tag-count {
-            font-size: 12px;
-            color: #999;
-          }
-        }
       }
     }
   }

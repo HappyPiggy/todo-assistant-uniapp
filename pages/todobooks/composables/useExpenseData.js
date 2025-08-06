@@ -1,11 +1,20 @@
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 /**
- * 消费统计数据处理
+ * 消费统计数据处理（增强版，支持交互功能）
  */
 export function useExpenseData() {
   // 原始任务数据
   const tasks = ref([])
+  
+  // 交互状态管理
+  const interactionState = reactive({
+    selectedSegment: null,        // 当前选中的扇形ID
+    centerMode: 'total',          // 中心显示模式: 'total' | 'category'
+    hoveredSegment: null,         // 悬停的扇形ID
+    isAnimating: false,           // 是否正在动画中
+    lastClickTime: 0              // 上次点击时间（防抖）
+  })
   
   // 缓存计算结果
   const cachedResults = new Map()
@@ -195,6 +204,114 @@ export function useExpenseData() {
     return calculateTotals(tasks.value).totalActualCost
   })
   
+  // 交互功能方法
+  
+  // 处理扇形点击事件
+  const handleSegmentClick = (segmentId, debounceTime = 200) => {
+    const now = Date.now()
+    if (now - interactionState.lastClickTime < debounceTime) {
+      return // 防抖处理
+    }
+    interactionState.lastClickTime = now
+    
+    // 如果点击的是已选中的扇形，切换回总览模式
+    if (interactionState.selectedSegment === segmentId) {
+      interactionState.selectedSegment = null
+      interactionState.centerMode = 'total'
+    } else {
+      // 选中新的扇形
+      interactionState.selectedSegment = segmentId
+      interactionState.centerMode = 'category'
+    }
+    
+    return {
+      selectedSegment: interactionState.selectedSegment,
+      centerMode: interactionState.centerMode
+    }
+  }
+  
+  // 设置悬停状态
+  const setHoveredSegment = (segmentId) => {
+    interactionState.hoveredSegment = segmentId
+  }
+  
+  // 重置所有交互状态
+  const resetInteractionState = () => {
+    interactionState.selectedSegment = null
+    interactionState.centerMode = 'total'
+    interactionState.hoveredSegment = null
+    interactionState.isAnimating = false
+  }
+  
+  // 设置动画状态
+  const setAnimating = (isAnimating) => {
+    interactionState.isAnimating = isAnimating
+  }
+  
+  // 获取当前选中的类别详情
+  const getSelectedCategory = (tagGroups) => {
+    if (!interactionState.selectedSegment || !tagGroups) {
+      return null
+    }
+    return tagGroups.find(group => group.tagId === interactionState.selectedSegment)
+  }
+  
+  // 判断扇形是否需要显示延伸标签（占比>5%）
+  const shouldShowExtensionLabel = (percentage) => {
+    return percentage > 5
+  }
+  
+  // 转换数据格式为增强版格式
+  const transformToEnhancedData = (tagGroups, mode = 'actual') => {
+    if (!tagGroups || tagGroups.length === 0) return []
+    
+    return tagGroups.map(group => ({
+      id: group.tagId,
+      tagId: group.tagId,
+      tagName: group.tagName,
+      amount: mode === 'budget' ? group.budget : group.actualCost,
+      count: group.taskCount,
+      percentage: parseFloat(group.percentage || 0),
+      color: group.tagColor,
+      icon: getTagIcon(group.tagName),
+      showExtensionLabel: shouldShowExtensionLabel(parseFloat(group.percentage || 0)),
+      tasks: group.tasks
+    }))
+  }
+  
+  // 获取标签对应的图标
+  const getTagIcon = (tagName) => {
+    const iconMap = {
+      '装修': 'home',
+      '房租': 'house',
+      '教育学习': 'book',
+      '餐饮日常': 'cutlery',
+      '汽车交通': 'car',
+      '医疗健康': 'medical',
+      '娱乐休闲': 'game',
+      '购物消费': 'bag',
+      '投资理财': 'money',
+      '未分类': 'wallet'
+    }
+    return iconMap[tagName] || 'wallet'
+  }
+  
+  // 计算增强版数据（同时包含交互状态）
+  const calculateEnhancedExpenseData = (taskList) => {
+    const baseData = calculateExpenseData(taskList)
+    
+    return {
+      ...baseData,
+      // 转换为增强版格式
+      enhancedActualGroups: transformToEnhancedData(baseData.actualTagGroups, 'actual'),
+      enhancedBudgetGroups: transformToEnhancedData(baseData.budgetTagGroups, 'budget'),
+      // 交互状态
+      interactionState: { ...interactionState },
+      // 当前选中的类别
+      selectedCategory: getSelectedCategory(baseData.actualTagGroups)
+    }
+  }
+
   return {
     tasks,
     totalBudget,
@@ -202,6 +319,17 @@ export function useExpenseData() {
     calculateTotals,
     groupByTags,
     sortByAmount,
-    calculateExpenseData
+    calculateExpenseData,
+    // 新增的交互功能
+    interactionState,
+    handleSegmentClick,
+    setHoveredSegment,
+    resetInteractionState,
+    setAnimating,
+    getSelectedCategory,
+    shouldShowExtensionLabel,
+    transformToEnhancedData,
+    getTagIcon,
+    calculateEnhancedExpenseData
   }
 }
