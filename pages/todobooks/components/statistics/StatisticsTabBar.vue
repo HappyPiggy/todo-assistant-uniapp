@@ -35,9 +35,9 @@ const tabs = ref([
     icon: '📊'
   },
   {
-    key: 'time',
-    label: '时间分析',
-    icon: '⏰'
+    key: 'expense',
+    label: '消费统计',
+    icon: '💰'
   }
 ])
 

@@ -37,17 +37,18 @@
           <!-- 总览统计 -->
           <view class="tab-panel" :class="{ 'active': activeTab === 'overview' }">
             <StatisticsOverviewTab 
-              :stats-data="statsOverview"
               :book-data="bookData"
+              :tasks-data="allTasks"
+              :stats-data="statsOverview"
+              :loading="chartLoading"
             />
           </view>
 
-          <!-- 时间分析 -->
-          <view class="tab-panel" :class="{ 'active': activeTab === 'time' }">
-            <StatisticsTimeTab 
-              :timeline-data="timelineData"
-              :time-analysis-data="timeAnalysisData"
-              :chart-loading="chartLoading"
+          <!-- 消费统计 -->
+          <view class="tab-panel" :class="{ 'active': activeTab === 'expense' }">
+            <StatisticsExpenseTab 
+              :expense-data="expenseData"
+              :tag-groups="tagGroups"
             />
           </view>
         </view>
@@ -64,16 +65,17 @@ import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import StatisticsTabBar from '@/pages/todobooks/components/statistics/StatisticsTabBar.vue'
 import StatisticsOverviewTab from '@/pages/todobooks/components/statistics/StatisticsOverviewTab.vue'
-import StatisticsTimeTab from '@/pages/todobooks/components/statistics/StatisticsTimeTab.vue'
+import StatisticsExpenseTab from '@/pages/todobooks/components/statistics/StatisticsExpenseTab.vue'
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { useExpenseData } from '@/pages/todobooks/composables/useExpenseData.js'
 
 // 页面参数
 let bookId = null
 
 // Tab状态管理
 const activeTab = ref('overview')
-const tabs = ['overview', 'time']
+const tabs = ['overview', 'expense']
 
 // 滑动状态管理
 const touchStartX = ref(0)
@@ -85,13 +87,24 @@ const {
   bookData,
   loading,
   error,
+  allTasks,
   chartLoading,
   timelineData,
   statsOverview,
   timeAnalysisData,
   loadStatisticsData,
-  refreshStatistics
+  refreshStatistics,
+  getCompletedTasksTimeline
 } = useBookData()
+
+// 使用消费数据处理组合式函数
+const {
+  calculateExpenseData
+} = useExpenseData()
+
+// 消费统计数据
+const expenseData = ref({})
+const tagGroups = ref([])
 
 // 计算属性
 const totalTasks = computed(() => {
@@ -173,22 +186,38 @@ const handleTouchEnd = (e) => {
   isSwipeStarted.value = false
 }
 
+// 加载并计算消费数据
+const loadExpenseData = () => {
+  if (allTasks.value && allTasks.value.length > 0) {
+    const result = calculateExpenseData(allTasks.value)
+    expenseData.value = {
+      totalBudget: result.totalBudget,
+      totalActualCost: result.totalActualCost
+    }
+    // 根据当前视图模式选择标签组
+    tagGroups.value = result.actualTagGroups
+  }
+}
+
 // 页面生命周期
-onLoad((options) => {
+onLoad(async (options) => {
   console.log("统计页面 onLoad options", JSON.stringify(options, null, 2))
   if (options && options.id) {
     bookId = options.id
-    loadStatisticsData(bookId)
+    await loadStatisticsData(bookId)
+    // 加载完统计数据后，计算消费数据
+    loadExpenseData()
   } else {
     console.error('错误：未能从路由参数中获取到 id')
     uni.showToast({ title: '页面参数错误', icon: 'error' })
   }
 })
 
-onShow(() => {
+onShow(async () => {
   // 页面显示时刷新数据
   if (bookId) {
-    refreshStatistics(bookId)
+    await refreshStatistics(bookId)
+    loadExpenseData()
   }
 })
 

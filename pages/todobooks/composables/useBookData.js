@@ -372,6 +372,18 @@ export function useBookData() {
     }
   }
 
+  // 获取已完成任务的时间线数据（供外部调用）
+  const getCompletedTasksTimeline = () => {
+    return allTasks.value
+      .filter(task => task.status === 'completed' && task.completed_at)
+      .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+      .map((task, index) => ({
+        ...task,
+        index: index + 1,
+        completedAt: task.completed_at
+      }))
+  }
+  
   // 统计计算属性
   // 时序图数据 - 已完成任务的时间线
   const timelineData = computed(() => {
@@ -596,6 +608,7 @@ export function useBookData() {
     // 统计方法
     loadStatisticsData,
     refreshStatistics,
+    getCompletedTasksTimeline,
     
     // 导出方法
     exportTodoBookData

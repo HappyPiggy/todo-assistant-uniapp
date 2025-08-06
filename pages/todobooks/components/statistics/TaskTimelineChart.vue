@@ -87,12 +87,18 @@
 <script setup>
 import { defineProps, computed } from 'vue'
 
+const emit = defineEmits(['task-click'])
+
 const props = defineProps({
   timelineData: {
     type: Array,
     default: () => []
   },
   loading: {
+    type: Boolean,
+    default: false
+  },
+  enableVirtualScroll: {
     type: Boolean,
     default: false
   },
@@ -107,10 +113,9 @@ const emit = defineEmits(['task-click'])
 // 处理任务点击
 const handleTaskClick = (task) => {
   emit('task-click', task)
-  // 可以在这里添加跳转到任务详情的逻辑
-  uni.showToast({
-    title: `任务: ${task.title}`,
-    icon: 'none'
+  // 导航到任务详情页
+  uni.navigateTo({
+    url: `/pages/tasks/detail?id=${task._id || task.id}`
   })
 }
 
@@ -135,24 +140,38 @@ const getNodeColor = (task) => {
   return colorMap[task.priority] || '#1890ff'
 }
 
-// 格式化完成时间
+// 格式化完成时间 - 优化显示格式
 const formatCompletedTime = (completedAt) => {
   if (!completedAt) return ''
   
   const date = new Date(completedAt)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  
+  const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
   const hour = String(date.getHours()).padStart(2, '0')
   const minute = String(date.getMinutes()).padStart(2, '0')
+  const time = `${hour}:${minute}`
   
-  const currentYear = new Date().getFullYear()
-  
-  // 如果是当年，不显示年份
-  if (year === currentYear) {
-    return `${month}-${day} ${hour}:${minute}`
+  // 判断日期显示格式
+  if (taskDate.getTime() === today.getTime()) {
+    return `今天 ${time}`
+  } else if (taskDate.getTime() === yesterday.getTime()) {
+    return `昨天 ${time}`
   } else {
-    return `${year}-${month}-${day} ${hour}:${minute}`
+    const year = date.getFullYear()
+    const currentYear = now.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    
+    if (year === currentYear) {
+      return `${month}月${day}日 ${time}`
+    } else {
+      return `${year}年${month}月${day}日 ${time}`
+    }
   }
 }
 
