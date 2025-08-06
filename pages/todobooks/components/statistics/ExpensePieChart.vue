@@ -1,7 +1,7 @@
 <template>
   <view class="expense-pie-chart">
     <canvas 
-      :canvas-id="canvasId" 
+      canvas-id="expense-pie-chart"
       :style="{ width: canvasWidth + 'px', height: canvasHeight + 'px' }"
       @touchstart="handleTouchStart"
     ></canvas>
@@ -40,7 +40,7 @@ const totalAmount = computed(() => {
 
 // 格式化金额
 const formatAmount = (amount) => {
-  return (amount / 100).toFixed(2)
+  return Number(amount).toFixed(2)
 }
 
 // 防抖定时器
@@ -63,7 +63,6 @@ const drawPieChart = () => {
 
 // 核心绘制逻辑
 const drawPieChartCore = () => {
-  
   const ctx = uni.createCanvasContext(canvasId)
   const centerX = canvasWidth.value / 2
   const centerY = canvasHeight.value / 2
@@ -143,13 +142,23 @@ const handleTouchStart = (e) => {
 }
 
 // 监听数据变化重新绘制
-watch(() => props.chartData, () => {
-  nextTick(() => {
-    drawPieChart()
+watch(() => props.chartData, (newData, oldData) => {
+  console.log('图表数据变化:', {
+    新数据长度: newData?.length || 0,
+    旧数据长度: oldData?.length || 0,
+    视图模式: props.viewMode
   })
-}, { deep: true })
+  
+  // 确保数据有效且组件已挂载
+  if (newData && newData.length > 0) {
+    nextTick(() => {
+      drawPieChart()
+    })
+  }
+}, { deep: true, immediate: true })
 
-watch(() => props.viewMode, () => {
+watch(() => props.viewMode, (newMode) => {
+  console.log('视图模式变化:', newMode)
   nextTick(() => {
     drawPieChart()
   })
@@ -157,6 +166,7 @@ watch(() => props.viewMode, () => {
 
 // 挂载时绘制
 onMounted(() => {
+  console.log('饼图组件挂载完成')
   // 获取屏幕宽度，自适应画布大小
   const systemInfo = uni.getSystemInfoSync()
   const screenWidth = systemInfo.windowWidth
@@ -164,8 +174,21 @@ onMounted(() => {
   canvasWidth.value = chartSize
   canvasHeight.value = chartSize
   
+  // 延迟绘制，确保父组件数据已准备好
   nextTick(() => {
-    drawPieChart()
+    if (props.chartData && props.chartData.length > 0) {
+      console.log('挂载时绘制图表，数据长度:', props.chartData.length)
+      drawPieChart()
+    } else {
+      console.log('挂载时无数据，等待数据加载')
+      // 增加重试机制，等待数据加载
+      setTimeout(() => {
+        if (props.chartData && props.chartData.length > 0) {
+          console.log('延迟重试绘制图表，数据长度:', props.chartData.length)
+          drawPieChart()
+        }
+      }, 200)
+    }
   })
 })
 </script>

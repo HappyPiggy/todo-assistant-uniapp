@@ -49,6 +49,7 @@
             <StatisticsExpenseTab 
               :expense-data="expenseData"
               :tag-groups="tagGroups"
+              @view-change="handleExpenseViewChange"
             />
           </view>
         </view>
@@ -105,6 +106,7 @@ const {
 // 消费统计数据
 const expenseData = ref({})
 const tagGroups = ref([])
+const expenseResult = ref(null) // 存储完整的消费统计结果
 
 // 计算属性
 const totalTasks = computed(() => {
@@ -135,9 +137,16 @@ const handleTabChange = (tabKey) => {
     activeTab.value = tabKey
     console.log('切换到Tab:', tabKey)
     
-    // 如果切换到消费统计，确保数据已加载
-    if (tabKey === 'expense' && (!expenseData.value.totalBudget && !expenseData.value.totalActualCost)) {
-      loadExpenseData()
+    // 如果切换到消费统计，确保数据已加载并等待数据准备
+    if (tabKey === 'expense') {
+      if (!expenseData.value.totalBudget && !expenseData.value.totalActualCost) {
+        loadExpenseData()
+      }
+      // 确保标签组数据也已准备好
+      if (expenseResult.value && (!tagGroups.value || tagGroups.value.length === 0)) {
+        const defaultView = 'actual' // 默认显示实际支出
+        tagGroups.value = expenseResult.value.actualTagGroups
+      }
     }
   }
 }
@@ -201,13 +210,33 @@ const handleTouchEnd = (e) => {
 // 加载并计算消费数据
 const loadExpenseData = () => {
   if (allTasks.value && allTasks.value.length > 0) {
+    console.log('=== 开始计算消费数据 ===')
+    console.log('任务数据:', JSON.stringify(allTasks.value.slice(0, 2), null, 2)) // 只显示前两个任务的详细信息
+    
     const result = calculateExpenseData(allTasks.value)
+    expenseResult.value = result // 存储完整结果
     expenseData.value = {
       totalBudget: result.totalBudget,
       totalActualCost: result.totalActualCost
     }
-    // 根据当前视图模式选择标签组
+    // 默认显示实际支出的标签组
     tagGroups.value = result.actualTagGroups
+    
+    console.log('消费数据计算完成:', {
+      totalBudget: result.totalBudget,
+      totalActualCost: result.totalActualCost,
+      actualTagGroups: result.actualTagGroups.length,
+      budgetTagGroups: result.budgetTagGroups.length
+    })
+  }
+}
+
+// 处理视图切换（从ExpenseTab组件传上来的事件）
+const handleExpenseViewChange = (viewMode) => {
+  console.log('视图切换到:', viewMode)
+  if (expenseResult.value) {
+    tagGroups.value = viewMode === 'budget' ? expenseResult.value.budgetTagGroups : expenseResult.value.actualTagGroups
+    console.log('更新标签组数据:', tagGroups.value.length)
   }
 }
 
