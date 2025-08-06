@@ -7,6 +7,7 @@
     <view class="debug-buttons">
       <button @click="createTestData" class="debug-btn init-btn">0. 创建测试数据</button>
       <button @click="createTemplateBook" class="debug-btn template-btn">创建模板项目册</button>
+      <button @click="triggerImportData" class="debug-btn import-btn">导入项目册数据</button>
       <button @click="testBasicGet" class="debug-btn">1. 测试基础 get() 查询</button>
       <button @click="testWhereQuery" class="debug-btn">2. 测试 where() 条件查询</button>
       <button @click="testCrossTableQuery" class="debug-btn">4. 测试跨表查询</button>
@@ -26,6 +27,21 @@
       </view>
       
       <button @click="clearResults" class="debug-btn clear-btn">清空结果</button>
+    </view>
+    
+    <!-- JSON输入区域 -->
+    <view class="json-input-section" v-if="showJsonInput">
+      <text class="section-title">粘贴JSON文件内容</text>
+      <textarea 
+        v-model="jsonInputContent" 
+        placeholder="请粘贴JSON文件的完整内容到此处..."
+        class="json-input-textarea"
+        :maxlength="-1"
+      ></textarea>
+      <view class="json-input-buttons">
+        <button @click="parseAndImportJson" class="debug-btn import-btn">解析并导入</button>
+        <button @click="closeJsonInput" class="debug-btn clear-btn">取消</button>
+      </view>
     </view>
     
     <view class="debug-results">
@@ -86,7 +102,9 @@ export default {
       showDbComponent: false,
       dbwhere: 'title == "${this.bookIdInput}"',
       dbCollection: 'book',
-      dbField: 'title,description,creator_id,created_at,updated_at,color,icon,is_shared,member_count,item_count'
+      dbField: 'title,description,creator_id,created_at,updated_at,color,icon,is_shared,member_count,item_count',
+      showJsonInput: false,
+      jsonInputContent: ''
     }
   },
   methods: {
@@ -670,6 +688,356 @@ export default {
       return tagColorMap
     },
     
+    // 触发文件选择
+    triggerImportData() {
+      // 提示用户手动复制文件内容
+      this.debugResults = '=== 导入项目册数据 ===\n\n'
+      this.log('请将JSON文件内容复制到下方输入框中，然后点击"解析并导入"按钮')
+      this.log('或者使用开发者工具在控制台执行: this.importFromJsonString(jsonString)')
+      
+      // 显示输入框让用户粘贴JSON内容
+      this.showJsonInput = true
+    },
+    
+    // 解析并导入JSON内容
+    parseAndImportJson() {
+      if (!this.jsonInputContent.trim()) {
+        this.log('❌ 请先粘贴JSON内容')
+        return
+      }
+      
+      this.showJsonInput = false
+      this.importFromJsonString(this.jsonInputContent)
+    },
+    
+    // 关闭JSON输入框
+    closeJsonInput() {
+      this.showJsonInput = false
+      this.jsonInputContent = ''
+    },
+    
+    // 从JSON字符串导入数据
+    async importFromJsonString(jsonString) {
+      this.debugResults = '=== 导入项目册数据 ===\n\n'
+      
+      try {
+        // 检查用户登录状态
+        if (uniCloud.getCurrentUserInfo().tokenExpired < Date.now()) {
+          this.log('❌ 用户未登录或token已过期')
+          return
+        }
+        
+        const currentUserId = uniCloud.getCurrentUserInfo().uid
+        this.log('当前用户ID:', currentUserId)
+        
+        // 解析 JSON 数据
+        this.log('正在解析 JSON 数据...')
+        let importData
+        try {
+          importData = JSON.parse(jsonString)
+        } catch (parseError) {
+          this.log('❌ JSON 格式错误:', parseError.message)
+          return
+        }
+        
+        // 验证数据格式
+        if (!importData.todobook || !importData.tasks) {
+          this.log('❌ 数据格式无效，缺少必要字段 todobook 或 tasks')
+          return
+        }
+        
+        // 验证 todobook 必需字段
+        if (!importData.todobook.title) {
+          this.log('❌ 项目册缺少标题字段')
+          return
+        }
+        
+        // 验证 tasks 是否为数组
+        if (!Array.isArray(importData.tasks)) {
+          this.log('❌ tasks 字段必须是数组')
+          return
+        }
+        
+        this.log('✅ 数据结构验证通过')
+        
+        this.log(`✅ 数据解析成功`)
+        this.log(`- 项目册标题: ${importData.todobook.title}`)
+        this.log(`- 任务数量: ${importData.tasks.length}`)
+        
+        // 开始导入流程
+        await this.performDataImport(importData, currentUserId)
+        
+      } catch (error) {
+        this.log('❌ 导入失败')
+        this.log('错误信息:', error.message)
+        this.log('完整错误对象:', error)
+      }
+    },
+    
+    // 处理文件选择
+    handleFileSelect(event) {
+      const file = event.target.files[0]
+      if (!file) {
+        return
+      }
+      
+      // 检查文件名或路径是否包含.json
+      const fileName = file.name || file.path || ''
+      if (!fileName.toLowerCase().includes('.json')) {
+        this.log('❌ 请选择 JSON 文件')
+        return
+      }
+      
+      this.importDataFromFile(file)
+    },
+    
+    // 从文件导入数据
+    async importDataFromFile(file) {
+      this.debugResults = '=== 导入项目册数据 ===\n\n'
+      
+      try {
+        // 检查用户登录状态
+        if (uniCloud.getCurrentUserInfo().tokenExpired < Date.now()) {
+          this.log('❌ 用户未登录或token已过期')
+          return
+        }
+        
+        const currentUserId = uniCloud.getCurrentUserInfo().uid
+        this.log('当前用户ID:', currentUserId)
+        
+        // 读取文件内容
+        this.log('正在读取文件...')
+        const fileContent = await this.readFileAsText(file)
+        
+        // 解析 JSON 数据
+        this.log('正在解析 JSON 数据...')
+        let importData
+        try {
+          importData = JSON.parse(fileContent)
+        } catch (parseError) {
+          this.log('❌ JSON 格式错误:', parseError.message)
+          return
+        }
+        
+        // 验证数据格式
+        if (!importData.todobook || !importData.tasks) {
+          this.log('❌ 数据格式无效，缺少必要字段 todobook 或 tasks')
+          return
+        }
+        
+        // 验证 todobook 必需字段
+        if (!importData.todobook.title) {
+          this.log('❌ 项目册缺少标题字段')
+          return
+        }
+        
+        // 验证 tasks 是否为数组
+        if (!Array.isArray(importData.tasks)) {
+          this.log('❌ tasks 字段必须是数组')
+          return
+        }
+        
+        this.log('✅ 数据结构验证通过')
+        
+        this.log(`✅ 数据解析成功`)
+        this.log(`- 项目册标题: ${importData.todobook.title}`)
+        this.log(`- 任务数量: ${importData.tasks.length}`)
+        
+        // 开始导入流程
+        await this.performDataImport(importData, currentUserId)
+        
+      } catch (error) {
+        this.log('❌ 导入失败')
+        this.log('错误信息:', error.message)
+        this.log('完整错误对象:', error)
+      }
+    },
+    
+    // 执行数据导入
+    async performDataImport(importData, currentUserId) {
+      try {
+        const { createTodoBook } = useBookData()
+        const todoItemCo = uniCloud.importObject('todobook-co')
+        
+        // 第一步：创建项目册
+        this.log('\n=== 步骤1: 创建项目册 ===')
+        
+        const todohookData = {
+          title: importData.todobook.title,
+          description: importData.todobook.description || '',
+          color: importData.todobook.color || '#007AFF',
+          icon: importData.todobook.icon || 'folder',
+          is_shared: false,
+          share_type: 'private'
+        }
+        
+        this.log(`创建项目册: ${todohookData.title}`)
+      
+      let createdBook, newBookId
+      try {
+        createdBook = await createTodoBook(todohookData)
+        newBookId = createdBook._id
+        this.log(`✅ 项目册创建成功，新ID: ${newBookId}`)
+      } catch (bookError) {
+        this.log('❌ 项目册创建失败，终止导入')
+        this.log('错误详情:', bookError.message)
+        return
+      }
+      
+      // 第二步：创建任务并建立ID映射
+      this.log('\n=== 步骤2: 创建任务 ===')
+      
+      const taskIdMapping = new Map() // 旧ID -> 新ID 映射
+      const commentIdMapping = new Map() // 旧评论ID -> 新评论ID 映射
+      
+      let successCount = 0
+      let failCount = 0
+      
+      // 先创建所有任务（不包含评论）
+      for (const task of importData.tasks) {
+        try {
+          const taskData = {
+            todobook_id: newBookId,
+            title: task.title,
+            description: task.description || '',
+            tags: task.tags || [],
+            priority: task.priority || 'medium',
+            status: task.status || 'todo',
+            level: task.level || 0,
+            budget: task.budget || null,
+            due_date: task.due_date || null,
+            progress: task.progress || 0,
+            actual_cost: task.actual_cost || 0,
+            estimated_hours: task.estimated_hours || 0,
+            // 确保创建者和分配者都是当前用户
+            creator_id: currentUserId,
+            assignee_id: currentUserId
+          }
+          
+          // 创建任务
+          const result = await todoItemCo.createTodoItem(taskData)
+          
+          if (result.code === 0) {
+            const newTaskId = result.data._id
+            taskIdMapping.set(task._id, newTaskId)
+            successCount++
+            this.log(`✅ 任务创建成功: ${task.title} (${task._id} → ${newTaskId})`)
+          } else {
+            failCount++
+            this.log(`❌ 任务创建失败: ${task.title} - ${result.message}`)
+          }
+          
+        } catch (error) {
+          failCount++
+          this.log(`❌ 任务创建失败: ${task.title} - ${error.message}`)
+        }
+      }
+      
+      // 第三步：处理评论
+      this.log('\n=== 步骤3: 创建评论 ===')
+      
+      let commentSuccessCount = 0
+      let commentFailCount = 0
+      
+      for (const task of importData.tasks) {
+        if (!task.comments || task.comments.length === 0) {
+          continue
+        }
+        
+        const newTaskId = taskIdMapping.get(task._id)
+        if (!newTaskId) {
+          this.log(`❌ 跳过任务 ${task.title} 的评论，任务创建失败`)
+          continue
+        }
+        
+        // 按时间顺序排序评论，确保回复关系正确
+        const sortedComments = task.comments
+          .filter(comment => !comment.is_deleted)
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+        
+        for (const comment of sortedComments) {
+          try {
+            // 处理回复关系
+            let replyToCommentId = null
+            if (comment.reply_to) {
+              const originalReplyToId = comment.reply_to
+              replyToCommentId = commentIdMapping.get(originalReplyToId) || null
+            }
+            
+            const commentData = {
+              todoitem_id: newTaskId,
+              content: comment.content,
+              reply_to: replyToCommentId,
+              user_id: currentUserId
+            }
+            
+            // 创建评论
+            const result = await todoItemCo.addTaskComment(
+              newTaskId, 
+              comment.content, 
+              replyToCommentId
+            )
+            
+            if (result.code === 0) {
+              const newCommentId = result.data.commentId
+              commentIdMapping.set(comment._id, newCommentId)
+              commentSuccessCount++
+              this.log(`✅ 评论创建成功: ${comment.content.substring(0, 30)}...`)
+            } else {
+              commentFailCount++
+              this.log(`❌ 评论创建失败: ${comment.content.substring(0, 30)}... - ${result.message}`)
+            }
+            
+          } catch (error) {
+            commentFailCount++
+            this.log(`❌ 评论创建失败: ${comment.content.substring(0, 30)}... - ${error.message}`)
+          }
+        }
+      }
+      
+      // 导入完成状态
+      this.log('\n🎉 数据导入完成！')
+      
+      if (failCount > 0 || commentFailCount > 0) {
+        this.log(`\n⚠️  有部分数据导入失败，请检查上方日志`)
+      } else {
+        this.log(`\n✅  所有数据导入成功`)
+      }
+      
+      } catch (error) {
+        this.log('\n❌ 导入过程发生严重错误')
+        this.log('错误信息:', error.message)
+        this.log('错误堆栈:', error.stack)
+        throw error // 重新抛出错误，让上层处理
+      }
+    },
+    
+    // 读取文件内容为文本
+    readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        // 如果是uni-app的临时文件，使用uni.getFileSystemManager读取
+        if (file.path) {
+          const fs = uni.getFileSystemManager()
+          fs.readFile({
+            filePath: file.path,
+            encoding: 'utf8',
+            success: (res) => {
+              resolve(res.data)
+            },
+            fail: (err) => {
+              reject(new Error('文件读取失败: ' + err.errMsg))
+            }
+          })
+        } else {
+          // 传统的FileReader方式
+          const reader = new FileReader()
+          reader.onload = e => resolve(e.target.result)
+          reader.onerror = () => reject(new Error('文件读取失败'))
+          reader.readAsText(file, 'UTF-8')
+        }
+      })
+    },
+    
     // 读取模板任务文件
     async readTemplateTaskFile() {
       try {
@@ -834,6 +1202,14 @@ export default {
   background-color: #E55A2B;
 }
 
+.import-btn {
+  background-color: #28a745;
+}
+
+.import-btn:hover {
+  background-color: #218838;
+}
+
 .debug-results {
   background-color: white;
   border-radius: 8px;
@@ -996,5 +1372,33 @@ export default {
 .item-details text {
   font-size: 12px;
   color: #888;
+}
+
+/* JSON输入区域样式 */
+.json-input-section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.json-input-textarea {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 12px;
+  font-family: monospace;
+  margin: 10px 0;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.json-input-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
 }
 </style>
