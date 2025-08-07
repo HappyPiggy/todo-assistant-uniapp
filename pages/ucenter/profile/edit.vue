@@ -60,8 +60,13 @@
 						v-model="formData.nickname" 
 						placeholder="请输入昵称"
 						:clearable="true"
-						:maxlength="20">
+						:maxlength="20"
+						:disabled="!canEditNickname">
 					</uni-easyinput>
+					<view v-if="!canEditNickname && nicknameEditInfo" class="nickname-limit-tip">
+						<uni-icons type="info-filled" size="16" color="#f56565"></uni-icons>
+						<text class="tip-text">{{ nicknameEditInfo }}</text>
+					</view>
 				</uni-forms-item>
 
 				<!-- #ifndef MP-WEIXIN -->
@@ -102,6 +107,8 @@
 		data() {
 			return {
 				saving: false,
+				canEditNickname: true,
+				nicknameEditInfo: '',
 				formData: {
 					nickname: '',
 					// #ifndef MP-WEIXIN
@@ -151,6 +158,7 @@
 		},
 		onLoad() {
 			this.loadUserData()
+			this.checkNicknameEditLimit()
 		},
 		methods: {
 			loadUserData() {
@@ -165,6 +173,24 @@
 						// #endif
 						avatar: this.userInfo.avatar || this.defaultAvatars[0].url
 					}
+				}
+			},
+			
+			// 检查昵称修改限制
+			async checkNicknameEditLimit() {
+				try {
+					const userCo = uniCloud.importObject('user-co')
+					const result = await userCo.checkNicknameEditLimit()
+					
+					if (result.code === 0) {
+						this.canEditNickname = result.data.canEdit
+						if (!result.data.canEdit) {
+							const remainingDays = result.data.remainingDays
+							this.nicknameEditInfo = `昵称修改间隔为7天，还需等待${remainingDays}天`
+						}
+					}
+				} catch (error) {
+					console.error('检查昵称修改限制失败:', error)
 				}
 			},
 			
@@ -194,6 +220,15 @@
 					return
 				}
 				
+				// 如果昵称不能修改，在保存前再次检查
+				if (!this.canEditNickname && this.formData.nickname !== this.userInfo.nickname) {
+					uni.showToast({
+						title: '昵称修改间隔为7天',
+						icon: 'error'
+					})
+					return
+				}
+				
 				this.saving = true
 				
 				try {
@@ -208,6 +243,11 @@
 							title: '保存成功',
 							icon: 'success'
 						})
+						
+						// 如果修改了昵称，需要重新检查限制
+						if (this.formData.nickname !== this.userInfo.nickname) {
+							this.checkNicknameEditLimit()
+						}
 						
 						setTimeout(() => {
 							uni.navigateBack()
@@ -246,6 +286,7 @@
 		flex: 1;
 		background: linear-gradient(180deg, #f8f9ff 0%, #f5f5f5 40%);
 		min-height: 100vh;
+		padding-bottom: calc(126rpx + env(safe-area-inset-bottom, 0));
 	}
 
 
@@ -556,6 +597,37 @@
 		font-size: 30rpx;
 		color: #2d3748;
 		font-weight: 500;
+	}
+	
+	/* 昵称限制提示样式 */
+	.nickname-limit-tip {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 16rpx;
+		padding: 20rpx 24rpx;
+		background: linear-gradient(135deg, rgba(245, 101, 101, 0.08) 0%, rgba(245, 101, 101, 0.04) 100%);
+		border-radius: 12rpx;
+		border: 1rpx solid rgba(245, 101, 101, 0.2);
+	}
+	
+	.nickname-limit-tip .tip-text {
+		margin-left: 12rpx;
+		font-size: 26rpx;
+		color: #f56565;
+		line-height: 1.4;
+		font-weight: 500;
+	}
+	
+	/* 禁用状态样式 */
+	::v-deep .uni-easyinput__content[disabled] {
+		background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+		border-color: #cbd5e0;
+		opacity: 0.6;
+	}
+	
+	::v-deep .uni-easyinput__content-input[disabled] {
+		color: #a0aec0;
+		cursor: not-allowed;
 	}
 	/* #endif */
 

@@ -6,8 +6,14 @@
       </view>
       <scroll-view scroll-y class="action-scroll">
         <view class="action-list">
-          <!-- 归档项目册只显示分享和删除 -->
+          <!-- 归档项目册只显示数据统计、分享和删除 -->
           <template v-if="isArchived">
+            <!-- 数据统计 -->
+            <view class="action-item" @click="handleStatisticsAction">
+              <uni-icons color="#17a2b8" size="20" type="bars" />
+              <text class="action-text">数据统计</text>
+            </view>
+
             <!-- 分享 -->
             <view class="action-item" @click="handleShareAction">
               <uni-icons color="#ff9500" size="20" type="redo" />

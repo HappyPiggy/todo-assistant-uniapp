@@ -93,24 +93,6 @@ module.exports = {
       }
     }
 
-    // 检查昵称唯一性
-    if (nickname && nickname.trim()) {
-      const db = uniCloud.database()
-      const nicknameCheck = await db.collection('uni-id-users')
-        .where({
-          nickname: nickname.trim(),
-          _id: db.command.neq(uid)
-        })
-        .count()
-      
-      if (nicknameCheck.total > 0) {
-        return {
-          code: 400,
-          message: '昵称已被使用，请选择其他昵称'
-        }
-      }
-    }
-
     // 准备更新数据
     const updateData = {}
     if (nickname !== undefined) updateData.nickname = nickname.trim()
@@ -119,6 +101,57 @@ module.exports = {
     if (actualComment !== undefined) updateData.comment = actualComment // 统一使用comment字段存储
     if (avatar_file !== undefined) updateData.avatar_file = avatar_file
     if (avatar !== undefined) updateData.avatar = avatar
+
+    // 检查昵称修改限制（如果修改了昵称）
+    if (nickname && nickname.trim()) {
+      // 获取当前用户信息
+      const currentUser = await db.collection('uni-id-users')
+        .doc(uid)
+        .field({
+          nickname: true,
+          nickname_last_update: true
+        })
+        .get()
+      
+      const currentUserData = currentUser.data[0]
+      
+      // 如果昵称有变化，检查修改时间限制
+      if (currentUserData && currentUserData.nickname !== nickname.trim()) {
+        const lastUpdateTime = currentUserData.nickname_last_update
+        
+        if (lastUpdateTime) {
+          const now = new Date()
+          const timeDiff = now.getTime() - new Date(lastUpdateTime).getTime()
+          const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+          
+          if (daysDiff < 7) {
+            const remainingDays = 7 - daysDiff
+            return {
+              code: 400,
+              message: `昵称修改间隔为7天，还需等待${remainingDays}天`
+            }
+          }
+        }
+        
+        // 检查昵称唯一性
+        const nicknameCheck = await db.collection('uni-id-users')
+          .where({
+            nickname: nickname.trim(),
+            _id: db.command.neq(uid)
+          })
+          .count()
+        
+        if (nicknameCheck.total > 0) {
+          return {
+            code: 400,
+            message: '昵称已被使用，请选择其他昵称'
+          }
+        }
+        
+        // 如果昵称修改成功，记录修改时间
+        updateData.nickname_last_update = new Date()
+      }
+    }
 
     try {
       // 添加调试日志
@@ -301,6 +334,74 @@ module.exports = {
       return {
         code: 500,
         message: '设置更新失败'
+      }
+    }
+  },
+
+  /**
+   * 检查昵称修改限制
+   */
+  async checkNicknameEditLimit() {
+    const { uid, db } = this
+
+    try {
+      const userResult = await db.collection('uni-id-users')
+        .doc(uid)
+        .field({
+          nickname_last_update: true
+        })
+        .get()
+
+      if (userResult.data.length === 0) {
+        return {
+          code: 404,
+          message: '用户不存在'
+        }
+      }
+
+      const userData = userResult.data[0]
+      const lastUpdateTime = userData.nickname_last_update
+
+      if (!lastUpdateTime) {
+        // 如果从未修改过昵称，可以修改
+        return {
+          code: 0,
+          data: {
+            canEdit: true,
+            remainingDays: 0
+          }
+        }
+      }
+
+      const now = new Date()
+      const timeDiff = now.getTime() - new Date(lastUpdateTime).getTime()
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+
+      if (daysDiff >= 7) {
+        // 超过7天，可以修改
+        return {
+          code: 0,
+          data: {
+            canEdit: true,
+            remainingDays: 0
+          }
+        }
+      } else {
+        // 未满7天，不能修改
+        const remainingDays = 7 - daysDiff
+        return {
+          code: 0,
+          data: {
+            canEdit: false,
+            remainingDays: remainingDays
+          }
+        }
+      }
+    } catch (error) {
+      console.error('检查昵称修改限制失败:', error)
+      return {
+        code: 500,
+        message: '检查修改限制失败'
       }
     }
   },
