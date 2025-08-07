@@ -19,6 +19,12 @@ const { ERROR_CODES, PERMISSION_TYPE, TASK_STATUS, TASK_PRIORITY } = require('..
  * @param {string} itemData.priority 任务优先级
  * @param {Date} itemData.due_date 截止日期
  * @param {number} itemData.budget 预算金额
+ * @param {number} itemData.actual_cost 实际花费
+ * @param {number} itemData.estimated_hours 预估工时
+ * @param {Array} itemData.tags 标签列表
+ * @param {number} itemData.progress 进度百分比
+ * @param {number} itemData.level 层级
+ * @param {string} itemData.status 任务状态
  * @returns {Object} 响应结果
  */
 async function createTodoItem(itemData) {
@@ -33,7 +39,11 @@ async function createTodoItem(itemData) {
     due_date = null,
     tags = [],
     estimated_hours = 0,
-    budget = null
+    budget = null,
+    actual_cost = 0,
+    progress = 0,
+    level = null,
+    status = TASK_STATUS.TODO
   } = itemData
   
   // 验证任务标题
@@ -60,15 +70,15 @@ async function createTodoItem(itemData) {
       created_at: now,
       updated_at: now,
       due_date: due_date ? new Date(due_date) : null,
-      status: TASK_STATUS.TODO,
+      status: status || TASK_STATUS.TODO,
       priority,
       tags: tags || [],
       sort_order: 0,
-      level: parent_id ? 1 : 0,
-      progress: 0,
+      level: level !== null ? level : (parent_id ? 1 : 0),
+      progress: typeof progress === 'number' && progress >= 0 && progress <= 100 ? progress : 0,
       estimated_hours: typeof estimated_hours === 'number' ? estimated_hours : 0,
       budget: typeof budget === 'number' && budget >= 0 ? budget : null,
-      actual_cost: 0,
+      actual_cost: typeof actual_cost === 'number' && actual_cost >= 0 ? actual_cost : 0,
       comments: [],
       subtask_count: 0,
       completed_subtask_count: 0,
