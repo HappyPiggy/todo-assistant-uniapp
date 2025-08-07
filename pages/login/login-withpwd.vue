@@ -1,6 +1,25 @@
 <!-- 账号密码登录页 -->
 <template>
 	<view class="uni-content">
+		<!-- #ifdef MP-WEIXIN -->
+		<!-- 微信小程序只显示微信登录 -->
+		<view class="login-logo">
+			<image :src="logo"></image>
+		</view>
+		<text class="title title-box">微信快速登录</text>
+		<view class="weixin-login-container">
+			<button class="weixin-login-btn" @click="weixinLogin">
+				<image class="weixin-icon" src="/uni_modules/uni-id-pages/static/login/uni-fab-login/weixin.png" mode="aspectFit"></image>
+				<text class="weixin-login-text">微信一键登录</text>
+			</button>
+			<text class="login-tips">点击登录即表示同意服务协议和隐私政策</text>
+		</view>
+		<!-- 带选择框的隐私政策协议组件 -->
+		<uni-id-pages-agreements scope="register" ref="agreements"></uni-id-pages-agreements>
+		<!-- #endif -->
+		
+		<!-- #ifndef MP-WEIXIN -->
+		<!-- 非微信小程序显示完整登录选项 -->
 		<view class="login-logo">
 			<image :src="logo"></image>
 		</view>
@@ -29,7 +48,9 @@
 			<text class="link" @click="toRegister">{{config.isAdmin ? '注册管理员账号': '注册账号'}}</text>
 			<!-- <text class="link" @click="toRegister" v-if="!config.isAdmin">注册账号</text> -->
 		</view>
+		<!-- #endif -->
 		
+		<!-- #ifndef MP-WEIXIN -->
 		<!-- 第三方登录 -->
 		<view class="third-party-login" v-if="hasWeixinLogin">
 			<view class="divider">
@@ -44,6 +65,7 @@
 				</view>
 			</view>
 		</view>
+		<!-- #endif -->
 		
 		<!-- 带选择框的隐私政策协议组件（用于微信登录） -->
 		<uni-id-pages-agreements v-if="false" scope="register" ref="weixinAgreements"></uni-id-pages-agreements>
@@ -56,6 +78,7 @@
 	import mixin from '@/uni_modules/uni-id-pages/common/login-page.mixin.js';
 	import config from '@/uni_modules/uni-id-pages/config.js'
 	import {store,mutations} from '@/uni_modules/uni-id-pages/common/store.js'
+	import { weixinLogin, loginByWeixin } from './weixinLogin.js'
 	const uniIdCo = uniCloud.importObject("uni-id-co", {
 		errorOptions: {
 			type: 'toast'
@@ -162,109 +185,32 @@
 			},
 			/* 前往注册 */
 			toRegister() {
+				// #ifdef MP-WEIXIN
+				uni.showToast({
+					title: '微信小程序暂不支持注册',
+					icon: 'none',
+					duration: 2000
+				})
+				return
+				// #endif
+				
+				// #ifndef MP-WEIXIN
 				uni.navigateTo({
 					url: '/pages/register/register',
 					fail(e) {
 						console.error(e);
 					}
 				})
+				// #endif
 			},
 			// 微信登录
 			async weixinLogin() {
-				// 判断是否需要弹出隐私协议授权框
-				let needAgreements = (config?.agreements?.scope || []).includes('register')
-				if (needAgreements && !this.agree) {
-					// 使用当前页面的协议组件
-					return this.$refs.agreements.popup(() => {
-						this.weixinLogin()
-					})
-				}
-				
-				// H5平台微信登录
-				// #ifdef H5
-				if (true) {
-					let ua = window.navigator.userAgent.toLowerCase();
-					let isWeixin = ua.match(/MicroMessenger/i) == 'micromessenger'
-					
-					// #ifdef VUE2
-					const baseUrl = process.env.BASE_URL
-					// #endif
-					// #ifdef VUE3
-					const baseUrl = import.meta.env.BASE_URL
-					// #endif
-					
-					let redirectUrl = location.protocol +
-						'//' +
-						location.host +
-						baseUrl.replace(/\/$/, '') +
-						(window.location.href.includes('#')?'/#':'') +
-						'/uni_modules/uni-id-pages/pages/login/login-withoutpwd?is_weixin_redirect=true&type=weixin'
-					
-					if (isWeixin) {
-						// 在微信公众号内
-						return window.open(`https://open.weixin.qq.com/connect/oauth2/authorize?appid=${config.appid.weixin.h5}&redirect_uri=${encodeURIComponent(redirectUrl)}&response_type=code&scope=snsapi_userinfo&state=STATE&connect_redirect=1#wechat_redirect`);
-					} else {
-						// 非微信公众号内
-						return location.href = `https://open.weixin.qq.com/connect/qrconnect?appid=${config.appid.weixin.web}&redirect_uri=${encodeURIComponent(redirectUrl)}&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect`
-					}
-				}
-				// #endif
-				
-				// 非H5平台微信登录
-				// #ifndef H5
-				uni.showLoading({
-					mask: true
-				})
-				
-				uni.login({
-					provider: 'weixin',
-					onlyAuthorize: true,
-					success: async e => {
-						this.loginByWeixin({
-							code: e.code
-						})
-					},
-					fail: async (err) => {
-						console.error(JSON.stringify(err));
-						uni.showModal({
-							content: `登录失败; code: ${err.errCode || -1}`,
-							confirmText: "知道了",
-							showCancel: false
-						});
-						uni.hideLoading()
-					}
-				})
-				// #endif
+				// 调用拆分出来的微信登录方法
+				await weixinLogin(this)
 			},
-			// 执行微信登录
+			// 执行微信登录（保留此方法以兼容内部调用）
 			loginByWeixin(params) {
-				const uniIdCo = uniCloud.importObject("uni-id-co", {
-					customUI: true
-				})
-				uniIdCo.loginByWeixin(params).then(result => {
-					uni.showToast({
-						title: '登录成功',
-						icon: 'none',
-						duration: 2000
-					});
-					// #ifdef H5
-					result.loginType = 'weixin'
-					// #endif
-					this.loginSuccess({
-						...result,
-						uniIdRedirectUrl: this.uniIdRedirectUrl
-					})
-				})
-				.catch(e => {
-					uni.showModal({
-						content: e.message,
-						confirmText: "知道了",
-						showCancel: false
-					});
-				})
-				.finally(e => {
-					uni.hideLoading()
-				})
+				loginByWeixin(this, params)
 			}
 		}
 	}
@@ -363,4 +309,59 @@
 		color: #666;
 		text-align: center;
 	}
+	
+	/* #ifdef MP-WEIXIN */
+	/* 微信小程序专用样式 */
+	.weixin-login-container {
+		margin-top: 100rpx;
+		padding: 0 60rpx;
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.weixin-login-btn {
+		width: 100%;
+		height: 96rpx;
+		background: #07C160;
+		color: #ffffff;
+		border-radius: 48rpx;
+		font-size: 32rpx;
+		font-weight: 600;
+		border: none;
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 30rpx;
+	}
+	
+	.weixin-login-btn:active {
+		background: #06AD56;
+	}
+	
+	.weixin-icon {
+		width: 48rpx;
+		height: 48rpx;
+		margin-right: 16rpx;
+	}
+	
+	.weixin-login-text {
+		color: #ffffff;
+		font-size: 32rpx;
+		font-weight: 600;
+	}
+	
+	.login-tips {
+		font-size: 24rpx;
+		color: #999;
+		text-align: center;
+		margin-top: 30rpx;
+		line-height: 36rpx;
+	}
+	/* #endif */
 </style>

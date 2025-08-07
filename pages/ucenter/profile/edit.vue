@@ -64,29 +64,13 @@
 					</uni-easyinput>
 				</uni-forms-item>
 
+				<!-- #ifndef MP-WEIXIN -->
 				<uni-forms-item name="gender" label="性别">
 					<uni-data-picker 
 						v-model="formData.gender" 
 						:localdata="genderOptions"
 						placeholder="请选择性别">
 					</uni-data-picker>
-				</uni-forms-item>
-
-				<uni-forms-item name="mobile" label="手机号">
-					<uni-easyinput 
-						v-model="formData.mobile" 
-						type="number"
-						placeholder="请输入手机号"
-						:disabled="true">
-					</uni-easyinput>
-				</uni-forms-item>
-
-				<uni-forms-item name="email" label="邮箱">
-					<uni-easyinput 
-						v-model="formData.email" 
-						placeholder="请输入邮箱地址"
-						:clearable="true">
-					</uni-easyinput>
 				</uni-forms-item>
 
 				<uni-forms-item name="description" label="个人简介">
@@ -98,6 +82,7 @@
 						:clearable="true">
 					</uni-easyinput>
 				</uni-forms-item>
+				<!-- #endif -->
 			</view>
 		</uni-forms>
 
@@ -119,10 +104,12 @@
 				saving: false,
 				formData: {
 					nickname: '',
+					// #ifndef MP-WEIXIN
 					gender: 0,
 					mobile: '',
 					email: '',
 					description: '',
+					// #endif
 					avatar: ''
 				},
 				defaultAvatars: [
@@ -142,11 +129,13 @@
 							{ minLength: 2, maxLength: 20, errorMessage: '昵称长度应为2-20个字符' }
 						]
 					},
+					// #ifndef MP-WEIXIN
 					email: {
 						rules: [
 							{ format: 'email', errorMessage: '邮箱格式不正确' }
 						]
 					}
+					// #endif
 				},
 				genderOptions: [
 					{ value: 0, text: '保密' },
@@ -168,10 +157,12 @@
 				if (this.userInfo) {
 					this.formData = {
 						nickname: this.userInfo.nickname || '',
+						// #ifndef MP-WEIXIN
 						gender: this.userInfo.gender || 0,
 						mobile: this.userInfo.mobile || '',
 						email: this.userInfo.email || '',
 						description: this.userInfo.description || this.userInfo.comment || '',
+						// #endif
 						avatar: this.userInfo.avatar || this.defaultAvatars[0].url
 					}
 				}

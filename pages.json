@@ -20,12 +20,14 @@
             "navigationBarTitleText": "登录"
         }
     },
+    // #ifndef MP-WEIXIN
     {
         "path": "pages/register/register",
         "style": {
             "navigationBarTitleText": "注册"
         }
     },
+    // #endif
     {
         "path": "pages/ucenter/settings/settings",
         "style": {
@@ -82,12 +84,14 @@
             "navigationBarTitleText": "标签管理"
         }
     },
+    // #ifndef MP-WEIXIN
     {
         "path": "pages/debug/debug",
         "style": {
             "navigationBarTitleText": "数据库调试"
         }
     },
+    // #endif
     {
         "path": "pages/settings/share-management",
         "style": {
