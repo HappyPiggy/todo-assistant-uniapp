@@ -117,11 +117,17 @@
             "navigationBarTextStyle": "black",
             "backgroundColor": "#f8f9fa"
         }
+    },
+    {
+        "path": "uni_modules/uni-id-pages/pages/common/webview/webview",
+        "style": {
+            "navigationBarTitleText": ""
+        }
     }
 ],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "TODO助手",
+		"navigationBarTitleText": "土豆记录册",
 		"navigationBarBackgroundColor": "#FFFFFF",
 		"backgroundColor": "#f5f5f5",
 		"app-plus": {
