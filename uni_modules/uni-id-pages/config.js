@@ -34,8 +34,8 @@ export default {
   ],
   // 政策协议
   agreements: {
-    serviceUrl: '/static/agreements/service.html', // 用户服务协议链接
-    privacyUrl: '/static/agreements/privacy.html', // 隐私政策条款链接
+    serviceUrl: 'https://static-mp-1c0f4b19-5189-45e2-a77a-7521503194c2.next.bspapp.com/service.html', // 用户服务协议链接
+    privacyUrl: 'https://static-mp-1c0f4b19-5189-45e2-a77a-7521503194c2.next.bspapp.com/privacy.html', // 隐私政策条款链接
     // 哪些场景下显示，1.注册（包括登录并注册，如：微信登录、苹果登录、短信验证码登录）、2.登录（如：用户名密码登录）
     scope: [
       'register', 'login', 'realNameVerify'
