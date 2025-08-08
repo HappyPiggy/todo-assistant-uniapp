@@ -206,18 +206,11 @@ export function useBookData() {
       // 使用数据适配器加载项目册详情
       const book = await dataAdapter.getTodoBook(id)
       
-      // 模拟原有的返回结构以保持兼容性
-      const result = {
-        code: 0,
-        data: {
-          book: book
-        }
-      }
-      
-      if (result.code === 0) {
+      // 数据适配器已经处理了返回结构，直接使用返回的数据
+      if (book) {
         // 处理基本信息
-        if (includeBasic && result.data.book) {
-          bookData.value = result.data.book
+        if (includeBasic && book) {
+          bookData.value = book
           
           // 设置页面标题
           if (bookData.value && bookData.value.title) {
@@ -228,33 +221,39 @@ export function useBookData() {
         }
         
         // 处理成员信息
-        if (includeMembers && result.data.members) {
-          membersData.value = result.data.members
-          memberCount.value = result.data.members.length
+        if (includeMembers) {
+          // 从基本信息中获取成员数量
+          memberCount.value = book.member_count || 1
         }
         
-        // 处理任务信息
-        if (includeTasks && result.data.tasks) {
-          const tasks = result.data.tasks || []
-          tasksData.value = tasks
-          
-          // 扁平化处理任务数据用于统计
-          const flatTasks = []
-          tasks.forEach(task => {
-            flatTasks.push(task)
-            // 如果有子任务，也加入到扁平化数组中
-            if (task.subtasks && task.subtasks.length > 0) {
-              flatTasks.push(...task.subtasks)
-            }
-          })
-          allTasks.value = flatTasks
+        // 处理任务信息 - 需要单独调用getTasks
+        if (includeTasks) {
+          try {
+            const tasks = await dataAdapter.getTasks(id)
+            tasksData.value = tasks || []
+            
+            // 扁平化处理任务数据用于统计
+            const flatTasks = []
+            tasks.forEach(task => {
+              flatTasks.push(task)
+              // 如果有子任务，也加入到扁平化数组中
+              if (task.subtasks && task.subtasks.length > 0) {
+                flatTasks.push(...task.subtasks)
+              }
+            })
+            allTasks.value = flatTasks
+          } catch (taskError) {
+            console.warn('加载任务失败:', taskError)
+            tasksData.value = []
+            allTasks.value = []
+          }
         }
         
       } else {
-        console.log('loadBookDetail 失败, 错误信息:', result.message)
-        error.value = result.message || ERROR_MESSAGES.DATA_NOT_FOUND
+        console.log('loadBookDetail 失败: 项目册数据为空')
+        error.value = ERROR_MESSAGES.DATA_NOT_FOUND
         uni.showToast({
-          title: result.message || ERROR_MESSAGES.DATA_NOT_FOUND,
+          title: ERROR_MESSAGES.DATA_NOT_FOUND,
           icon: 'none'
         })
       }

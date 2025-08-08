@@ -168,8 +168,24 @@ const previewData = computed(() => {
   }
 })
 
-const handleSubmit = () => {
-  emit('submit', localFormData.value)
+const formRef = ref(null)
+
+const handleSubmit = async () => {
+  try {
+    // 使用uni-forms进行表单验证
+    await formRef.value.validate()
+    // 验证通过后提交数据
+    emit('submit', localFormData.value)
+  } catch (error) {
+    console.log('表单验证失败:', error)
+    // 显示第一个验证错误
+    if (error && error.length > 0) {
+      uni.showToast({
+        title: error[0].errorMessage || '请检查输入信息',
+        icon: 'none'
+      })
+    }
+  }
 }
 
 const handleCancel = () => {

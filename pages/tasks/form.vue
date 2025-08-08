@@ -319,9 +319,12 @@ const loadTaskData = async () => {
 	loading.value = true
 	try {
 		// 使用数据适配器加载任务详情
-		const task = await dataAdapter.getTask(taskId)
+		const result = await dataAdapter.getTask(taskId)
 		
-		console.log('任务数据加载结果:', JSON.stringify(task, null, 2))
+		console.log('任务数据加载结果:', JSON.stringify(result, null, 2))
+		
+		// 数据适配器已经处理了返回结构，直接使用返回的数据
+		const task = result
 		
 		if (task) {
 			// 填充表单数据 - 使用 Object.assign 确保响应式更新
@@ -421,16 +424,20 @@ const submitTask = async () => {
 			parent_id: formData.parent_id || null,
 			due_date: formData.due_date,
 			tags: formData.tags || [],
-			// 支付相关字段使用正确的字段名
-			expense_amount: formData.budget ? parseInt(formData.budget) : 0,
-			actual_expense: formData.actual_cost ? parseInt(formData.actual_cost) : 0,
+			// 统一使用budget和actual_cost字段
+			budget: formData.budget ? parseInt(formData.budget) : 0,
+			actual_cost: formData.actual_cost ? parseInt(formData.actual_cost) : 0,
 			estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : 0
 		}
 
 		let result
 		if (isEditMode.value) {
-			// 编辑模式：使用数据适配器更新任务
-			result = await dataAdapter.updateTask(taskId, taskData)
+			// 编辑模式：检查是否有父任务变化，决定是否跳过页面刷新
+			const hasParentChange = (formData.parent_id !== originalData.value?.parent_id)
+			const skipRefresh = !hasParentChange // 没有父任务变化时跳过刷新
+			
+			// 使用数据适配器更新任务，同时跳过加载提示
+			result = await dataAdapter.updateTask(taskId, taskData, { skipRefresh })
 			console.log('任务更新结果:', JSON.stringify(result, null, 2))
 		} else {
 			// 创建模式：使用数据适配器创建任务
@@ -439,26 +446,58 @@ const submitTask = async () => {
 		}
 
 		if (result) {
+			// 先发送事件通知页面更新，再显示成功提示
+			if (isEditMode.value) {
+				// 编辑模式：检查是否有父任务变化，决定如何通知页面更新
+				const hasParentChange = (formData.parent_id !== originalData.value?.parent_id)
+				
+				if (hasParentChange) {
+					// 有父任务变化，触发完整刷新
+					console.log('发送父任务变更事件')
+					uni.$emit('task-parent-changed', { taskId, bookId })
+				} else {
+					// 没有父任务变化，发送任务更新事件用于本地更新
+					// 使用表单数据构建完整的更新数据
+					const updatedTaskData = {
+						_id: taskId,
+						title: formData.title.trim(),
+						description: formData.description.trim(),
+						priority: formData.priority,
+						due_date: formData.due_date,
+						tags: formData.tags || [],
+						estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : 0,
+						budget: formData.budget ? parseFloat(formData.budget) : 0,
+						actual_cost: formData.actual_cost ? parseFloat(formData.actual_cost) : 0,
+						parent_id: formData.parent_id || null,
+						updated_at: new Date()
+					}
+					
+					console.log('发送任务更新事件 - 完整数据:', {
+						taskId, 
+						bookId,
+						updatedTask: updatedTaskData
+					})
+					
+					uni.$emit('task-updated', { 
+						taskId, 
+						bookId,
+						updatedTask: updatedTaskData
+					})
+					
+					console.log('任务更新事件已发送')
+				}
+			} else {
+				// 创建模式：检测是否有父任务
+				const hasParentTask = !!formData.parent_id
+				if (hasParentTask) {
+					uni.$emit('task-parent-changed', { taskId: null, bookId })
+				}
+			}
+
 			uni.showToast({
 				title: isEditMode.value ? '保存成功' : '创建成功',
 				icon: 'success'
 			})
-
-			// 检测是否有父任务变化，需要触发刷新
-			const hasParentTask = !!(formData.parent_id || (isEditMode.value && originalData.value?.parent_id))
-			
-			if (isEditMode.value) {
-				// 编辑模式：发出更新事件
-				uni.$emit('task-updated', { ...result, _id: taskId })
-			} else {
-				// 创建模式：发出创建事件
-				uni.$emit('task-created', result)
-			}
-			
-			// 如果有父任务，需要触发刷新
-			if (hasParentTask) {
-				uni.$emit('task-parent-changed', { taskId: isEditMode.value ? taskId : null, bookId })
-			}
 
 			// 返回上一页
 			setTimeout(() => {

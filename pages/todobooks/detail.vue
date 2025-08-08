@@ -272,9 +272,9 @@ onMounted(() => {
   }
   
   // 注册事件监听
-  uni.$on('task-updated', updateTaskOptimistic)
-  uni.$on('task-created', handleTaskCreated)
+  uni.$on('tasks-updated', refreshTasks) // 监听数据适配器的任务更新事件
   uni.$on('task-parent-changed', handleTaskParentChanged)
+  uni.$on('task-updated', handleTaskUpdated) // 监听单个任务更新事件
 })
 
 // 计算滚动区域高度
@@ -344,9 +344,9 @@ onUnmounted(() => {
   }
   
   // 移除事件监听
-  uni.$off('task-updated', updateTaskOptimistic)
-  uni.$off('task-created', handleTaskCreated)
+  uni.$off('tasks-updated', refreshTasks)
   uni.$off('task-parent-changed', handleTaskParentChanged)
+  uni.$off('task-updated', handleTaskUpdated)
 })
 
 // 加载项目册详情数据
@@ -365,10 +365,28 @@ const loadBookDetailData = async () => {
     bookData.value = book
     
     // 设置页面标题
-    if (book && book.name) {
+    if (book && book.title) {
       const prefix = getPageTitlePrefix()
+      const fullTitle = `${prefix}${book.title}`
+      console.log('设置导航栏标题:', {
+        prefix,
+        bookTitle: book.title,
+        fullTitle
+      })
       uni.setNavigationBarTitle({
-        title: `${prefix}${book.name}`
+        title: fullTitle,
+        success: () => {
+          console.log('导航栏标题设置成功:', fullTitle)
+        },
+        fail: (err) => {
+          console.error('导航栏标题设置失败:', err)
+        }
+      })
+    } else {
+      console.warn('无法设置导航栏标题:', {
+        hasBook: !!book,
+        bookTitle: book?.title,
+        bookData: JSON.stringify(book, null, 2)
       })
     }
   } catch (error) {
@@ -711,6 +729,63 @@ const handleTaskParentChanged = async (eventData) => {
   if (eventData.bookId === bookId) {
     console.log('handleTaskParentChanged: 父任务变更涉及当前项目册，刷新任务列表')
     await refreshTasks()
+  }
+}
+
+// 处理单个任务更新事件
+const handleTaskUpdated = async (eventData) => {
+  console.log('handleTaskUpdated: 收到任务更新事件', JSON.stringify(eventData, null, 2))
+  
+  // 确保事件是针对当前项目册的
+  if (eventData.bookId === bookId && eventData.updatedTask) {
+    console.log('handleTaskUpdated: 任务更新涉及当前项目册，本地更新任务数据')
+    
+    // 在 allTasks 中查找并更新对应的任务
+    if (allTasks.value && Array.isArray(allTasks.value)) {
+      const taskIndex = allTasks.value.findIndex(task => task._id === eventData.taskId)
+      console.log(`handleTaskUpdated: 查找任务索引 ${eventData.taskId}，找到索引: ${taskIndex}`)
+      
+      if (taskIndex !== -1) {
+        // 保留原始任务的其他字段（如状态、子任务等），只更新编辑的字段
+        const originalTask = allTasks.value[taskIndex]
+        
+        console.log('handleTaskUpdated: 原始任务数据:', JSON.stringify(originalTask, null, 2))
+        console.log('handleTaskUpdated: 更新数据:', JSON.stringify(eventData.updatedTask, null, 2))
+        
+        const updatedTask = {
+          ...originalTask,
+          ...eventData.updatedTask,
+          // 确保保留重要字段
+          _id: originalTask._id,
+          status: originalTask.status,
+          subtasks: originalTask.subtasks,
+          subtask_count: originalTask.subtask_count,
+          completed_subtask_count: originalTask.completed_subtask_count,
+          expanded: originalTask.expanded, // 保留展开状态
+          created_at: originalTask.created_at, // 保留创建时间
+          completed_at: originalTask.completed_at // 保留完成时间
+        }
+        
+        // 直接替换数组中的任务对象，确保响应式更新
+        allTasks.value.splice(taskIndex, 1, updatedTask)
+        
+        console.log('handleTaskUpdated: 任务数据已本地更新:', JSON.stringify(updatedTask, null, 2))
+        
+        // 重新初始化任务数据以触发响应式更新
+        initializeTasks(allTasks.value)
+        
+        // 使用nextTick确保DOM更新
+        await nextTick(() => {
+          console.log('handleTaskUpdated: DOM更新完成，界面应已刷新')
+        })
+      } else {
+        console.warn('handleTaskUpdated: 未找到对应的任务进行更新')
+      }
+    } else {
+      console.warn('handleTaskUpdated: allTasks 数据无效')
+    }
+  } else {
+    console.log('handleTaskUpdated: 事件不匹配当前项目册或缺少更新数据')
   }
 }
 

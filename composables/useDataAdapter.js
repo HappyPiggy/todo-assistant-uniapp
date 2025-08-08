@@ -138,18 +138,23 @@ export function useDataAdapter() {
    * 更新任务
    * @param {String} taskId - 任务ID
    * @param {Object} updateData - 更新数据
+   * @param {Object} options - 选项配置
+   * @param {boolean} options.skipRefresh - 是否跳过页面刷新事件，默认false
    * @returns {Promise<Object>} 更新后的任务
    */
-  const updateTask = async (taskId, updateData) => {
+  const updateTask = async (taskId, updateData, options = {}) => {
     if (isGuest.value) {
       // 访客模式：更新本地存储
       const updatedTask = await localManager.updateTask(taskId, updateData)
-      // 发送更新事件
-      uni.$emit('tasks-updated', { taskId })
+      
+      // 如果不跳过刷新，则发送更新事件
+      if (!options.skipRefresh) {
+        uni.$emit('tasks-updated', { taskId })
+      }
       return updatedTask
     } else {
       // 登录模式：更新云端数据
-      return await updateCloudTask(taskId, updateData)
+      return await updateCloudTask(taskId, updateData, options)
     }
   }
   
@@ -247,16 +252,19 @@ export function useDataAdapter() {
   const createCloudTodoBook = async (bookData) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.createTodoBook(
-        bookData.name,
-        bookData.description,
-        bookData.color,
-        bookData.icon,
-        bookData.tags
-      )
+      const result = await todoBookCo.createTodoBook({
+        title: bookData.title,
+        description: bookData.description,
+        color: bookData.color,
+        icon: bookData.icon
+      })
       
       if (result.code === 0) {
         uni.$emit('todobooks-updated')
+        // 如果返回的data包含book字段，直接返回book数据
+        if (result.data && result.data.book) {
+          return result.data.book
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -270,17 +278,19 @@ export function useDataAdapter() {
   const updateCloudTodoBook = async (bookId, updateData) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.updateTodoBook(
-        bookId,
-        updateData.name,
-        updateData.description,
-        updateData.color,
-        updateData.icon,
-        updateData.tags
-      )
+      const result = await todoBookCo.updateTodoBook(bookId, {
+        title: updateData.title,
+        description: updateData.description,
+        color: updateData.color,
+        icon: updateData.icon
+      })
       
       if (result.code === 0) {
         uni.$emit('todobooks-updated')
+        // 如果返回的data包含book字段，直接返回book数据
+        if (result.data && result.data.book) {
+          return result.data.book
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -298,6 +308,10 @@ export function useDataAdapter() {
       
       if (result.code === 0) {
         uni.$emit('todobooks-updated')
+        // 如果返回的data包含book字段，直接返回book数据
+        if (result.data && result.data.book) {
+          return result.data.book
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -311,9 +325,13 @@ export function useDataAdapter() {
   const getCloudTodoBook = async (bookId) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBook(bookId)
+      const result = await todoBookCo.getTodoBookDetail(bookId)
       
       if (result.code === 0) {
+        // 如果返回的data包含book字段，直接返回book数据
+        if (result.data && result.data.book) {
+          return result.data.book
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -328,10 +346,15 @@ export function useDataAdapter() {
   const getCloudTasks = async (bookId, options) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTasks(bookId, options)
+      const result = await todoBookCo.getTodoBookDetail(bookId, {
+        includeBasic: false,
+        includeMembers: false,
+        includeTasks: true,
+        ...options
+      })
       
       if (result.code === 0) {
-        return result.data
+        return result.data.tasks || []
       } else {
         throw new Error(result.message)
       }
@@ -344,21 +367,24 @@ export function useDataAdapter() {
   const createCloudTask = async (bookId, taskData) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.createTask(
-        bookId,
-        taskData.title,
-        taskData.description,
-        taskData.priority,
-        taskData.tags,
-        taskData.parent_id,
-        taskData.expense_amount,
-        taskData.actual_expense,
-        taskData.payment_method,
-        taskData.expense_description
-      )
+      const result = await todoBookCo.createTodoItem({
+        todobook_id: bookId,
+        title: taskData.title,
+        description: taskData.description,
+        priority: taskData.priority,
+        tags: taskData.tags,
+        parent_id: taskData.parent_id,
+        budget: taskData.budget,
+        actual_cost: taskData.actual_cost,
+        estimated_hours: taskData.estimated_hours
+      })
       
       if (result.code === 0) {
         uni.$emit('tasks-updated', { bookId })
+        // 如果返回的data包含task字段，直接返回task数据
+        if (result.data && result.data.task) {
+          return result.data.task
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -369,13 +395,22 @@ export function useDataAdapter() {
     }
   }
   
-  const updateCloudTask = async (taskId, updateData) => {
+  const updateCloudTask = async (taskId, updateData, options = {}) => {
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.updateTask(taskId, updateData)
+      const todoBookCo = uniCloud.importObject('todobook-co', {
+        customUI: options.skipRefresh // 如果跳过刷新，则也跳过默认UI提示
+      })
+      const result = await todoBookCo.updateTodoItem(taskId, updateData)
       
       if (result.code === 0) {
-        uni.$emit('tasks-updated', { taskId })
+        // 如果不跳过刷新，则发送更新事件
+        if (!options.skipRefresh) {
+          uni.$emit('tasks-updated', { taskId })
+        }
+        // 如果返回的data包含task字段，直接返回task数据
+        if (result.data && result.data.task) {
+          return result.data.task
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -393,6 +428,10 @@ export function useDataAdapter() {
       
       if (result.code === 0) {
         uni.$emit('tasks-updated', { taskId })
+        // 如果返回的data包含task字段，直接返回task数据
+        if (result.data && result.data.task) {
+          return result.data.task
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -406,9 +445,13 @@ export function useDataAdapter() {
   const getCloudTask = async (taskId) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTask(taskId)
+      const result = await todoBookCo.getTaskDetail(taskId)
       
       if (result.code === 0) {
+        // 如果返回的data包含task字段，直接返回task数据
+        if (result.data && result.data.task) {
+          return result.data.task
+        }
         return result.data
       } else {
         throw new Error(result.message)
@@ -425,6 +468,8 @@ export function useDataAdapter() {
       const result = await todoBookCo.getTodoItemDetail(taskId)
       
       if (result.code === 0) {
+        // getTaskDetail应该返回完整的详情数据，包括task, subtasks, parentTask等
+        // 这里不做额外的解包处理，直接返回完整数据
         return result.data
       } else {
         throw new Error(result.message)
@@ -438,13 +483,20 @@ export function useDataAdapter() {
   const batchUpdateCloudTaskStatus = async (taskIds, status) => {
     try {
       const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.batchUpdateTaskStatus(taskIds, status)
+      // 批量更新任务状态 - 逐个更新
+      const promises = taskIds.map(taskId => 
+        todoBookCo.updateTodoItemStatus(taskId, status)
+      )
+      const results = await Promise.all(promises)
       
-      if (result.code === 0) {
+      // 检查是否所有更新都成功
+      const allSuccess = results.every(result => result.code === 0)
+      if (allSuccess) {
         uni.$emit('tasks-updated')
-        return result.data
+        return results.map(result => result.data)
       } else {
-        throw new Error(result.message)
+        const failedResults = results.filter(result => result.code !== 0)
+        throw new Error(`部分任务状态更新失败: ${failedResults[0].message}`)
       }
     } catch (error) {
       console.error('批量更新云端任务状态失败:', error)

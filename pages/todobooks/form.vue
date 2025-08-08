@@ -88,8 +88,7 @@ const errors = ref({})
  */
 const fillForm = (data) => {
   if (data) {
-    // 优先使用 name 字段，fallback 到 title 字段
-    formData.title = data.name || data.title || ''
+    formData.title = data.title || ''
     formData.description = data.description || ''
     formData.color = data.color || BOOK_CONSTANTS.DEFAULT_COLOR
     formData.icon = data.icon || BOOK_CONSTANTS.DEFAULT_ICON
@@ -97,25 +96,7 @@ const fillForm = (data) => {
   errors.value = {}
 }
 
-// 表单验证函数
-const validateForm = (data) => {
-  const newErrors = {}
-  
-  // 验证项目册名称
-  if (!data.title || data.title.trim() === '') {
-    newErrors.title = '项目册名称不能为空'
-  } else if (data.title.length > 100) {
-    newErrors.title = '项目册名称不能超过100个字符'
-  }
-  
-  // 验证描述（可选字段）
-  if (data.description && data.description.length > 500) {
-    newErrors.description = '项目描述不能超过500个字符'
-  }
-  
-  errors.value = newErrors
-  return Object.keys(newErrors).length === 0
-}
+// 表单验证已移至子组件BookForm.vue中处理
 
 // 计算统计数据
 const statsData = computed(() => {
@@ -173,8 +154,11 @@ const loadBookData = async () => {
     bookError.value = null
     
     // 使用数据适配器加载数据（自动根据登录状态选择数据源）
-    const book = await dataAdapter.getTodoBook(bookId)
-    console.log('加载TodoBook详情完成:', JSON.stringify(book, null, 2))
+    const result = await dataAdapter.getTodoBook(bookId)
+    console.log('加载TodoBook详情完成:', JSON.stringify(result, null, 2))
+    
+    // 数据适配器已经处理了返回结构，直接使用返回的数据
+    const book = result
     
     // 手动设置bookData，因为我们不再依赖useBookData的状态
     bookData.value = book
@@ -227,17 +211,7 @@ const handleSubmit = async (data) => {
     }
   }
   
-  // 表单验证
-  if (!validateForm(data)) {
-    console.log('表单验证失败:', errors.value)
-    const errorMessages = Object.values(errors.value)
-    uni.showToast({
-      title: errorMessages[0] || '请检查输入信息',
-      icon: 'none'
-    })
-    return
-  }
-  console.log('表单验证通过')
+  console.log('收到表单提交数据:', data)
   
   try {
     console.log('设置 submitting 为 true')
@@ -247,8 +221,7 @@ const handleSubmit = async (data) => {
     if (isEditMode.value) {
       // 编辑模式：清理数据，避免循环引用
       const cleanData = {
-        name: data.title,
-        title: data.title,  // 同时更新 title 字段保持一致性
+        title: data.title,
         description: data.description,
         color: data.color,
         icon: data.icon
@@ -257,8 +230,7 @@ const handleSubmit = async (data) => {
     } else {
       // 创建模式：使用数据适配器
       const createData = {
-        name: data.title,
-        title: data.title,  // 同时设置 title 字段保持一致性
+        title: data.title,
         description: data.description,
         color: data.color,
         icon: data.icon
@@ -297,7 +269,7 @@ const handleCancel = () => {
   if (isEditMode.value) {
     // 编辑模式：检查是否有未保存的更改
     const hasChanges = bookData.value && (
-      formData.title !== (bookData.value.name || bookData.value.title) ||
+      formData.title !== bookData.value.title ||
       formData.description !== bookData.value.description ||
       formData.color !== bookData.value.color ||
       formData.icon !== bookData.value.icon

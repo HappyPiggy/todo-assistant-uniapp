@@ -520,7 +520,8 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     }
     
     try {
-      const result = await dataAdapter.updateTask(task._id, { status: newStatus })
+      // 状态切换时跳过页面刷新，只更新本地状态
+      const result = await dataAdapter.updateTask(task._id, { status: newStatus }, { skipRefresh: true })
       
       if (result) {
         // 处理父子任务关系的本地更新
@@ -673,8 +674,8 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     }
     
     try {
-      // 使用数据适配器更新任务状态
-      const result = await dataAdapter.updateTask(subtask._id, { status: newStatus })
+      // 子任务状态切换时跳过页面刷新，只更新本地状态
+      const result = await dataAdapter.updateTask(subtask._id, { status: newStatus }, { skipRefresh: true })
       
       if (result) {
         // 处理父子任务关系的本地更新

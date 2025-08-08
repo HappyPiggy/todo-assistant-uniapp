@@ -240,8 +240,7 @@ class LocalStorageManager {
       // 创建新的TodoBook
       const newBook = {
         _id: this.generateLocalId('book'),
-        title: bookData.title || bookData.name || '新建项目册', // 兼容 title 字段
-        name: bookData.name || bookData.title || '新建项目册',
+        title: bookData.title || '新建项目册',
         description: bookData.description || '',
         color: bookData.color || '#4CAF50',
         icon: bookData.icon || '📝',
@@ -278,13 +277,6 @@ class LocalStorageManager {
         updated_at: new Date().toISOString()
       }
       
-      // 确保字段一致性
-      if (updatedBook.name && !updatedBook.title) {
-        updatedBook.title = updatedBook.name
-      }
-      if (updatedBook.title && !updatedBook.name) {
-        updatedBook.name = updatedBook.title
-      }
       
       data.todobooks[bookIndex] = updatedBook
       this.saveStorageData(data)
