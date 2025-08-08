@@ -6,8 +6,23 @@
       </view>
       <scroll-view scroll-y class="action-scroll">
         <view class="action-list">
+          <!-- 访客模式只显示编辑和删除 -->
+          <template v-if="isGuest">
+            <!-- 编辑 -->
+            <view class="action-item" @click="handleEditAction">
+              <uni-icons color="#007AFF" size="20" type="compose" />
+              <text class="action-text">编辑</text>
+            </view>
+            
+            <!-- 删除  -->
+            <view class="action-item danger" @click="handleDeleteAction">
+              <uni-icons color="#FF4757" size="20" type="trash" />
+              <text class="action-text">删除</text>
+            </view>
+          </template>
+          
           <!-- 归档项目册只显示数据统计、分享和删除 -->
-          <template v-if="isArchived">
+          <template v-else-if="isArchived">
             <!-- 数据统计 -->
             <view class="action-item" @click="handleStatisticsAction">
               <uni-icons color="#17a2b8" size="20" type="bars" />
@@ -27,7 +42,7 @@
             </view>
           </template>
           
-          <!-- 正常项目册显示所有操作 -->
+          <!-- 登录用户的正常项目册显示所有操作 -->
           <template v-else>
             <!-- 编辑 -->
             <view class="action-item" @click="handleEditAction">
@@ -107,6 +122,7 @@ import ShareDialog from './ShareDialog.vue'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { usePinning } from '@/composables/usePinning.js'
 import { currentUserId } from '@/store/storage.js'
+import { useAuthState } from '@/composables/useAuthState.js'
 
 // Props - 只需要基本数据，不需要回调
 const props = defineProps({
@@ -152,6 +168,7 @@ const shareDialogRef = ref(null)
 // 组合式函数
 const { archiveTodoBook, deleteTodoBook, exportTodoBookData } = useBookData()
 const { isPinned, togglePin } = usePinning('todobooks')
+const { isGuest } = useAuthState()
 
 // 权限检查
 const isCurrentUserCreator = computed(() => {

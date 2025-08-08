@@ -85,7 +85,8 @@
 			<view class="form-section">
 				<view class="section-header">
 					<text class="section-title">分类标签</text>
-					<view class="add-tag-btn" @click="openTagManager">
+					<!-- 标签管理按钮（仅登录用户可见） -->
+					<view v-if="!isGuest" class="add-tag-btn" @click="openTagManager">
 						<uni-icons color="#007AFF" size="18" type="plus" />
 						<text class="add-tag-text">管理</text>
 					</view>
@@ -152,11 +153,18 @@
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
+import { useAuthState } from '@/composables/useAuthState.js'
+import { checkFeatureAccess } from '@/utils/featureGuard.js'
 
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null
 let bookId = null
 let parentId = null
+
+// 使用数据适配器和认证状态管理
+const dataAdapter = useDataAdapter()
+const { isGuest, getPageTitlePrefix } = useAuthState()
 
 // 页面模式状态
 const isEditMode = ref(false)
@@ -208,6 +216,12 @@ const buttonText = computed(() => {
 	}
 })
 
+// 页面标题
+const pageTitle = computed(() => {
+	const prefix = getPageTitlePrefix()
+	return prefix + (isEditMode.value ? '编辑任务' : '创建任务')
+})
+
 // 使用 onLoad 安全地获取页面参数
 onLoad(async (options) => {
 	console.log("onLoad options", JSON.stringify(options, null, 2))
@@ -217,6 +231,11 @@ onLoad(async (options) => {
 		isEditMode.value = true
 		taskId = options.id
 		bookId = options.bookId
+		
+		// 设置页面标题
+		uni.setNavigationBarTitle({
+			title: pageTitle.value
+		})
 		
 		if (!bookId) {
 			console.error('错误：编辑模式下未能获取到项目册ID')
@@ -233,6 +252,11 @@ onLoad(async (options) => {
 		isEditMode.value = false
 		bookId = options.bookId
 		parentId = options.parentId || null
+		
+		// 设置页面标题
+		uni.setNavigationBarTitle({
+			title: pageTitle.value
+		})
 		
 		// 如果传入了父任务ID，设置默认值
 		if (parentId) {
@@ -294,14 +318,12 @@ const loadTaskData = async () => {
 	console.log('开始加载任务数据，taskId:', taskId)
 	loading.value = true
 	try {
-		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.getTodoItemDetail(taskId)
+		// 使用数据适配器加载任务详情
+		const task = await dataAdapter.getTask(taskId)
 		
-		//console.log('任务数据加载结果:', JSON.stringify(result, null, 2))
+		console.log('任务数据加载结果:', JSON.stringify(task, null, 2))
 		
-		if (result.code === 0 && result.data && result.data.task) {
-			const task = result.data.task
-			
+		if (task) {
 			// 填充表单数据 - 使用 Object.assign 确保响应式更新
 			Object.assign(formData, {
 				title: task.title || '',
@@ -315,7 +337,7 @@ const loadTaskData = async () => {
 				parent_id: task.parent_id || null
 			})
 			
-			//console.log('表单数据已填充:', JSON.stringify(formData, null, 2))
+			console.log('表单数据已填充:', JSON.stringify(formData, null, 2))
 			
 			// 保存原始数据用于比较
 			originalData.value = JSON.parse(JSON.stringify(formData))
@@ -323,7 +345,7 @@ const loadTaskData = async () => {
 			// 确保DOM更新
 			await nextTick()
 		} else {
-			throw new Error(result.message || '加载任务数据失败')
+			throw new Error('加载任务数据失败')
 		}
 	} catch (error) {
 		console.error('加载任务数据失败:', error)
@@ -347,14 +369,12 @@ const loadParentTasks = async () => {
 	}
 	
 	try {
-		// 使用云对象获取可用的父任务
-		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.getTodoBookDetail(bookId,  { includeTasks:      
-			true })
+		// 使用数据适配器获取可用的父任务
+		const tasks = await dataAdapter.getTasks(bookId)
 		
-		if (result.code === 0 && result.data.tasks) {
+		if (tasks && tasks.length > 0) {
 			// 筛选出可作为父任务的任务
-			const availableTasks = result.data.tasks.filter(task => {
+			const availableTasks = tasks.filter(task => {
 				// 过滤已完成的任务
 				if (task.status === 'completed') return false
 				// 过滤已经有父任务的任务（只允许一层父子关系）
@@ -392,56 +412,70 @@ const submitTask = async () => {
 
 	submitting.value = true
 
-	// 准备任务数据
-	const taskData = {
-		title: formData.title.trim(),
-		description: formData.description.trim(),
-		priority: formData.priority,
-		parent_id: formData.parent_id || null,
-		due_date: formData.due_date,
-		tags: formData.tags || []
-	}
+	try {
+		// 准备任务数据
+		const taskData = {
+			title: formData.title.trim(),
+			description: formData.description.trim(),
+			priority: formData.priority,
+			parent_id: formData.parent_id || null,
+			due_date: formData.due_date,
+			tags: formData.tags || [],
+			// 支付相关字段使用正确的字段名
+			expense_amount: formData.budget ? parseInt(formData.budget) : 0,
+			actual_expense: formData.actual_cost ? parseInt(formData.actual_cost) : 0,
+			estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : 0
+		}
 
-	// 添加预估工时
-	if (formData.estimated_hours) {
-		taskData.estimated_hours = parseFloat(formData.estimated_hours)
-	} else if (isEditMode.value) {
-		taskData.estimated_hours = null
-	}
+		let result
+		if (isEditMode.value) {
+			// 编辑模式：使用数据适配器更新任务
+			result = await dataAdapter.updateTask(taskId, taskData)
+			console.log('任务更新结果:', JSON.stringify(result, null, 2))
+		} else {
+			// 创建模式：使用数据适配器创建任务
+			result = await dataAdapter.createTask(bookId, taskData)
+			console.log('任务创建结果:', JSON.stringify(result, null, 2))
+		}
 
-	// 添加预算
-	if (formData.budget) {
-		taskData.budget = parseInt(formData.budget)
-	} else if (isEditMode.value) {
-		taskData.budget = null
-	}
+		if (result) {
+			uni.showToast({
+				title: isEditMode.value ? '保存成功' : '创建成功',
+				icon: 'success'
+			})
 
-	// 添加实际花费
-	if (formData.actual_cost) {
-		taskData.actual_cost = parseInt(formData.actual_cost)
-	} else if (isEditMode.value) {
-		taskData.actual_cost = null
-	}
+			// 检测是否有父任务变化，需要触发刷新
+			const hasParentTask = !!(formData.parent_id || (isEditMode.value && originalData.value?.parent_id))
+			
+			if (isEditMode.value) {
+				// 编辑模式：发出更新事件
+				uni.$emit('task-updated', { ...result, _id: taskId })
+			} else {
+				// 创建模式：发出创建事件
+				uni.$emit('task-created', result)
+			}
+			
+			// 如果有父任务，需要触发刷新
+			if (hasParentTask) {
+				uni.$emit('task-parent-changed', { taskId: isEditMode.value ? taskId : null, bookId })
+			}
 
-	// 检测是否有父任务
-	const hasParentTask = !!(formData.parent_id || (isEditMode.value && originalData.value?.parent_id))
-	
-	if (isEditMode.value) {
-		// 编辑模式：发出更新事件
-		uni.$emit('task-updated', { ...originalData.value, ...taskData, _id: taskId });
-	} else {
-		// 创建模式：发出创建事件
-		taskData.todobook_id = bookId;
-		uni.$emit('task-created', taskData);
+			// 返回上一页
+			setTimeout(() => {
+				uni.navigateBack()
+			}, 1000)
+		} else {
+			throw new Error('操作失败')
+		}
+	} catch (error) {
+		console.error(isEditMode.value ? '保存任务失败:' : '创建任务失败:', error)
+		uni.showToast({
+			title: isEditMode.value ? '保存失败，请重试' : '创建失败，请重试',
+			icon: 'none'
+		})
+	} finally {
+		submitting.value = false
 	}
-	
-	// 如果有父任务，需要触发刷新
-	if (hasParentTask) {
-		uni.$emit('task-parent-changed', { taskId: isEditMode.value ? taskId : null, bookId })
-	}
-	
-	// 无论成功与否，都直接返回
-	uni.navigateBack();
 }
 
 const cancel = () => {
@@ -477,8 +511,29 @@ const hasChanges = () => {
 	}
 }
 
-const openTagManager = () => {
-	// 跳转到标签管理页面
+const openTagManager = async () => {
+	// 访客用户无法使用标签管理功能
+	if (isGuest.value) {
+		const canAccess = await checkFeatureAccess('tag_management')
+		if (!canAccess.allowed) {
+			uni.showModal({
+				title: '功能受限',
+				content: canAccess.message,
+				confirmText: '立即登录',
+				cancelText: '稍后再说',
+				success: (res) => {
+					if (res.confirm) {
+						uni.navigateTo({
+							url: '/pages/login/login-withpwd'
+						})
+					}
+				}
+			})
+			return
+		}
+	}
+	
+	// 登录用户可以使用标签管理功能
 	// 使用 JSON.parse(JSON.stringify()) 确保传递普通对象而不是响应式代理
 	const plainTags = JSON.parse(JSON.stringify(formData.tags))
 	const currentTagsStr = encodeURIComponent(JSON.stringify(plainTags))

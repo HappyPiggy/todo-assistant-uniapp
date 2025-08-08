@@ -1,4 +1,5 @@
 import { ref, reactive } from 'vue'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
 
 /**
  * @description 任务详情页的核心业务逻辑，包括数据获取、状态管理和操作
@@ -13,6 +14,9 @@ export function useTaskDetail() {
 	const assigneeInfo = ref(null)
 	const loading = ref(true)
 	const error = ref(null)
+	
+	// 使用数据适配器
+	const dataAdapter = useDataAdapter()
 
 	/**
 	 * @description 加载任务的详细信息，包括子任务、负责人等
@@ -119,10 +123,10 @@ export function useTaskDetail() {
 		const newStatus = task.value.status === 'completed' ? 'todo' : 'completed'
 
 		try {
-			const todoBooksObj = uniCloud.importObject('todobook-co')
-			const result = await todoBooksObj.updateTodoItemStatus(taskId.value, newStatus)
+			// 使用数据适配器更新任务状态
+			const result = await dataAdapter.updateTask(taskId.value, { status: newStatus })
 
-			if (result.code === 0) {
+			if (result) {
 				task.value.status = newStatus
 				task.value.updated_at = new Date()
 				
@@ -137,7 +141,7 @@ export function useTaskDetail() {
 					icon: 'success'
 				})
 			} else {
-				throw new Error(result.message || '更新失败')
+				throw new Error('更新失败')
 			}
 		} catch (error) {
 			console.error('更新任务状态失败:', error)
@@ -157,10 +161,10 @@ export function useTaskDetail() {
 		const newStatus = subtask.status === 'completed' ? 'todo' : 'completed'
 
 		try {
-			const todoBooksObj = uniCloud.importObject('todobook-co')
-			const result = await todoBooksObj.updateTodoItemStatus(subtask._id, newStatus)
+			// 使用数据适配器更新子任务状态
+			const result = await dataAdapter.updateTask(subtask._id, { status: newStatus })
 
-			if (result.code === 0) {
+			if (result) {
 				subtask.status = newStatus
 				subtask.updated_at = new Date()
 				
@@ -177,7 +181,7 @@ export function useTaskDetail() {
 					icon: 'success'
 				})
 			} else {
-				throw new Error(result.message || '更新失败')
+				throw new Error('更新失败')
 			}
 		} catch (error) {
 			console.error('更新子任务状态失败:', error)
@@ -218,12 +222,12 @@ export function useTaskDetail() {
 								title: '删除中...'
 							})
 							
-							const todoBooksObj = uniCloud.importObject('todobook-co')
-							const result = await todoBooksObj.deleteTask(taskId.value)
+							// 使用数据适配器删除任务
+							const result = await dataAdapter.deleteTask(taskId.value)
 							
 							uni.hideLoading()
 							
-							if (result.code === 0) {
+							if (result) {
 								uni.showToast({
 									title: '删除成功',
 									icon: 'success'
@@ -235,7 +239,7 @@ export function useTaskDetail() {
 								resolve(true)
 							} else {
 								uni.showToast({
-									title: result.message || '删除失败',
+									title: '删除失败',
 									icon: 'error'
 								})
 								resolve(false)

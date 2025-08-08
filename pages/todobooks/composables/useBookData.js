@@ -1,11 +1,14 @@
 import { ref, computed } from 'vue'
 import { API_CODES, ERROR_MESSAGES } from '@/pages/todobooks/utils/constants.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
 
 /**
  * TodoBook 数据操作组合式函数
  * @returns {Object} TodoBook 操作方法
  */
 export function useBookData() {
+  // 初始化数据适配器
+  const dataAdapter = useDataAdapter()
   // 响应式数据
   const bookData = ref({})
   const loading = ref(false)
@@ -24,23 +27,11 @@ export function useBookData() {
    * @returns {Promise<Array>} TodoBook 列表
    */
   const loadTodoBooks = async (options = {}) => {
-    // 直接从云端加载最新数据
-    console.log('从云端加载项目册...')
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.getTodoBooks({
-        include_archived: false,
-        ...options
-      })
-      
-      if (result.code === 0) {
-        const books = result.data.list || result.data
-        // 通知页面数据已更新
-        uni.$emit('todobooks-updated', books)
-        return books
-      } else {
-        throw new Error(result.message)
-      }
+      const books = await dataAdapter.getTodoBooks(options)
+      // 通知页面数据已更新
+      uni.$emit('todobooks-updated', books)
+      return books
     } catch (error) {
       console.error('加载项目册失败:', error)
       throw error
@@ -54,18 +45,12 @@ export function useBookData() {
    */
   const archiveTodoBook = async (bookId) => {
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.updateTodoBook(bookId, {
+      await dataAdapter.updateTodoBook(bookId, {
         is_archived: true,
         archived_at: new Date()
       })
-      
-      if (result.code === 0) {
-        // 重新加载最新数据并通知页面
-        await refreshTodoBooks()
-      } else {
-        throw new Error(result.message)
-      }
+      // 重新加载最新数据并通知页面
+      await refreshTodoBooks()
     } catch (error) {
       console.error('归档项目册失败:', error)
       throw error
@@ -79,15 +64,9 @@ export function useBookData() {
    */
   const deleteTodoBook = async (bookId) => {
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.deleteTodoBook(bookId)
-      
-      if (result.code === 0) {
-        // 重新加载最新数据并通知页面
-        await refreshTodoBooks()
-      } else {
-        throw new Error(result.message)
-      }
+      await dataAdapter.deleteTodoBook(bookId)
+      // 重新加载最新数据并通知页面
+      await refreshTodoBooks()
     } catch (error) {
       console.error('删除项目册失败:', error)
       throw error
@@ -101,16 +80,10 @@ export function useBookData() {
    */
   const createTodoBook = async (bookData) => {
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.createTodoBook(bookData)
-      
-      if (result.code === 0) {
-        // 重新加载最新数据并通知页面
-        await refreshTodoBooks()
-        return result.data
-      } else {
-        throw new Error(result.message)
-      }
+      const result = await dataAdapter.createTodoBook(bookData)
+      // 重新加载最新数据并通知页面
+      await refreshTodoBooks()
+      return result
     } catch (error) {
       console.error('创建项目册失败:', error)
       throw error
@@ -125,16 +98,10 @@ export function useBookData() {
    */
   const updateTodoBook = async (bookId, updates) => {
     try {
-      const todoBookCo = uniCloud.importObject('todobook-co')
-      const result = await todoBookCo.updateTodoBook(bookId, updates)
-      
-      if (result.code === 0) {
-        // 重新加载最新数据并通知页面
-        await refreshTodoBooks()
-        return result.data || updates
-      } else {
-        throw new Error(result.message)
-      }
+      const result = await dataAdapter.updateTodoBook(bookId, updates)
+      // 重新加载最新数据并通知页面
+      await refreshTodoBooks()
+      return result
     } catch (error) {
       console.error('更新项目册失败:', error)
       throw error
@@ -236,15 +203,18 @@ export function useBookData() {
     error.value = null
     
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
+      // 使用数据适配器加载项目册详情
+      const book = await dataAdapter.getTodoBook(id)
       
-      const result = await todoBooksObj.getTodoBookDetail(id, {
-        includeBasic,
-        includeMembers,
-        includeTasks
-      })
+      // 模拟原有的返回结构以保持兼容性
+      const result = {
+        code: 0,
+        data: {
+          book: book
+        }
+      }
       
-      if (result.code === API_CODES.SUCCESS) {
+      if (result.code === 0) {
         // 处理基本信息
         if (includeBasic && result.data.book) {
           bookData.value = result.data.book

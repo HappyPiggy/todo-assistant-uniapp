@@ -331,6 +331,46 @@ page {
 	font-weight: 500;
 }
 
+/* 标识容器 */
+.badges-container {
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+}
+
+/* 本地数据标识 */
+.local-badge {
+	flex-direction: row;
+	align-items: center;
+	background: linear-gradient(135deg, #FF9500, #FF7A00);
+	padding: 6rpx 12rpx;
+	border-radius: 16rpx;
+	box-shadow: 
+		0 2rpx 6rpx rgba(255, 149, 0, 0.25),
+		inset 0 1rpx 0 rgba(255, 255, 255, 0.3);
+	position: relative;
+	overflow: hidden;
+}
+
+.local-badge::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent);
+	pointer-events: none;
+}
+
+.local-text {
+	font-size: 24rpx;
+	color: #ffffff;
+	margin-left: 6rpx;
+	font-weight: 600;
+}
+
+/* 协作标识 */
 .share-badge {
 	flex-direction: row;
 	align-items: center;

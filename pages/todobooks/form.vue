@@ -3,8 +3,8 @@
     <!-- 页面标题 -->
     <view class="page-header">
       <text class="page-title">{{ pageTitle }}</text>
-      <!-- 分享码导入快捷按钮 -->
-      <view v-if="!isEditMode" class="import-shortcut" @click="handleImportShortcut">
+      <!-- 分享码导入快捷按钮（仅登录用户可见） -->
+      <view v-if="!isEditMode && !isGuest" class="import-shortcut" @click="handleImportShortcut">
         <uni-icons type="download" size="18" color="#007AFF"></uni-icons>
         <text class="import-shortcut-text">从分享码导入</text>
       </view>
@@ -41,25 +41,34 @@ import LoadingState from '@/pages/todobooks/components/common/LoadingState.vue'
 import ErrorState from '@/pages/todobooks/components/common/ErrorState.vue'
 import BookForm from '@/pages/todobooks/components/book/BookForm.vue'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
+import { useAuthState } from '@/composables/useAuthState.js'
 import { BOOK_CONSTANTS } from '@/pages/todobooks/utils/constants.js'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 
 let bookId = null
 const hasInitialized = ref(false)
 
-// 计算属性
-const isEditMode = computed(() => !!bookId)
-const pageTitle = computed(() => isEditMode.value ? '编辑项目册' : '创建项目册')
-
 // 使用组合函数
+const dataAdapter = useDataAdapter()
+const { isGuest, checkTodoBookCreatePermission, getPageTitlePrefix } = useAuthState()
+
+// 响应式状态
+const isEditMode = ref(false)  // 改为响应式变量，在 onLoad 中设置
+const pageTitle = computed(() => {
+  const prefix = getPageTitlePrefix()
+  return prefix + (isEditMode.value ? '编辑项目册' : '创建项目册')
+})
+
+// 使用组合函数（作为备用）
 const {
   bookData,
   loading: bookLoading,
   error: bookError,
   memberCount,
-  loadBookDetail,
-  createTodoBook,
-  updateTodoBook
+  loadBookDetail: cloudLoadBookDetail,
+  createTodoBook: cloudCreateTodoBook,
+  updateTodoBook: cloudUpdateTodoBook
 } = useBookData()
 
 // 表单数据管理（原 useBookForm 逻辑）
@@ -79,7 +88,8 @@ const errors = ref({})
  */
 const fillForm = (data) => {
   if (data) {
-    formData.title = data.title || ''
+    // 优先使用 name 字段，fallback 到 title 字段
+    formData.title = data.name || data.title || ''
     formData.description = data.description || ''
     formData.color = data.color || BOOK_CONSTANTS.DEFAULT_COLOR
     formData.icon = data.icon || BOOK_CONSTANTS.DEFAULT_ICON
@@ -120,8 +130,24 @@ const statsData = computed(() => {
 
 onLoad((options) => {
   console.log("onLoad options", JSON.stringify(options, null, 2))
+  
   if (options && options.id) {
+    // 编辑模式
     bookId = options.id
+    isEditMode.value = true
+    console.log('设置为编辑模式, bookId:', bookId)
+  } else {
+    // 创建模式
+    isEditMode.value = false
+    console.log('设置为创建模式')
+  }
+  
+  // 设置页面标题
+  uni.setNavigationBarTitle({
+    title: pageTitle.value
+  })
+  
+  if (isEditMode.value) {
     loadBookData()
   }
 })
@@ -135,16 +161,37 @@ onShow(() => {
 
 // 加载数据（仅编辑模式）
 const loadBookData = async () => {
-  if (!isEditMode.value) return
+  if (!isEditMode.value) {
+    console.log('loadBookData: 非编辑模式，跳过加载')
+    return
+  }
   
-  await loadBookDetail(bookId)
-  console.log('loadBookDetail 完成，bookData.value:', bookId, JSON.stringify(bookData.value, null, 2))
+  console.log('loadBookData: 开始加载项目册数据, bookId:', bookId, '是否访客模式:', isGuest.value)
   
-  // 加载完成后初始化表单数据
-  if (bookData.value && Object.keys(bookData.value).length > 0) {
-    fillForm(bookData.value)
-  } else {
-    console.log('bookData 为空，无法填充表单')
+  try {
+    bookLoading.value = true
+    bookError.value = null
+    
+    // 使用数据适配器加载数据（自动根据登录状态选择数据源）
+    const book = await dataAdapter.getTodoBook(bookId)
+    console.log('加载TodoBook详情完成:', JSON.stringify(book, null, 2))
+    
+    // 手动设置bookData，因为我们不再依赖useBookData的状态
+    bookData.value = book
+    
+    // 加载完成后初始化表单数据
+    if (book && Object.keys(book).length > 0) {
+      fillForm(book)
+      console.log('表单数据填充完成:', JSON.stringify(formData, null, 2))
+    } else {
+      console.log('BookData 为空，无法填充表单')
+      bookError.value = '项目册数据不存在'
+    }
+  } catch (error) {
+    console.error('加载TodoBook详情失败:', error)
+    bookError.value = error.message || '加载失败，请重试'
+  } finally {
+    bookLoading.value = false
   }
 }
 
@@ -156,6 +203,28 @@ const handleSubmit = async (data) => {
   if (submitting.value) {
     console.log('防止重复提交，直接返回')
     return
+  }
+  
+  // 如果是创建模式且是访客用户，检查创建权限
+  if (!isEditMode.value && isGuest.value) {
+    const permission = await checkTodoBookCreatePermission()
+    if (!permission.allowed) {
+      uni.showModal({
+        title: '创建限制',
+        content: permission.message,
+        confirmText: '立即登录',
+        cancelText: '稍后再说',
+        success: (res) => {
+          if (res.confirm) {
+            // 跳转到登录页面
+            uni.navigateTo({
+              url: '/pages/login/login-withpwd'
+            })
+          }
+        }
+      })
+      return
+    }
   }
   
   // 表单验证
@@ -178,15 +247,23 @@ const handleSubmit = async (data) => {
     if (isEditMode.value) {
       // 编辑模式：清理数据，避免循环引用
       const cleanData = {
-        title: data.title,
+        name: data.title,
+        title: data.title,  // 同时更新 title 字段保持一致性
         description: data.description,
         color: data.color,
         icon: data.icon
       }
-      result = await updateTodoBook(bookId, cleanData)
+      result = await dataAdapter.updateTodoBook(bookId, cleanData)
     } else {
-      // 创建模式
-      result = await createTodoBook(data)
+      // 创建模式：使用数据适配器
+      const createData = {
+        name: data.title,
+        title: data.title,  // 同时设置 title 字段保持一致性
+        description: data.description,
+        color: data.color,
+        icon: data.icon
+      }
+      result = await dataAdapter.createTodoBook(createData)
     }
     
     console.log('操作返回结果:', JSON.stringify(result, null, 2))
@@ -220,7 +297,7 @@ const handleCancel = () => {
   if (isEditMode.value) {
     // 编辑模式：检查是否有未保存的更改
     const hasChanges = bookData.value && (
-      formData.title !== bookData.value.title ||
+      formData.title !== (bookData.value.name || bookData.value.title) ||
       formData.description !== bookData.value.description ||
       formData.color !== bookData.value.color ||
       formData.icon !== bookData.value.icon
@@ -259,6 +336,24 @@ const handleCancel = () => {
 
 // 处理分享码导入快捷按钮点击
 const handleImportShortcut = () => {
+  // 访客用户无法使用分享功能
+  if (isGuest.value) {
+    uni.showModal({
+      title: '功能受限',
+      content: '分享管理功能需要登录后使用，登录后可以通过分享码导入项目册',
+      confirmText: '立即登录',
+      cancelText: '稍后再说',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({
+            url: '/pages/login/login-withpwd'
+          })
+        }
+      }
+    })
+    return
+  }
+  
   uni.navigateTo({
     url: '/pages/settings/share-management'
   })

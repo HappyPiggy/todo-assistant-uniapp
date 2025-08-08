@@ -7,7 +7,7 @@
     <ErrorState 
       v-if="bookError" 
       :message="bookError"
-      @retry="loadBookDetail" />
+      @retry="refreshTasks" />
 
     <!-- 虚拟滚动任务列表（包含BookHeader和TaskFilter） -->
     <view 
@@ -102,6 +102,9 @@ import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionShee
 
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useTaskData } from '@/pages/todobooks/composables/useTaskData.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
+import { useAuthState } from '@/composables/useAuthState.js'
+import { checkFeatureAccess, guardFeature } from '@/utils/featureGuard.js'
 import { usePinning } from '@/composables/usePinning.js'
 import { currentUserId } from '@/store/storage.js'
 
@@ -112,14 +115,18 @@ let fromListPage = false
 // 标记是否为归档项目册
 let isFromArchive = false
 
-// 初始化组合式函数，此时不传入 bookId
+// 使用数据适配器和认证状态管理
+const dataAdapter = useDataAdapter()
+const { isGuest, userMode, getPageTitlePrefix } = useAuthState()
+
+// 初始化组合式函数，此时不传入 bookId（作为备用）
 const {
   bookData,
   allTasks,
   loading: bookLoading,
   error: bookError,
   memberCount,
-  loadBookDetail,
+  loadBookDetail: cloudLoadBookDetail,
 } = useBookData()
 
 const {
@@ -181,8 +188,19 @@ const isArchived = computed(() => {
 
 // 编辑权限检查
 const canEdit = computed(() => {
-  const result = !isArchived.value && !!bookData.value
-  return result
+  // 归档的项目册不能编辑
+  if (isArchived.value) return false
+  
+  // 必须有项目册数据
+  if (!bookData.value) return false
+  
+  // 访客用户只能编辑本地数据
+  if (isGuest.value) {
+    return bookData.value.is_local === true
+  }
+  
+  // 登录用户可以编辑非归档的项目册
+  return true
 })
 
 // 是否需要自动隐藏按钮（任务数大于10时才启用自动隐藏）
@@ -217,8 +235,10 @@ onLoad(async (options) => {
     // 更新useTaskData中的bookId
     updateBookId(bookId)
     
-    // 先加载项目册详情（包含任务数据）
-    await loadBookDetail(bookId, { includeBasic: true, includeTasks:true })
+    // 先加载项目册详情
+    await loadBookDetailData()
+    // 然后加载任务数据
+    await loadTasksData()
     initializeTasks(allTasks.value)
     
     // 在任务初始化后，初始化排序状态
@@ -253,7 +273,7 @@ onMounted(() => {
   
   // 注册事件监听
   uni.$on('task-updated', updateTaskOptimistic)
-  uni.$on('task-created', createTaskOptimistic)
+  uni.$on('task-created', handleTaskCreated)
   uni.$on('task-parent-changed', handleTaskParentChanged)
 })
 
@@ -325,16 +345,71 @@ onUnmounted(() => {
   
   // 移除事件监听
   uni.$off('task-updated', updateTaskOptimistic)
-  uni.$off('task-created', createTaskOptimistic)
+  uni.$off('task-created', handleTaskCreated)
   uni.$off('task-parent-changed', handleTaskParentChanged)
 })
+
+// 加载项目册详情数据
+const loadBookDetailData = async () => {
+  if (!bookId) return
+  
+  try {
+    bookLoading.value = true
+    bookError.value = null
+    
+    // 使用数据适配器加载项目册详情
+    const book = await dataAdapter.getTodoBook(bookId)
+    console.log('加载项目册详情完成:', JSON.stringify(book, null, 2))
+    
+    // 手动设置bookData
+    bookData.value = book
+    
+    // 设置页面标题
+    if (book && book.name) {
+      const prefix = getPageTitlePrefix()
+      uni.setNavigationBarTitle({
+        title: `${prefix}${book.name}`
+      })
+    }
+  } catch (error) {
+    console.error('加载项目册详情失败:', error)
+    bookError.value = error.message || '加载项目册详情失败'
+    throw error
+  } finally {
+    bookLoading.value = false
+  }
+}
+
+// 加载任务数据
+const loadTasksData = async () => {
+  if (!bookId) return
+  
+  try {
+    tasksLoading.value = true
+    tasksError.value = null
+    
+    // 使用数据适配器加载任务数据
+    const tasksList = await dataAdapter.getTasks(bookId)
+    console.log('加载任务数据完成:', tasksList.length, '个任务')
+    
+    // 手动设置allTasks
+    allTasks.value = tasksList || []
+  } catch (error) {
+    console.error('加载任务数据失败:', error)
+    tasksError.value = error.message || '加载任务数据失败'
+    throw error
+  } finally {
+    tasksLoading.value = false
+  }
+}
 
 // 刷新任务数据
 const refreshTasks = async () => {
   if (!bookId) return
   
   refreshPinnedIds() // 刷新置顶状态
-  await loadBookDetail(bookId, { includeBasic: true, includeTasks: true })
+  await loadBookDetailData()
+  await loadTasksData()
   await initializeTasks(allTasks.value)
 }
 
@@ -431,8 +506,61 @@ const scrollToTop = () => {
 // 弹窗相关数据
 const actionSheetRef = ref(null)
 
-const handleMoreActions = () => {
+const handleMoreActions = async () => {
+  // 访客用户的功能限制检查
+  if (isGuest.value) {
+    // 访客用户只能使用基本操作（编辑、删除本地数据）
+    // 不能使用成员管理、分享管理、归档等高级功能
+    const allowedActions = ['edit', 'delete']
+    
+    uni.showActionSheet({
+      itemList: ['编辑项目册', '删除项目册'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          // 编辑项目册
+          uni.navigateTo({
+            url: `/pages/todobooks/form?id=${bookId}`
+          })
+        } else if (res.tapIndex === 1) {
+          // 删除项目册
+          handleDeleteTodoBook()
+        }
+      }
+    })
+    return
+  }
+  
+  // 登录用户可以使用完整的操作面板
   actionSheetRef.value?.open()
+}
+
+// 处理删除项目册（访客模式专用）
+const handleDeleteTodoBook = async () => {
+  uni.showModal({
+    title: '确认删除',
+    content: '确定要删除这个项目册吗？删除后将无法恢复。',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await dataAdapter.deleteTodoBook(bookId)
+          uni.showToast({
+            title: '删除成功',
+            icon: 'success'
+          })
+          // 返回上一页
+          setTimeout(() => {
+            uni.navigateBack()
+          }, 1000)
+        } catch (error) {
+          console.error('删除项目册失败:', error)
+          uni.showToast({
+            title: '删除失败，请重试',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
 }
 
 // 处理操作完成事件
@@ -557,6 +685,22 @@ const handleSubtaskClick = (subtask) => {
   uni.navigateTo({
     url: `/pages/tasks/detail?id=${subtask._id}&bookId=${bookId}`
   })
+}
+
+// 处理任务创建事件（直接添加已创建的任务到列表）
+const handleTaskCreated = (newTask) => {
+  console.log('handleTaskCreated: 收到任务创建事件', JSON.stringify(newTask, null, 2))
+  
+  // 确保任务属于当前项目册
+  if (newTask && newTask.todobook_id === bookId) {
+    console.log('handleTaskCreated: 新任务属于当前项目册，添加到列表')
+    // 直接添加到任务列表开头
+    if (allTasks.value) {
+      allTasks.value.unshift(newTask)
+      // 重新初始化任务数据以触发响应式更新
+      initializeTasks(allTasks.value)
+    }
+  }
 }
 
 // 处理任务父任务变更事件

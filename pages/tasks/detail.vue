@@ -168,7 +168,7 @@
 			</view>
 
 			<!-- 评论区域 -->
-			<view class="comments-section">
+			<view v-if="!isGuest" class="comments-section">
 				<view class="section-header">
 					<text class="section-title">评论 ({{ commentsData.total || 0 }})</text>
 					<view v-if="canEdit" class="add-comment" @click="showAddComment">
@@ -290,6 +290,15 @@
 				</view>
 			</view>
 
+			<!-- 访客模式提示 -->
+			<view v-if="isGuest" class="guest-notice-section">
+				<text class="guest-text">访客模式下不支持评论功能</text>
+				<text class="guest-hint">登录后可查看和发表评论</text>
+				<view class="guest-login-btn" @click="handleGuestLogin">
+					<text class="login-btn-text">立即登录</text>
+				</view>
+			</view>
+
 		</view>
 
 		<!-- 任务菜单弹窗 -->
@@ -388,6 +397,9 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { useTaskDetail } from './composables/useTaskDetail.js'
 import { useTaskComments } from './composables/useTaskComments.js'
 import { useTaskUtils } from './composables/useTaskUtils.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
+import { useAuthState } from '@/composables/useAuthState.js'
+import { checkFeatureAccess } from '@/utils/featureGuard.js'
 import { getCommentAvatar, getCommentAvatarPlaceholder, hasAvatar } from '@/utils/avatarUtils.js'
 import { useShareData } from '@/pages/settings/composables/useShareData.js'
 import { formatCommentInfo } from '@/pages/todobooks/utils/copyFormatters.js'
@@ -396,6 +408,10 @@ import UniTag from '@/pages/todobooks/components/common/UniTag.vue'
 // 用于存储从路由获取的参数，初始为 null
 let taskId = null
 let bookId = null
+
+// 使用数据适配器和认证状态管理
+const dataAdapter = useDataAdapter()
+const { isGuest, getPageTitlePrefix } = useAuthState()
 
 // 初始化组合式函数，此时不传入具体参数
 const {
@@ -480,15 +496,11 @@ const hasAnyAttribute = computed(() => {
 // 检查项目册归档状态
 const checkBookArchiveStatus = async (bookId) => {
 	try {
-		const todoBookCo = uniCloud.importObject('todobook-co')
-		const result = await todoBookCo.getTodoBookDetail(bookId, {
-			includeBasic: true,
-			includeMembers: false,
-			includeTasks: false
-		})
+		// 使用数据适配器获取项目册信息
+		const book = await dataAdapter.getTodoBook(bookId)
 		
-		if (result.code === 0 && result.data && result.data.book) {
-			isArchived.value = result.data.book.is_archived === true
+		if (book) {
+			isArchived.value = book.is_archived === true
 			if (isArchived.value) {
 				console.log('当前任务所属项目册已归档，编辑功能受限')
 			}
@@ -508,14 +520,23 @@ onLoad(async (options) => {
 		// 获取当前用户信息
 		getCurrentUser()
 		
+		// 设置页面标题（包含访客模式前缀）
+		const prefix = getPageTitlePrefix()
+		uni.setNavigationBarTitle({
+			title: `${prefix}任务详情`
+		})
+		
 		// 检查项目册归档状态
 		if (bookId) {
 			await checkBookArchiveStatus(bookId)
 		}
 		
-		// 加载任务详情和评论
-		await loadTaskDetail(taskId)
-		await loadComments(taskId)
+		// 加载任务详情
+		await loadTaskDetailData()
+		// 只有登录用户才加载评论
+		if (!isGuest.value) {
+			await loadComments(taskId)
+		}
 	} else {
 		console.error('错误：未能从路由参数中获取到任务ID')
 		uni.showToast({ title: '页面参数错误', icon: 'error' })
@@ -566,16 +587,16 @@ onHide(() => {
 const handleTaskUpdated = async (updatedTask) => {
 	console.log('任务详情页面收到task-updated事件:', JSON.stringify(updatedTask, null, 2))
 	if (updatedTask._id === taskId) {
-		console.log('更新的是当前任务，调用云函数更新')
+		console.log('更新的是当前任务，使用数据适配器更新')
 		try {
-			const todoBooksObj = uniCloud.importObject('todobook-co')
-			const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
-			if (result.code === 0) {
+			// 使用数据适配器更新任务
+			const result = await dataAdapter.updateTask(updatedTask._id, updatedTask)
+			if (result) {
 				console.log('任务更新成功，刷新详情')
 				await refreshTaskDetail()
 				uni.showToast({ title: '保存成功', icon: 'success' })
 			} else {
-				throw new Error(result.message)
+				throw new Error('任务更新失败')
 			}
 		} catch (error) {
 			console.error('任务更新失败:', error)
@@ -592,13 +613,57 @@ onUnmounted(() => {
 	// 可以在这里清理一些资源，如定时器等
 })
 
+// 使用数据适配器加载任务详情
+const loadTaskDetailData = async () => {
+	if (!taskId) {
+		console.warn('loadTaskDetailData: taskId 为空，无法加载任务')
+		return
+	}
+	
+	console.log('loadTaskDetailData 被调用，taskId:', taskId, '是否访客模式:', isGuest.value)
+	
+	try {
+		loading.value = true
+		error.value = null
+		
+		// 使用数据适配器加载完整的任务详情
+		console.log('开始调用 dataAdapter.getTaskDetail')
+		const taskDetailData = await dataAdapter.getTaskDetail(taskId)
+		console.log('dataAdapter.getTaskDetail 返回结果:', JSON.stringify(taskDetailData, null, 2))
+		
+		if (taskDetailData) {
+			// 更新任务详情数据
+			task.value = taskDetailData.task
+			subtasks.value = taskDetailData.subtasks || []
+			parentTask.value = taskDetailData.parentTask
+			assigneeInfo.value = taskDetailData.assignee
+			
+			console.log('任务详情数据加载完成')
+			console.log('- 任务信息:', JSON.stringify(task.value, null, 2))
+			console.log('- 子任务数量:', subtasks.value.length)
+			console.log('- 父任务:', parentTask.value ? parentTask.value.title : '无')
+		} else {
+			console.error('taskDetailData 为空或 undefined')
+			error.value = '任务数据不存在'
+		}
+	} catch (error) {
+		console.error('使用数据适配器加载任务详情失败:', error)
+		error.value = error.message || '加载任务详情失败'
+	} finally {
+		loading.value = false
+	}
+}
+
 // 刷新任务详情
 const refreshTaskDetail = async () => {
 	if (!taskId) return
 	
 	console.log('refreshTaskDetail 被调用，taskId:', taskId)
-	await loadTaskDetail(taskId)
-	await loadComments(taskId)
+	await loadTaskDetailData()
+	// 只有登录用户才加载评论
+	if (!isGuest.value) {
+		await loadComments(taskId)
+	}
 }
 
 // 导航和操作方法
@@ -734,12 +799,12 @@ const updateActualCost = async () => {
 
 	updating.value = true
 	try {
-		const todoBooksObj = uniCloud.importObject('todobook-co')
-		const result = await todoBooksObj.updateTodoItem(taskId, {
+		// 使用数据适配器更新任务的实际花费
+		const result = await dataAdapter.updateTask(taskId, {
 			actual_cost: cost
 		})
 
-		if (result.code === 0) {
+		if (result) {
 			// 更新本地任务数据
 			task.value.actual_cost = cost
 			
@@ -749,7 +814,7 @@ const updateActualCost = async () => {
 			})
 			closeCostDialog()
 		} else {
-			throw new Error(result.message || '更新失败')
+			throw new Error('更新失败')
 		}
 	} catch (error) {
 		console.error('更新实际花费失败:', error)
@@ -762,7 +827,60 @@ const updateActualCost = async () => {
 	}
 }
 
+// 处理访客用户点击登录按钮
+const handleGuestLogin = () => {
+	uni.navigateTo({
+		url: '/pages/login/login-withpwd'
+	})
+}
+
 // 在 <script setup> 中，所有在顶层声明的变量、计算属性和方法都会自动暴露给模板，无需手动 return 或 defineExpose。
 </script>
 
-<style lang="scss" scoped src="./detail.scss"></style>
+<style lang="scss" scoped src="./detail.scss">
+/* 访客模式提示样式 */
+.guest-notice-section {
+  background-color: #fff7e6;
+  border: 1rpx solid #ffd591;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  margin: 20rpx 24rpx;
+  text-align: center;
+}
+
+.guest-text {
+  font-size: 28rpx;
+  color: #fa8c16;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.guest-hint {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.guest-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 32rpx;
+  background-color: #007AFF;
+  border-radius: 24rpx;
+  transition: all 0.3s ease;
+  
+  &:active {
+    background-color: #0056CC;
+    transform: scale(0.95);
+  }
+}
+
+.login-btn-text {
+  font-size: 26rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+</style>

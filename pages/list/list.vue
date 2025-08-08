@@ -29,7 +29,7 @@
 				<view class="empty-icon">
 					<uni-icons color="#cccccc" size="80" type="folder" />
 				</view>
-				<text class="empty-text">{{ searchKeyword ? '没有找到相关项目册' : '还没有项目册，点击右下角创建吧' }}</text>
+				<text class="empty-text">{{ getEmptyStateText() }}</text>
 			</view>
 
 			<!-- 项目册卡片列表 -->
@@ -89,9 +89,17 @@
 
 					<view class="card-footer">
 						<text class="last-activity">{{ formatRelativeTime(book.last_activity_at || book.updated_at) }}</text>
-						<view v-if="book.member_count > 1" class="share-badge">
-							<uni-icons color="#28a745" size="14" type="checkmarkempty" />
-							<text class="share-text">协作</text>
+						<view class="badges-container">
+							<!-- 本地数据标识 -->
+							<view v-if="book.is_local" class="local-badge">
+								<uni-icons color="#FF9500" size="14" type="gear" />
+								<text class="local-text">本地</text>
+							</view>
+							<!-- 协作标识 -->
+							<view v-if="book.member_count > 1" class="share-badge">
+								<uni-icons color="#28a745" size="14" type="checkmarkempty" />
+								<text class="share-text">协作</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -133,14 +141,20 @@ import { ref, computed } from 'vue'
 import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
+import { useAuthState } from '@/composables/useAuthState.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
 import { usePinning } from '@/composables/usePinning.js'
 import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
 import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
 
-// 使用 todobook 操作组合式函数
+// 使用数据适配器和认证状态管理
+const dataAdapter = useDataAdapter()
+const { isGuest, userMode, getPageTitlePrefix } = useAuthState()
+
+// 使用 todobook 操作组合式函数（作为备用）
 const { 
-	loadTodoBooks
+	loadTodoBooks: cloudLoadTodoBooks
 } = useBookData()
 
 // 页面响应式数据
@@ -158,31 +172,52 @@ const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 const { sortedItems: sortedTodoBooks, isPinned, togglePin, refreshPinnedIds } = usePinning('todobooks', todoBooks)
 
 // 计算属性
-const hasLogin = computed(() => store.hasLogin)
+const hasLogin = computed(() => {
+	const loginStatus = store.hasLogin
+	console.log('list.vue hasLogin computed:', loginStatus, 'store.userInfo:', JSON.stringify(store.userInfo, null, 2))
+	return loginStatus
+})
+
+// 为了保持兼容，基于 hasLogin 计算 isGuest
+const isGuestComputed = computed(() => {
+	const guestStatus = !hasLogin.value
+	console.log('list.vue isGuestComputed:', guestStatus)
+	return guestStatus
+})
+
+// 页面标题（显示访客模式标识）
+const pageTitle = computed(() => {
+	return `${getPageTitlePrefix()}土豆记录册`
+})
 
 // 页面生命周期
 onLoad(() => {
-	// 只检查登录状态，不加载数据
-	if (!hasLogin.value) {
-		uni.showToast({
-			title: '请先登录',
-			icon: 'none'
-		})
-		return
-	}
+	// 设置页面标题
+	uni.setNavigationBarTitle({
+		title: pageTitle.value
+	})
 	
 	// 监听数据更新事件
 	uni.$on('todobooks-updated', onCacheUpdated)
 	
 	// 监听用户切换事件
 	uni.$on('user-switched', onUserSwitched)
+	
+	// 监听用户登录状态变化
+	uni.$on('user-login-status-changed', onUserLoginStatusChanged)
+	
+	// 监听全局登录状态变化事件
+	uni.$on('login-status-changed', onLoginStatusChanged)
 })
 
 onShow(() => {
-	// 统一在onShow中处理数据加载，避免重复请求
-	if (hasLogin.value) {
-		loadTodoBooksOptimized()
-	}
+	// 更新页面标题（可能登录状态发生了变化）
+	uni.setNavigationBarTitle({
+		title: pageTitle.value
+	})
+	
+	// 始终加载数据（无论是否登录）
+	loadTodoBooksOptimized()
 })
 
 onUnload(() => {
@@ -194,6 +229,8 @@ onUnload(() => {
 	// 移除事件监听
 	uni.$off('todobooks-updated', onCacheUpdated)
 	uni.$off('user-switched', onUserSwitched)
+	uni.$off('user-login-status-changed', onUserLoginStatusChanged)
+	uni.$off('login-status-changed', onLoginStatusChanged)
 })
 
 // 数据加载方法
@@ -204,20 +241,28 @@ const loadTodoBooksOptimized = async () => {
 		loading.value = true
 		error.value = null
 		
-		const books = await loadTodoBooks({
+		// 使用数据适配器加载数据（自动根据登录状态选择数据源）
+		const books = await dataAdapter.getTodoBooks({
 			keyword: searchKeyword.value
 		})
 		
-		todoBooks.value = books
+		todoBooks.value = books || []
 		loadMoreStatus.value = 'noMore'
 		
 	} catch (err) {
-		console.error('加载项目册失败:', err)
+		console.error('加载项目册失败:', err, JSON.stringify(err, null, 2))
 		error.value = '加载失败，请重试'
-		uni.showToast({
-			title: '加载失败，请重试',
-			icon: 'none'
-		})
+		
+		// 访客模式下的错误处理更温和一些
+		if (isGuestComputed.value) {
+			console.log('访客模式加载失败，将重置本地存储')
+			// 可以考虑重置或修复本地存储
+		} else {
+			uni.showToast({
+				title: '加载失败，请重试',
+				icon: 'none'
+			})
+		}
 	} finally {
 		loading.value = false
 	}
@@ -229,17 +274,23 @@ const refreshTodoBooks = async (isFromPullDown = false) => {
 		loading.value = true
 		error.value = null
 		
-		const books = await loadTodoBooks({ keyword: searchKeyword.value })
-		todoBooks.value = books
+		// 使用数据适配器刷新数据
+		const books = await dataAdapter.getTodoBooks({ 
+			keyword: searchKeyword.value 
+		})
+		todoBooks.value = books || []
 		loadMoreStatus.value = 'noMore'
 		
 	} catch (err) {
-		console.error('刷新项目册失败:', err)
+		console.error('刷新项目册失败:', err, JSON.stringify(err, null, 2))
 		error.value = '刷新失败，请重试'
-		uni.showToast({
-			title: '刷新失败，请重试',
-			icon: 'none'
-		})
+		
+		if (!isGuestComputed.value) {
+			uni.showToast({
+				title: '刷新失败，请重试',
+				icon: 'none'
+			})
+		}
 	} finally {
 		loading.value = false
 		// 只有在下拉刷新时才停止刷新状态
@@ -280,17 +331,18 @@ const clearSearch = () => {
 
 // 事件处理方法
 const onCacheUpdated = (updatedBooks) => {
+	console.log('TodoBooks数据已更新')
+	
 	// 参数验证和防护：确保 updatedBooks 是有效数组
 	if (Array.isArray(updatedBooks)) {
+		// 如果传入了更新后的数据，直接使用
 		todoBooks.value = updatedBooks
+		loadMoreStatus.value = 'noMore'
 	} else {
-		// 如果接收到无效参数，重新加载数据
-		if (hasLogin.value) {
-			console.log('重新加载项目册数据...')
-			loadTodoBooksOptimized()
-		}
+		// 如果没有传入数据或数据无效，重新加载数据
+		console.log('重新加载项目册数据...')
+		loadTodoBooksOptimized()
 	}
-	loadMoreStatus.value = 'noMore'
 }
 
 const onUserSwitched = (newUserId) => {
@@ -352,6 +404,49 @@ const handleActionCompleted = (result) => {
 			refreshTodoBooks(false)
 		}
 	}
+}
+
+// 处理用户登录状态变化
+const onUserLoginStatusChanged = (eventData) => {
+	console.log('用户登录状态变化:', eventData)
+	
+	// 更新页面标题
+	uni.setNavigationBarTitle({
+		title: pageTitle.value
+	})
+	
+	// 重新加载数据（会自动切换数据源）
+	loadTodoBooksOptimized()
+}
+
+// 处理全局登录状态变化事件
+const onLoginStatusChanged = (eventData) => {
+	console.log('收到全局登录状态变化事件:', eventData)
+	
+	// 更新页面标题
+	uni.setNavigationBarTitle({
+		title: pageTitle.value
+	})
+	
+	// 重新加载数据（会自动切换数据源）
+	loadTodoBooksOptimized()
+}
+
+// 注意：onCacheUpdated函数已在上面定义，这里不需要重复定义
+
+// 注意：onUserSwitched函数已在上面定义，这里不需要重复定义
+
+// 获取空状态提示文案
+const getEmptyStateText = () => {
+	if (searchKeyword.value) {
+		return '没有找到相关项目册'
+	}
+	
+	if (isGuestComputed.value) {
+		return '还没有项目册，点击右下角创建第一个项目册吧'
+	}
+	
+	return '还没有项目册，点击右下角创建吧'
 }
 </script>
 

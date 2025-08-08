@@ -166,10 +166,6 @@
     "uniIdRouter": {
 		"loginPage": "pages/login/login-withpwd",
 		"needLogin": [
-			"/pages/list/list",
-			"/pages/ucenter/.*",
-			"/pages/todobooks/.*",
-			"/pages/tasks/.*",
 			"/pages/tags/.*",
 			"/pages/archive-management/.*"
 		],

@@ -6,6 +6,7 @@ import { API_CODES, ERROR_MESSAGES, TASK_CONSTANTS } from '@/pages/todobooks/uti
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { getGlobalCommentCache } from '@/pages/todobooks/composables/useTaskCommentCache.js'
 import { currentUserId } from '@/store/storage.js'
+import { useDataAdapter } from '@/composables/useDataAdapter.js'
 
 /**
  * 按标签筛选任务
@@ -286,6 +287,9 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
   // 存储当前的bookId，支持运行时更新
   const currentBookId = ref(initialBookId)
   
+  // 初始化数据适配器
+  const dataAdapter = useDataAdapter()
+  
   // 响应式数据
   const tasks = ref([])
   const loading = ref(false)
@@ -516,10 +520,9 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     }
     
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.updateTodoItemStatus(task._id, newStatus)
+      const result = await dataAdapter.updateTask(task._id, { status: newStatus })
       
-      if (result.code === API_CODES.SUCCESS) {
+      if (result) {
         // 处理父子任务关系的本地更新
         await handleLocalParentChildUpdate(task, newStatus)
       } else {
@@ -534,7 +537,7 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
           task.completed_at = null
         }
         
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
+        throw new Error(ERROR_MESSAGES.OPERATION_FAILED)
       }
     } catch (err) {
       console.error('更新任务状态失败:', err)
@@ -578,10 +581,9 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
           parentTask.updated_at = new Date()
           parentTask.last_activity_at = new Date()
           
-          // 调用云函数更新父任务状态
+          // 使用数据适配器更新父任务状态
           try {
-            const todoBooksObj = uniCloud.importObject('todobook-co')
-            await todoBooksObj.updateTodoItemStatus(parentTask._id, TASK_CONSTANTS.STATUS.COMPLETED)
+            await dataAdapter.updateTask(parentTask._id, { status: TASK_CONSTANTS.STATUS.COMPLETED })
           } catch (err) {
             console.error('更新父任务状态失败:', err)
           }
@@ -594,10 +596,9 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
           parentTask.updated_at = new Date()
           parentTask.last_activity_at = new Date()
           
-          // 调用云函数更新父任务状态
+          // 使用数据适配器更新父任务状态
           try {
-            const todoBooksObj = uniCloud.importObject('todobook-co')
-            await todoBooksObj.updateTodoItemStatus(parentTask._id, TASK_CONSTANTS.STATUS.TODO)
+            await dataAdapter.updateTask(parentTask._id, { status: TASK_CONSTANTS.STATUS.TODO })
           } catch (err) {
             console.error('更新父任务状态失败:', err)
           }
@@ -623,14 +624,8 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
    */
   const deleteTask = async (taskId) => {
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.deleteTask(taskId)
-      
-      if (result.code === API_CODES.SUCCESS) {
-        return result
-      } else {
-        throw new Error(result.message || ERROR_MESSAGES.OPERATION_FAILED)
-      }
+      const result = await dataAdapter.deleteTask(taskId)
+      return result
     } catch (err) {
       console.error('删除任务失败:', err)
       throw err
@@ -678,10 +673,10 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     }
     
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.updateTodoItemStatus(subtask._id, newStatus)
+      // 使用数据适配器更新任务状态
+      const result = await dataAdapter.updateTask(subtask._id, { status: newStatus })
       
-      if (result.code === API_CODES.SUCCESS) {
+      if (result) {
         // 处理父子任务关系的本地更新
         await handleLocalParentChildUpdate(subtask, newStatus)
       } else {
@@ -900,12 +895,7 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     if (taskIndex === -1) {
       // 子任务可能不在当前页面的tasks列表中，但仍需要更新数据库
       try {
-        const todoBooksObj = uniCloud.importObject('todobook-co')
-        const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
-        
-        if (result.code !== 0) {
-          throw new Error(result.message)
-        }
+        await dataAdapter.updateTask(updatedTask._id, updatedTask)
         uni.showToast({ title: '保存成功', icon: 'success' })
       } catch (error) {
         console.error('任务更新失败:', error)
@@ -920,12 +910,7 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     Object.assign(tasks.value[taskIndex], updatedTask)
 
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.updateTodoItem(updatedTask._id, updatedTask)
-      
-      if (result.code !== 0) {
-        throw new Error(result.message)
-      }
+      await dataAdapter.updateTask(updatedTask._id, updatedTask)
       uni.showToast({ title: '保存成功', icon: 'success' })
     } catch (error) {
       console.error('任务更新失败:', error)
@@ -953,18 +938,17 @@ export function useTaskData(initialBookId, allTasks = null, bookData = null) {
     tasks.value.unshift(tempTask)
 
     try {
-      const todoBooksObj = uniCloud.importObject('todobook-co')
-      const result = await todoBooksObj.createTodoItem(newTaskData)
+      const result = await dataAdapter.createTask(newTaskData.todobook_id, newTaskData)
       
-      if (result.code === 0 && result.data) {
+      if (result) {
         // 成功后，用真实数据替换临时数据
         const taskIndex = tasks.value.findIndex(t => t._id === tempId)
         if (taskIndex !== -1) {
-          tasks.value[taskIndex] = result.data
+          tasks.value[taskIndex] = result
         }
         uni.showToast({ title: '创建成功', icon: 'success' })
       } else {
-        throw new Error(result.message)
+        throw new Error('创建失败')
       }
     } catch (error) {
       // 失败后，从列表中移除临时任务

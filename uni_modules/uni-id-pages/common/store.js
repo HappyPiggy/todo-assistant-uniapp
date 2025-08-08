@@ -66,11 +66,21 @@ export const mutations = {
 	},
 	setUserInfo(data, {cover}={cover:false}) {
 		// console.log('set-userInfo', data);
+		const prevHasLogin = store.hasLogin
 		let userInfo = cover?data:Object.assign(store.userInfo,data)
 		store.userInfo = Object.assign({},userInfo)
 		store.hasLogin = Object.keys(store.userInfo).length != 0
 		// console.log('store.userInfo', store.userInfo);
 		uni.setStorageSync('uni-id-pages-userInfo', store.userInfo)
+		
+		// 如果登录状态发生变化，发送全局事件
+		if (prevHasLogin !== store.hasLogin) {
+			console.log('登录状态发生变化:', prevHasLogin, '->', store.hasLogin)
+			uni.$emit('login-status-changed', {
+				hasLogin: store.hasLogin,
+				userInfo: store.userInfo
+			})
+		}
 		return data
 	},
 	async logout() {
