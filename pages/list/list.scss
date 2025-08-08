@@ -18,59 +18,67 @@ page {
 	position: relative;
 }
 
-/* 搜索区域 - 现代化设计（点击弹窗样式） */
-.search-section {
-	background: rgba(248, 248, 248, 0.95);
+/* 顶部搜索头部 */
+.search-header {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 24rpx 32rpx 16rpx;
+	background: rgba(255, 255, 255, 0.05);
 	backdrop-filter: blur(20rpx);
 	-webkit-backdrop-filter: blur(20rpx);
-	padding: 0 24rpx;
-	margin: 16rpx 20rpx 0;
-	border-radius: 16rpx;
-	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08), 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-	border: 2rpx solid rgba(255, 255, 255, 0.3);
-	height: 80rpx;
-	align-items: center;
-	transition: all 0.3s ease;
-	cursor: pointer;
 }
 
-/* 搜索按钮活跃状态 */
-.search-section:active {
-	transform: scale(0.98);
-	background: rgba(255, 255, 255, 0.9);
-	border-color: rgba(0, 122, 255, 0.5);
+.page-title {
+	font-size: 40rpx;
+	color: rgba(255, 255, 255, 0.95);
+	font-weight: 700;
+	text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
 }
 
-/* 搜索按钮内容 */
+/* 搜索按钮 */
 .search-button {
-	flex-direction: row;
+	width: 48rpx;
+	height: 48rpx;
+	justify-content: center;
 	align-items: center;
-	flex: 1;
-	height: 100%;
+	border-radius: 24rpx;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(10rpx);
+	-webkit-backdrop-filter: blur(10rpx);
+	transition: all 0.3s ease;
+	position: relative;
+	border: 1rpx solid rgba(255, 255, 255, 0.2);
 }
 
-.search-placeholder {
-	flex: 1;
-	font-size: 30rpx;
-	color: #999999;
-	margin-left: 12rpx;
+.search-button:active {
+	background: rgba(255, 255, 255, 0.25);
+	transform: scale(0.95);
 }
 
-/* 已有搜索关键词显示 */
-.search-keyword-display {
-	flex-direction: row;
-	align-items: center;
-	background: rgba(0, 122, 255, 0.1);
-	padding: 8rpx 12rpx;
-	border-radius: 12rpx;
-	margin-left: 12rpx;
+/* 搜索提示点 */
+.search-indicator {
+	position: absolute;
+	top: 4rpx;
+	right: 4rpx;
+	width: 12rpx;
+	height: 12rpx;
+	background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+	border-radius: 50%;
+	border: 2rpx solid #ffffff;
+	box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3);
+	animation: search-indicator-pulse 2s infinite;
 }
 
-.keyword-text {
-	font-size: 28rpx;
-	color: #007AFF;
-	margin-right: 8rpx;
-	font-weight: 500;
+@keyframes search-indicator-pulse {
+	0%, 100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	50% {
+		transform: scale(1.1);
+		opacity: 0.8;
+	}
 }
 
 
@@ -486,26 +494,21 @@ page {
 		background: linear-gradient(135deg, #2c3e50 0%, #3c4858 100%);
 	}
 	
-	.search-section {
-		background: rgba(45, 55, 72, 0.95);
+	.search-header {
+		background: rgba(0, 0, 0, 0.2);
+	}
+	
+	.page-title {
+		color: rgba(236, 240, 241, 0.95);
+	}
+	
+	.search-button {
+		background: rgba(255, 255, 255, 0.1);
 		border-color: rgba(255, 255, 255, 0.1);
 	}
 	
-	.search-section:active {
-		background: rgba(52, 73, 94, 0.95);
-		border-color: rgba(0, 122, 255, 0.5);
-	}
-	
-	.search-placeholder {
-		color: #bdc3c7 !important;
-	}
-	
-	.keyword-text {
-		color: #5AC8FA !important;
-	}
-	
-	.search-keyword-display {
-		background: rgba(0, 122, 255, 0.2) !important;
+	.search-button:active {
+		background: rgba(255, 255, 255, 0.2);
 	}
 	
 	.todobook-card {

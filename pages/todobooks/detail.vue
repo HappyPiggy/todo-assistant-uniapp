@@ -34,6 +34,7 @@
         :toggle-pin="togglePin"
         :is-archived="isArchived"
         :can-edit="canEdit"
+        :search-keyword="searchKeyword"
         @retry="refreshTasks"
         @add-task="addTask"
         @task-click="handleTaskClick"

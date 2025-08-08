@@ -11,6 +11,8 @@
       <!-- 搜索按钮 -->
       <view class="search-button" @click="handleSearchClick">
         <uni-icons color="#666666" size="20" type="search" />
+        <!-- 搜索提示点 -->
+        <view v-if="hasSearchKeyword" class="search-indicator"></view>
       </view>
       <!-- 更多操作按钮 -->
       <view class="actions-button" @click="handleMoreActions">
@@ -48,7 +50,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, watchEffect } from 'vue'
+import { defineProps, defineEmits, watchEffect, computed } from 'vue'
 import ProgressBar from '@/pages/todobooks/components/common/ProgressBar.vue'
 
 const props = defineProps({
@@ -67,10 +69,19 @@ const props = defineProps({
   memberCount: {
     type: Number,
     default: 0
+  },
+  searchKeyword: {
+    type: String,
+    default: ''
   }
 })
 
 const emit = defineEmits(['more-actions', 'search-click'])
+
+// 检查是否有搜索关键词
+const hasSearchKeyword = computed(() => {
+  return props.searchKeyword && props.searchKeyword.trim().length > 0
+})
 
 // 处理搜索按钮点击
 const handleSearchClick = () => {
@@ -185,6 +196,7 @@ watchEffect(() => {
   border-radius: $border-radius-small;
   margin-left: $margin-sm;
   transition: background-color $transition-base;
+  position: relative;
   
   &:hover {
     background-color: $gray-100;
@@ -192,6 +204,31 @@ watchEffect(() => {
   
   &:active {
     background-color: $gray-200;
+  }
+}
+
+/* 搜索提示点 */
+.search-indicator {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 12rpx;
+  height: 12rpx;
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+  border-radius: 50%;
+  border: 2rpx solid #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.3);
+  animation: search-indicator-pulse 2s infinite;
+}
+
+@keyframes search-indicator-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
   }
 }
 </style>

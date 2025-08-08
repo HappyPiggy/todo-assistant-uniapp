@@ -31,6 +31,7 @@
         :overall-progress="overallProgress"
         :task-stats="taskStats"
         :member-count="memberCount"
+        :search-keyword="searchKeyword"
         @more-actions="handleMoreActions"
         @search-click="handleSearchClick"
       />
@@ -188,6 +189,10 @@ const props = defineProps({
   canEdit: {
     type: Boolean,
     default: true
+  },
+  searchKeyword: {
+    type: String,
+    default: ''
   }
 })
 

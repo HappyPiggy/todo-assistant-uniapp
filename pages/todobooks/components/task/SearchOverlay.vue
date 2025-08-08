@@ -99,9 +99,9 @@ const handleOverlayClick = () => {
   /* #endif */
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 40rpx;
+  padding: 120rpx 40rpx 40rpx;
   animation: overlay-fade-in 0.3s ease;
 }
 

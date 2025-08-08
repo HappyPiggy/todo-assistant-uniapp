@@ -1,14 +1,12 @@
 <template>
 	<view class="list-page">
-		<!-- 顶部搜索栏 -->
-		<view class="search-section" @click="handleSearchClick">
-			<view class="search-button">
-				<uni-icons color="#999999" size="20" type="search" />
-				<text class="search-placeholder">搜索项目册...</text>
-				<view v-if="searchKeyword" class="search-keyword-display">
-					<text class="keyword-text">{{ searchKeyword }}</text>
-					<uni-icons color="#999999" size="16" type="close" @click.stop="clearSearch" />
-				</view>
+		<!-- 顶部搜索按钮 -->
+		<view class="search-header">
+			<text class="page-title">项目册</text>
+			<view class="search-button" @click="handleSearchClick">
+				<uni-icons color="#ffffff" size="20" type="search" />
+				<!-- 搜索提示点 -->
+				<view v-if="hasSearchKeyword" class="search-indicator"></view>
 			</view>
 		</view>
 
@@ -190,6 +188,11 @@ const pageTitle = computed(() => {
 	return `${getPageTitlePrefix()}土豆记录册`
 })
 
+// 检查是否有搜索关键词
+const hasSearchKeyword = computed(() => {
+	return searchKeyword.value && searchKeyword.value.trim().length > 0
+})
+
 // 页面生命周期
 onLoad(() => {
 	// 设置页面标题
@@ -324,6 +327,7 @@ const handleSearchOverlayClose = () => {
 	showSearchOverlay.value = false
 }
 
+// 清除搜索（现在通过搜索弹窗处理）
 const clearSearch = () => {
 	searchKeyword.value = ''
 	refreshTodoBooks(false)
