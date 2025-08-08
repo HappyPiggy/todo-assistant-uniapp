@@ -57,7 +57,9 @@
           <ExpenseTagList
             :tag-data="enhancedChartData"
             :selected-segment="selectedSegment"
+            :view-mode="viewMode"
             @item-click="handleTagItemClick"
+            @task-click="handleTaskClick"
           />
         </view>
       </template>
@@ -95,10 +97,15 @@ const props = defineProps({
   animationDuration: {
     type: Number,
     default: 300
+  },
+  // 视图模式
+  viewMode: {
+    type: String,
+    default: 'actual'
   }
 })
 
-const emit = defineEmits(['segment-click', 'chart-ready'])
+const emit = defineEmits(['segment-click', 'chart-ready', 'task-click'])
 
 // 组件引用
 const canvasRef = ref(null)
@@ -150,7 +157,9 @@ const enhancedChartData = computed(() => {
         color: item.color || getDefaultColor(index),
         icon: item.icon || 'wallet',
         // 是否显示延伸标签（占比大于5%）
-        showExtensionLabel: props.showLabels && percentage > 5
+        showExtensionLabel: props.showLabels && percentage > 5,
+        // 重要：传递tasks数组给ExpenseTagItem组件使用
+        tasks: item.tasks || []
       }
     })
   } catch (err) {
@@ -221,6 +230,12 @@ const handleTagItemClick = (itemData) => {
   
   // 发送事件给父组件
   emit('segment-click', itemData.id, itemData)
+}
+
+// 处理任务点击事件
+const handleTaskClick = (task) => {
+  console.log('任务点击事件:', task)
+  emit('task-click', task)
 }
 
 // 统一的选择切换逻辑

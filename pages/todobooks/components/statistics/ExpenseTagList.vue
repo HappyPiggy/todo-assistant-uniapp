@@ -10,7 +10,10 @@
         :item="item"
         :index="index"
         :selected="selectedSegment === item.id"
+        :force-expanded="selectedSegment === item.id"
+        :view-mode="viewMode"
         @click="handleItemClick"
+        @task-click="handleTaskClick"
       />
     </view>
     
@@ -33,15 +36,25 @@ const props = defineProps({
   selectedSegment: {
     type: String,
     default: null
+  },
+  viewMode: {
+    type: String,
+    default: 'actual'
   }
 })
 
-const emit = defineEmits(['item-click'])
+const emit = defineEmits(['item-click', 'task-click'])
 
 // 处理列表项点击
 const handleItemClick = (item) => {
   console.log('标签列表项被点击:', item.tagName)
   emit('item-click', item)
+}
+
+// 处理任务点击
+const handleTaskClick = (task) => {
+  console.log('任务被点击:', task.title || '无标题')
+  emit('task-click', task)
 }
 </script>
 

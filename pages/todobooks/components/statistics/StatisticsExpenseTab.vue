@@ -43,8 +43,10 @@
         :expense-data="enhancedExpenseData"
         :width="chartSize"
         :height="chartSize"
+        :view-mode="viewMode"
         @segment-click="handleSegmentClick"
         @chart-ready="handleChartReady"
+        @task-click="handleTaskClick"
       />
     </view>
 
@@ -71,7 +73,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-change'])
+const emit = defineEmits(['view-change', 'task-click'])
 
 // 视图模式：actual（实际支出）或 budget（预算）
 const viewMode = ref('actual')
@@ -95,14 +97,7 @@ const sortedTagGroups = computed(() => {
 
 // 增强版图表数据
 const enhancedExpenseData = computed(() => {
-  console.log('计算增强版图表数据:', {
-    tagGroups: props.tagGroups,
-    sortedTagGroups: sortedTagGroups.value,
-    viewMode: viewMode.value
-  })
-  
   if (!sortedTagGroups.value || sortedTagGroups.value.length === 0) {
-    console.log('无标签数据，返回空数组')
     return []
   }
   
@@ -116,7 +111,6 @@ const enhancedExpenseData = computed(() => {
     tasks: tag.tasks || []
   }))
   
-  console.log('增强版图表数据结果:', result)
   return result
 })
 
@@ -166,6 +160,12 @@ const handleSegmentClick = (segmentId, segmentData) => {
 
 // 处理图表准备就绪事件
 const handleChartReady = () => {
+}
+
+// 处理任务点击事件
+const handleTaskClick = (task) => {
+  console.log('StatisticsExpenseTab - 任务点击:', task)
+  emit('task-click', task)
 }
 
 // 监听tagGroups数据变化，确保图表组件能及时响应
