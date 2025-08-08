@@ -16,7 +16,9 @@
             "autoclose" : true,
             "delay" : 0
         },
-        "modules" : {},
+        "modules" : {
+            "OAuth" : {}
+        },
         /* 模块配置 */
         "icons" : {
             "android" : {
@@ -52,9 +54,21 @@
                 "dSYMs" : false
             },
             /* ios打包配置 */
-            "sdkConfigs" : {},
+            "sdkConfigs" : {
+                "oauth" : {
+                    "weixin" : {
+                        "appid" : "wx522ce7083ca5127e",
+                        "UniversalLinks" : ""
+                    }
+                }
+            },
             "splashscreen" : {
                 "useOriginalMsgbox" : true
+            },
+            "icons" : {
+                "android" : {
+                    "hdpi" : ""
+                }
             }
         }
     },

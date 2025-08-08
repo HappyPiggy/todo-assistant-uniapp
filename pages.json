@@ -41,6 +41,12 @@
         }
     },
     {
+        "path": "pages/ucenter/logout-redirect",
+        "style": {
+            "navigationBarTitleText": ""
+        }
+    },
+    {
         "path": "pages/todobooks/detail",
         "style": {
             "navigationBarTitleText": "项目册详情",
@@ -164,7 +170,7 @@
 	},
 
     "uniIdRouter": {
-		"loginPage": "pages/login/login-withpwd",
+		"loginPage": "pages/ucenter/logout-redirect",
 		"needLogin": [
 			"/pages/tags/.*",
 			"/pages/archive-management/.*"

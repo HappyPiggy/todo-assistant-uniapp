@@ -299,14 +299,10 @@ const navToSettings = () => {
 const changeLoginState = async () => {
 	if (hasLogin.value) {
 		await mutations.logout()
-		// 退出登录后跳转到首页
-		uni.reLaunch({
-			url: '/pages/list/list'
-		})
 	} else {
 		uni.redirectTo({
 			url: '/pages/login/login-withpwd',
-		});
+		})
 	}
 }
 

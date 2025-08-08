@@ -2,6 +2,7 @@
 // 用于判断用户登录状态并检查功能访问权限
 import { computed, ref, watch } from 'vue'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
+import { useLocalStorageManager } from '@/store/localStorageManager.js'
 
 // 访客允许的功能列表
 const GUEST_ALLOWED_FEATURES = [
@@ -188,7 +189,6 @@ export function useAuthState() {
     }
     
     try {
-      const { useLocalStorageManager } = await import('@/store/localStorageManager.js')
       const localManager = useLocalStorageManager()
       const books = await localManager.getTodoBooks()
       
