@@ -69,7 +69,7 @@ class LocalStorageManager {
   checkStorageQuota(data) {
     try {
       const dataString = JSON.stringify(data)
-      const sizeInBytes = new Blob([dataString]).size
+      const sizeInBytes = this.getStringByteSize(dataString)
       
       if (sizeInBytes > this.STORAGE_SIZE_LIMIT) {
         uni.showToast({
@@ -173,7 +173,7 @@ class LocalStorageManager {
       if (!data) return null
       
       const dataString = JSON.stringify(data)
-      const sizeInBytes = new Blob([dataString]).size
+      const sizeInBytes = this.getStringByteSize(dataString)
       const sizeInKB = Math.round(sizeInBytes / 1024)
       
       return {
@@ -577,6 +577,37 @@ class LocalStorageManager {
   }
   
   // =================== 私有辅助方法 ===================
+  
+  // 计算字符串字节大小（兼容Android）
+  getStringByteSize(str) {
+    if (!str) return 0
+    
+    // 优先使用TextEncoder（现代浏览器）
+    if (typeof TextEncoder !== 'undefined') {
+      try {
+        return new TextEncoder().encode(str).length
+      } catch (error) {
+        // 降级到手动计算
+      }
+    }
+    
+    // 手动计算UTF-8字节数
+    let bytes = 0
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i)
+      if (code < 0x80) {
+        bytes += 1
+      } else if (code < 0x800) {
+        bytes += 2
+      } else if (code < 0x10000) {
+        bytes += 3
+      } else {
+        bytes += 4
+      }
+    }
+    
+    return bytes
+  }
   
   // 更新TodoBook统计信息
   _updateBookStatistics(data, bookId) {

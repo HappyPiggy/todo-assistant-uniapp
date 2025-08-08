@@ -45,14 +45,22 @@ export function usePinning(itemType, initialItems) {
   };
 
   const isPinned = (itemId) => {
+    if (!Array.isArray(pinnedIds.value)) {
+      return false;
+    }
     return pinnedIds.value.includes(itemId);
   };
 
   const sortedItems = computed(() => {
-    // 确保 initialItems 是一个 ref
-    const items = [...(initialItems.value || [])];
+    // 确保 initialItems 是一个 ref，并且数据已经加载
+    const items = initialItems.value;
+    if (!Array.isArray(items)) {
+      return [];
+    }
     
-    return items.sort((a, b) => {
+    const sortableItems = [...items];
+    
+    return sortableItems.sort((a, b) => {
       const isAPinned = isPinned(a._id);
       const isBPinned = isPinned(b._id);
 
