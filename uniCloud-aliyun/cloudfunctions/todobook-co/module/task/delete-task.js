@@ -30,28 +30,20 @@ module.exports = async function deleteTask(taskId) {
     
     const task = taskResult.data[0]
     
-    // 检查项目册权限
-    const permissionResult = await checkTodoBookPermission(this, uid, task.todobook_id, PERMISSION_TYPE.DELETE)
-    if (!permissionResult.success) {
-      return {
-        code: 403,
-        message: permissionResult.error?.message || '无权限删除此任务'
+    // 检查是否为任务创建者
+    if (task.creator_id === uid) {
+      // 任务创建者可以删除自己的任务，只需检查基本的项目册访问权限
+      const permissionResult = await checkTodoBookPermission(this, uid, task.todobook_id, PERMISSION_TYPE.READ)
+      if (!permissionResult.success) {
+        return {
+          code: 403,
+          message: permissionResult.error?.message || '无权限访问此项目册'
+        }
       }
-    }
-    
-    // 检查是否为任务创建者或有管理权限
-    if (task.creator_id !== uid) {
-      // 如果不是创建者，检查是否为项目册管理员
-      const memberResult = await db.collection('todobook_members')
-        .where({
-          todobook_id: task.todobook_id,
-          user_id: uid,
-          role: db.command.in(['owner', 'admin'])
-        })
-        .get()
-      console.log(JSON.stringify(memberResult, null, 2),task.creator_id, uid)
-      
-      if (!memberResult.data || memberResult.data.length === 0) {
+    } else {
+      // 非任务创建者需要项目册的删除权限（owner/admin）
+      const permissionResult = await checkTodoBookPermission(this, uid, task.todobook_id, PERMISSION_TYPE.DELETE)
+      if (!permissionResult.success) {
         return {
           code: 403,
           message: '只能删除自己创建的任务或需要管理员权限'

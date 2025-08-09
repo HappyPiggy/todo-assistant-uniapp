@@ -95,7 +95,7 @@ async function checkTodoBookPermission(context, userId, todoBookId, permission) 
 }
 
 /**
- * 检查任务权限（通过项目册权限）
+ * 检查任务权限（考虑任务创建者权限）
  * @param {Object} context 云函数上下文
  * @param {string} userId 用户ID
  * @param {string} taskId 任务ID
@@ -120,11 +120,26 @@ async function checkTaskPermission(context, userId, taskId, permission) {
     
     const task = taskResult.data[0]
     
-    // 检查项目册权限
+    // 如果是任务创建者，检查基本访问权限
+    if (task.creator_id === userId) {
+      // 任务创建者可以修改/删除自己的任务，只需要项目册的读权限
+      const permissionResult = await checkTodoBookPermission(context, userId, task.todobook_id, PERMISSION_TYPE.READ)
+      if (permissionResult.success) {
+        return {
+          success: true,
+          task: task
+        }
+      }
+    }
+    
+    // 非任务创建者，检查项目册对应权限
     const permissionResult = await checkTodoBookPermission(context, userId, task.todobook_id, permission)
     
     if (!permissionResult.success) {
-      return permissionResult
+      return {
+        success: false,
+        error: createErrorResponse(ERROR_CODES.FORBIDDEN, '只能修改自己创建的任务或需要管理员权限')
+      }
     }
     
     return {
