@@ -304,7 +304,7 @@ export default {
 </script>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue'
+import { defineProps, defineEmits, computed, ref } from 'vue'
 import { currentUserId } from '@/store/storage.js'
 import { getPriorityText, formatDueDate } from '../../utils/taskUtils.js'
 import { isOverdue } from '../../utils/dateUtils.js'
@@ -477,7 +477,15 @@ const shouldShowSubtasks = computed(() => {
   return result
 })
 
+// 长按标识，防止长按后触发点击
+const isLongPressing = ref(false)
+
 const handleClick = () => {
+  // 如果正在长按状态，不触发点击事件
+  if (isLongPressing.value) {
+    isLongPressing.value = false
+    return
+  }
   emit('click', props.task)
 }
 
@@ -489,6 +497,9 @@ const handleMenuClick = () => {
   emit('menuClick', props.task)
 }
 const handleLongPress = () => {
+  // 设置长按标识，防止后续触发点击事件
+  isLongPressing.value = true
+  
   const { copyToClipboard } = useShareData()
   try {
     const formattedText = formatTaskInfo(props.task)
@@ -500,8 +511,16 @@ const handleLongPress = () => {
       icon: 'error'
     })
   }
+  
+  // 延迟重置标识，确保点击事件能被拦截
+  setTimeout(() => {
+    isLongPressing.value = false
+  }, 100)
 }
 const handleSubtaskLongPress = (subtask) => {
+  // 设置长按标识，防止后续触发点击事件
+  isLongPressing.value = true
+  
   const { copyToClipboard } = useShareData()
   try {
     const formattedText = formatTaskInfo(subtask)
@@ -513,6 +532,11 @@ const handleSubtaskLongPress = (subtask) => {
       icon: 'error'
     })
   }
+  
+  // 延迟重置标识，确保点击事件能被拦截
+  setTimeout(() => {
+    isLongPressing.value = false
+  }, 100)
 }
 
 const handleSubtaskStatusToggle = (subtask) => {
@@ -539,6 +563,11 @@ const handleExpandClick = () => {
 
 // 微信小程序和其他平台通用的子任务事件处理
 const handleSubtaskItemClick = (subtask) => {
+  // 如果正在长按状态，不触发点击事件
+  if (isLongPressing.value) {
+    isLongPressing.value = false
+    return
+  }
   emit('subtaskClick', subtask)
 }
 
