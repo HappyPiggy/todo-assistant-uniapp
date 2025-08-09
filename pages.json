@@ -97,6 +97,12 @@
             "navigationBarTitleText": "数据库调试"
         }
     },
+    {
+        "path": "pages/debug/pie-chart-test",
+        "style": {
+            "navigationBarTitleText": "饼图组件测试"
+        }
+    },
     // #endif
     {
         "path": "pages/settings/share-management",

@@ -30,16 +30,20 @@
         <view class="chart-section">
           <!-- 图表容器，使用相对定位 -->
           <view class="chart-container">
-            <!-- Canvas 饼图绘制区域 -->
-            <PieChartCanvas 
+            <!-- 跨平台饼图组件 -->
+            <CrossPlatformPieChart 
               ref="canvasRef"
               :chart-data="enhancedChartData"
-              :canvas-width="canvasWidth"
-              :canvas-height="canvasHeight"
+              :width="canvasWidth"
+              :height="canvasHeight"
               :selected-segment="selectedSegment"
-              :show-extension-labels="showLabels"
+              :show-labels="showLabels"
+              :enable-animation="true"
+              :enable-interaction="true"
               @segment-click="handleSegmentClick"
               @canvas-ready="handleCanvasReady"
+              @render-complete="handleRenderComplete"
+              @error="handleChartError"
             />
             
             <!-- 中心显示组件 -->
@@ -52,7 +56,7 @@
           </view>
         </view>
         
-        <!-- 列表区域 -->
+        <!-- 列表区域：始终显示标签列表 -->
         <view class="list-section">
           <ExpenseTagList
             :tag-data="enhancedChartData"
@@ -69,7 +73,7 @@
 
 <script setup>
 import { ref, computed, defineProps, defineEmits, watch, nextTick } from 'vue'
-import PieChartCanvas from './PieChartCanvas.vue'
+import CrossPlatformPieChart from '../charts/CrossPlatformPieChart.vue'
 import PieChartCenter from './PieChartCenter.vue'
 import ExpenseTagList from './ExpenseTagList.vue'
 
@@ -288,6 +292,19 @@ const handleCanvasReady = () => {
     error.value = 'Canvas初始化失败'
     loading.value = false
   }
+}
+
+// 渲染完成处理
+const handleRenderComplete = () => {
+  console.log('跨平台饼图渲染完成')
+  loading.value = false
+}
+
+// 图表错误处理
+const handleChartError = (error) => {
+  console.error('跨平台饼图错误:', error)
+  error.value = '图表渲染失败'
+  loading.value = false
 }
 
 // 监听数据变化，重置选中状态和管理加载状态
