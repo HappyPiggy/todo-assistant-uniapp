@@ -212,7 +212,8 @@ const handleRemoveMember = (member) => {
   confirmAction.value = 'removeMember'
   
   confirmDialogTitle.value = '确认移除'
-  confirmDialogMessage.value = `确定要将 ${member['user_info.nickname'] || member.username} 移出项目册吗？`
+  const nickname = member.user_info?.nickname || '未知用户'
+  confirmDialogMessage.value = `确定要将 ${nickname} 移出项目册吗？`
   confirmDialogType.value = 'danger'
   confirmDialogVisible.value = true
 }

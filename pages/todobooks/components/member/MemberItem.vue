@@ -51,7 +51,7 @@ const props = defineProps({
 })
 
 onShow(() => {
-   //console.log("props.member.user_id", props.member.user_id, props.member['user_info.nickname'], currentUserId.value)
+  // 页面显示时的处理逻辑
 })
 
 
@@ -60,8 +60,7 @@ const isCurrentUser = computed(() => {
 })
 
 const getMemberNickname = (member) => {
-  // 使用与 useMemberData.js 相同的字段访问方式
-  return member['user_info.nickname'] || '未知用户'
+  return member.user_info?.nickname || '未知用户'
 }
 
 const getRoleText = (role) => {

@@ -236,30 +236,7 @@ export function useMemberData() {
    * @returns {string} 头像URL或占位符文本
    */
   const getMemberAvatar = (member) => {
-    // 优先使用avatar字段
-    if (member.user_info && typeof member.user_info === 'object') {
-      if (member.user_info.avatar) {
-        return member.user_info.avatar
-      }
-      if (member.user_info.avatar_file) {
-        return member.user_info.avatar_file
-      }
-    }
-    
-    // 兼容字符串键格式
-    if (member['user_info.avatar']) {
-      return member['user_info.avatar']
-    }
-    
-    if (member['user_info.avatar_url']) {
-      return member['user_info.avatar_url']
-    }
-    
-    if (member['user_info.avatar_file']) {
-      return member['user_info.avatar_file']
-    }
-    
-    return ''
+    return member.user_info?.avatar || member.user_info?.avatar_file || ''
   }
   
   /**
@@ -268,7 +245,7 @@ export function useMemberData() {
    * @returns {string} 昵称
    */
   const getMemberNickname = (member) => {
-    return member['user_info.nickname'] || '未知用户'
+    return member.user_info?.nickname || '未知用户'
   }
   
   /**
