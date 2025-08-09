@@ -51,6 +51,7 @@ export async function weixinLogin(context) {
 	
 	// 非H5平台微信登录
 	// #ifndef H5
+	
 	uni.showLoading({
 		mask: true
 	})
@@ -75,6 +76,7 @@ export async function weixinLogin(context) {
 	})
 	// #endif
 }
+
 
 /**
  * 执行微信登录
@@ -121,6 +123,20 @@ export function loginByWeixin(context, params) {
 
 // #ifdef MP-WEIXIN
 /**
+ * 生成随机字符串（数字+字母）
+ * @param {Number} length - 字符串长度
+ * @returns {String} 随机字符串
+ */
+function generateRandomString(length = 5) {
+	const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+	let result = ''
+	for (let i = 0; i < length; i++) {
+		result += chars.charAt(Math.floor(Math.random() * chars.length))
+	}
+	return result
+}
+
+/**
  * 尝试获取微信用户信息
  * @param {Object} context - Vue组件上下文
  * @param {Object} loginResult - 登录结果
@@ -136,155 +152,50 @@ export function tryGetWeixinUserInfo(context, loginResult) {
 		return
 	}
 	
-	// 没有昵称，提示用户授权
-	uni.showModal({
-		title: '完善信息',
-		content: '是否使用微信昵称和头像完善个人信息？',
-		confirmText: '使用',
-		cancelText: '跳过',
-		success: (res) => {
-			if (res.confirm) {
-				// 用户同意，获取用户信息
-				getWeixinProfile(context, loginResult)
-			} else {
-				// 用户拒绝，直接跳转
-				context.loginSuccess({
-					...loginResult,
-					uniIdRedirectUrl: context.uniIdRedirectUrl
-				})
-			}
-		}
-	})
+	// 直接设置默认昵称，不请求授权也不询问用户
+	setSimpleDefaultNickname(context, loginResult)
 }
 
 /**
- * 获取微信用户信息
+ * 简单设置默认昵称（不询问用户）
  * @param {Object} context - Vue组件上下文
  * @param {Object} loginResult - 登录结果
  */
-export function getWeixinProfile(context, loginResult) {
-	uni.getUserProfile({
-		desc: '用于完善用户资料',
-		success: async (res) => {
-			console.log('获取用户信息成功：', res.userInfo)
-			
-			// 更新用户资料
-			await updateUserProfile(context, res.userInfo, loginResult)
-		},
-		fail: (err) => {
-			console.log('用户拒绝授权：', err)
-			// 用户拒绝授权，继续登录流程
-			context.loginSuccess({
-				...loginResult,
-				uniIdRedirectUrl: context.uniIdRedirectUrl
-			})
-		}
-	})
-}
-
-/**
- * 更新用户资料（处理昵称重复）
- * @param {Object} context - Vue组件上下文
- * @param {Object} wxUserInfo - 微信用户信息
- * @param {Object} loginResult - 登录结果
- * @param {Number} retryCount - 重试次数
- */
-export async function updateUserProfile(context, wxUserInfo, loginResult, retryCount = 0) {
+async function setSimpleDefaultNickname(context, loginResult) {
+	// 生成默认昵称：微信用户 + 5位随机字符
+	const defaultNickname = '微信用户' + generateRandomString(5)
+	
 	try {
 		const userCo = uniCloud.importObject('user-co')
-		let nickname = wxUserInfo.nickName
-		
-		// 如果已经重试过，添加随机后缀
-		if (retryCount > 0) {
-			// 生成4位随机数字
-			const suffix = Math.floor(1000 + Math.random() * 9000)
-			nickname = `${wxUserInfo.nickName}_${suffix}`
-		}
-		
-		const updateData = {
-			nickname: nickname,
-			avatar: wxUserInfo.avatarUrl
-		}
-		
-		const result = await userCo.updateProfile(updateData)
+		const result = await userCo.updateProfile({
+			nickname: defaultNickname
+		})
 		
 		if (result.code === 0) {
-			// 更新成功
+			// 更新成功，更新登录结果中的用户信息
 			if (loginResult.userInfo) {
-				loginResult.userInfo.nickname = nickname
-				loginResult.userInfo.avatar = wxUserInfo.avatarUrl
+				loginResult.userInfo.nickname = defaultNickname
 			}
 			
-			if (retryCount > 0) {
-				uni.showToast({
-					title: `昵称已更新为：${nickname}`,
-					icon: 'none',
-					duration: 2500
-				})
-			} else {
-				uni.showToast({
-					title: '信息已更新',
-					icon: 'success',
-					duration: 1500
-				})
-			}
+			console.log('已设置默认昵称：', defaultNickname)
 			
-			// 继续登录流程
+			// 完成登录流程
 			context.loginSuccess({
 				...loginResult,
 				uniIdRedirectUrl: context.uniIdRedirectUrl
 			})
 		} else {
-			throw new Error(result.message || '更新失败')
+			throw new Error(result.message || '设置昵称失败')
 		}
 	} catch (error) {
-		console.error('更新用户信息失败：', error)
+		console.error('设置默认昵称失败:', error)
 		
-		// 判断是否是昵称重复错误
-		if (error.message && 
-		    (error.message.includes('昵称') && error.message.includes('已存在')) ||
-		    (error.message.includes('nickname') && error.message.includes('exist')) ||
-		    error.code === 'NICKNAME_EXISTS' ||
-		    error.code === 'nickname-exists') {
-			
-			// 昵称重复，自动重试
-			if (retryCount < 3) {
-				console.log(`昵称重复，自动添加后缀重试，第${retryCount + 1}次`)
-				// 递归调用，增加重试次数
-				await updateUserProfile(context, wxUserInfo, loginResult, retryCount + 1)
-			} else {
-				// 重试次数过多，让用户手动设置
-				uni.showModal({
-					title: '昵称设置失败',
-					content: '该昵称已被使用，请稍后在个人中心手动设置昵称',
-					confirmText: '知道了',
-					showCancel: false,
-					success: () => {
-						// 继续登录流程
-						context.loginSuccess({
-							...loginResult,
-							uniIdRedirectUrl: context.uniIdRedirectUrl
-						})
-					}
-				})
-			}
-		} else {
-			// 其他错误，提示用户但不阻塞登录
-			console.error('更新资料失败，但不影响登录：', error)
-			uni.showToast({
-				title: '资料更新失败，可稍后在个人中心设置',
-				icon: 'none',
-				duration: 2000
-			})
-			
-			// 继续登录流程
-			setTimeout(() => {
-				context.loginSuccess({
-					...loginResult,
-					uniIdRedirectUrl: context.uniIdRedirectUrl
-				})
-			}, 2000)
-		}
+		// 设置失败，直接完成登录流程，不影响用户体验
+		context.loginSuccess({
+			...loginResult,
+			uniIdRedirectUrl: context.uniIdRedirectUrl
+		})
 	}
 }
+
 // #endif
