@@ -311,25 +311,25 @@ watch(() => props.expenseData, (newData, oldData) => {
       loading.value = false // 取消加载状态
       error.value = null
       
-      // 延迟触发重绘，确保组件完全渲染
-      setTimeout(() => {
-        nextTick(() => {
-          if (canvasRef.value && canvasRef.value.redraw) {
-            console.log('延迟重绘：数据更新，触发Canvas重绘')
-            canvasRef.value.redraw()
-          }
-        })
-      }, 100) // 延迟100ms
+      // iOS平台增强的多重保障重绘机制
+      // #ifdef APP-IOS
+      const iosRedrawDelays = [100, 300, 600, 1000]
+      // #endif
+      // #ifndef APP-IOS
+      const iosRedrawDelays = [100, 300]
+      // #endif
       
-      // 如果100ms后仍未成功，再次尝试
-      setTimeout(() => {
-        nextTick(() => {
-          if (canvasRef.value && canvasRef.value.redraw) {
-            console.log('二次重绘：确保图表显示')
-            canvasRef.value.redraw()
-          }
-        })
-      }, 300) // 延迟300ms
+      // 按照不同延迟时间进行多次重绘尝试
+      iosRedrawDelays.forEach((delay, index) => {
+        setTimeout(() => {
+          nextTick(() => {
+            if (canvasRef.value && canvasRef.value.redraw) {
+              console.log(`第${index + 1}次重绘：数据更新，触发Canvas重绘 (延迟${delay}ms)`)
+              canvasRef.value.redraw()
+            }
+          })
+        }, delay)
+      })
     }
   } catch (err) {
     console.error('数据变化监听出错:', err)

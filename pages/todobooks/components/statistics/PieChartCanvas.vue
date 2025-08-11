@@ -1,8 +1,10 @@
 <template>
   <view class="pie-chart-canvas">
     <canvas 
+      :id="canvasId"
       :canvas-id="canvasId"
-      :style="{ width: canvasWidth + 'px', height: canvasHeight + 'px' }"
+      type="2d"
+      :style="canvasStyle"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -67,40 +69,84 @@ const totalAmount = computed(() => {
   return props.chartData.reduce((sum, item) => sum + (item.amount || 0), 0)
 })
 
-// 初始化Canvas上下文 - 改进版本
+// Canvas就绪检测函数
+const verifyCanvasReady = (ctx) => {
+  if (!ctx) return false
+  try {
+    // 尝试基本绘图操作验证Context可用性
+    ctx.save()
+    ctx.restore()
+    return true
+  } catch (e) {
+    console.warn('Canvas Context验证失败:', e)
+    return false
+  }
+}
+
+// 初始化Canvas上下文 - iOS兼容版本
 const initCanvas = (retryCount = 0) => {
   try {
     console.log(`PieChartCanvas - 尝试初始化Canvas (第${retryCount + 1}次)`)
+    
+    // 尝试新的Canvas 2.0 API (如果可用)
+    const query = uni.createSelectorQuery()
+    query.select(`#${canvasId}`).node().exec((res) => {
+      if (res[0] && res[0].node) {
+        console.log('PieChartCanvas - 使用Canvas 2.0 API')
+        const canvas = res[0].node
+        const context = canvas.getContext('2d')
+        
+        // 设置Canvas尺寸
+        const dpr = uni.getSystemInfoSync().pixelRatio || 1
+        canvas.width = props.canvasWidth * dpr
+        canvas.height = props.canvasHeight * dpr
+        context.scale(dpr, dpr)
+        
+        ctx.value = context
+        ctx.value.canvas = canvas
+        ctx.value.draw = () => {} // Canvas 2.0 不需要draw()方法
+        
+        console.log('PieChartCanvas - Canvas 2.0初始化成功')
+        emit('canvas-ready')
+        
+        return true
+      } else {
+        // 回退到传统API
+        console.log('PieChartCanvas - 回退到传统Canvas API')
+        initCanvasLegacy(retryCount)
+      }
+    })
+  } catch (error) {
+    console.log('PieChartCanvas - Canvas 2.0失败，使用传统API')
+    initCanvasLegacy(retryCount)
+  }
+}
+
+// 传统Canvas初始化方法
+const initCanvasLegacy = (retryCount = 0) => {
+  try {
     ctx.value = uni.createCanvasContext(canvasId)
     
-    if (ctx.value) {
-      console.log('PieChartCanvas - Canvas上下文初始化成功')
+    if (ctx.value && verifyCanvasReady(ctx.value)) {
+      console.log('PieChartCanvas - 传统Canvas上下文初始化成功')
       emit('canvas-ready')
-      
-      // 初始化成功后，如果有数据就立即绘制
-      setTimeout(() => {
-        if (props.chartData && props.chartData.length > 0) {
-          console.log('PieChartCanvas - 初始化完成，开始绘制图表')
-          drawPieChart(true) // 首次绘制使用动画
-        }
-      }, 100)
       
       return true
     } else {
-      throw new Error('createCanvasContext 返回了 null 或 undefined')
+      throw new Error('createCanvasContext 返回了 null 或 Context未就绪')
     }
   } catch (error) {
-    console.error(`Canvas初始化失败 (第${retryCount + 1}次):`, error)
+    console.error(`传统Canvas初始化失败 (第${retryCount + 1}次):`, error)
     
     // 最多重试3次，每次间隔更长
     if (retryCount < 3) {
       const delay = (retryCount + 1) * 200 // 200ms, 400ms, 600ms
-      console.log(`PieChartCanvas - ${delay}ms后重试初始化`)
+      console.log(`PieChartCanvas - ${delay}ms后重试传统初始化`)
       setTimeout(() => {
-        initCanvas(retryCount + 1)
+        initCanvasLegacy(retryCount + 1)
       }, delay)
     } else {
-      console.error('PieChartCanvas - Canvas初始化重试次数用尽，放弃初始化')
+      console.error('PieChartCanvas - 传统Canvas初始化重试次数用尽，放弃初始化')
     }
     return false
   }
@@ -119,10 +165,20 @@ const drawPieChart = (withAnimation = false) => {
     // 直接重新创建上下文，不依赖initCanvas的重试逻辑
     try {
       ctx.value = uni.createCanvasContext(canvasId)
-      if (ctx.value) {
+      if (ctx.value && verifyCanvasReady(ctx.value)) {
         console.log('PieChartCanvas - 重新初始化Canvas成功，继续绘制')
       } else {
-        console.error('PieChartCanvas - 重新初始化失败，Canvas上下文为空')
+        console.error('PieChartCanvas - 重新初始化失败，Canvas上下文为空或未就绪')
+        // iOS平台延迟重试机制
+        // #ifdef APP-IOS
+        setTimeout(() => {
+          ctx.value = uni.createCanvasContext(canvasId)
+          if (ctx.value && verifyCanvasReady(ctx.value)) {
+            console.log('PieChartCanvas - iOS延迟重试成功')
+            drawPieChartCore()
+          }
+        }, 200)
+        // #endif
         return
       }
     } catch (err) {
@@ -149,7 +205,7 @@ const drawPieChart = (withAnimation = false) => {
 // 带动画的绘制
 const drawPieChartWithAnimation = () => {
   if (animationId) {
-    cancelAnimationFrame(animationId)
+    clearTimeout(animationId) // 改用setTimeout
   }
   
   isAnimating.value = true
@@ -169,7 +225,8 @@ const drawPieChartWithAnimation = () => {
     drawPieChartCore(easedProgress)
     
     if (progress < 1) {
-      animationId = requestAnimationFrame(animate)
+      // iOS平台使用setTimeout替代requestAnimationFrame
+      animationId = setTimeout(animate, 16) // 约60FPS
     } else {
       isAnimating.value = false
       animationProgress.value = 1
@@ -202,7 +259,9 @@ const drawEmptyChart = () => {
 
 // 核心绘制逻辑
 const drawPieChartCore = (animationProgress = 1) => {
-  if (!ctx.value) return
+  if (!ctx.value) {
+    return
+  }
   
   // 清空画布
   ctx.value.clearRect(0, 0, props.canvasWidth, props.canvasHeight)
@@ -284,15 +343,11 @@ const drawPieChartCore = (animationProgress = 1) => {
   ctx.value.arc(centerX.value, centerY.value, innerRadius.value - 1, 0, 2 * Math.PI)
   ctx.value.fill()
   
-  ctx.value.draw()
+  // 绘制Canvas
+  if (ctx.value.draw) {
+    ctx.value.draw()
+  }
   
-  // uni-app某些平台需要调用update确保绘制内容显示
-  setTimeout(() => {
-    if (ctx.value && ctx.value.update) {
-      ctx.value.update()
-      console.log('PieChartCanvas - 调用Canvas update方法')
-    }
-  }, 50)
 }
 
 // 绘制延伸标签
@@ -458,13 +513,47 @@ const redraw = () => {
   })
 }
 
+// 组件挂载状态
+const isMounted = ref(false)
+
+
+// Canvas样式计算
+const canvasStyle = computed(() => {
+  const baseStyle = {
+    width: props.canvasWidth + 'px',
+    height: props.canvasHeight + 'px',
+    display: 'block',
+  }
+  
+  // iOS特定样式
+  const iosStyle = {
+    transform: 'translateZ(0)', // 强制硬件加速
+    '-webkit-transform': 'translateZ(0)',
+    'will-change': 'transform',
+    position: 'relative',
+    zIndex: 1,
+  }
+  
+  return { ...baseStyle, ...iosStyle }
+})
+
 // 监听数据变化
 watch(() => props.chartData, (newData) => {
   console.log('Canvas: 图表数据变化, 数据长度:', newData?.length || 0)
+  
+  // 必须等组件挂载完成且Canvas初始化后才能绘制
+  if (!isMounted.value || !ctx.value) {
+    console.log('Canvas: 组件未挂载或Canvas未初始化，跳过绘制', {
+      mounted: isMounted.value,
+      hasContext: !!ctx.value
+    })
+    return
+  }
+  
   nextTick(() => {
     drawPieChart()
   })
-}, { deep: true, immediate: true })
+}, { deep: true, immediate: false }) // 改为不立即执行
 
 // 监听选中状态变化
 watch(() => props.selectedSegment, () => {
@@ -483,20 +572,80 @@ watch([() => props.canvasWidth, () => props.canvasHeight], () => {
 // 挂载时初始化
 onMounted(() => {
   console.log('PieChartCanvas 挂载完成')
+  isMounted.value = true
   
-  // 使用更长的延迟确保DOM完全渲染
+  // iOS平台需要更长的延迟确保DOM完全渲染
+  // #ifdef APP-IOS
+  const mountDelay = 500
+  // #endif
+  // #ifndef APP-IOS
+  const mountDelay = 300
+  // #endif
+  
+  // 使用延迟确保DOM完全渲染
   setTimeout(() => {
     nextTick(() => {
       console.log('PieChartCanvas - 开始初始化Canvas')
       initCanvas() // 初始化过程中会自动处理重试和后续绘制
+      
+      // Canvas初始化完成后，手动触发数据监听逻辑
+      setTimeout(() => {
+        if (ctx.value && props.chartData && props.chartData.length > 0) {
+          console.log('PieChartCanvas - 挂载完成后手动触发数据绘制')
+          console.log('PieChartCanvas - Context状态检查:', {
+            hasContext: !!ctx.value,
+            dataLength: props.chartData.length,
+            mounted: isMounted.value
+          })
+          
+          nextTick(() => {
+            // 直接调用核心绘制函数，绕过Context检查
+            if (ctx.value && verifyCanvasReady(ctx.value)) {
+              console.log('PieChartCanvas - 直接调用核心绘制函数')
+              drawPieChartWithAnimation()
+              
+              // iOS平台额外的显示保障机制
+              // #ifdef APP-IOS
+              setTimeout(() => {
+                console.log('PieChartCanvas - iOS平台额外显示保障')
+                // 通过重新绘制一次确保显示
+                drawPieChartCore()
+                
+                // 再次尝试强制刷新
+                setTimeout(() => {
+                  if (ctx.value) {
+                    try {
+                      ctx.value.draw(true) 
+                      if (ctx.value.update) {
+                        ctx.value.update()
+                      }
+                      console.log('PieChartCanvas - iOS最终强制显示完成')
+                    } catch (e) {
+                      console.warn('PieChartCanvas - iOS最终强制显示失败:', e)
+                    }
+                  }
+                }, 200)
+              }, 500)
+              // #endif
+            } else {
+              console.error('PieChartCanvas - 挂载后Context验证失败')
+            }
+          })
+        } else {
+          console.log('PieChartCanvas - 挂载后条件不满足:', {
+            hasContext: !!ctx.value,
+            hasData: !!(props.chartData && props.chartData.length > 0)
+          })
+        }
+      }, 100)
     })
-  }, 300) // 增加到300ms延迟
+  }, mountDelay)
 })
 
 // 清理动画资源
 onBeforeUnmount(() => {
   if (animationId) {
-    cancelAnimationFrame(animationId)
+    clearTimeout(animationId) // 改用clearTimeout
   }
   if (drawTimer) {
     clearTimeout(drawTimer)
@@ -513,11 +662,17 @@ defineExpose({
 <style lang="scss" scoped>
 .pie-chart-canvas {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   
   canvas {
     display: block;
+    // iOS强制硬件加速
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
   }
+  
 }
 </style>
