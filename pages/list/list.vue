@@ -143,6 +143,7 @@ import { useDataAdapter } from '@/composables/useDataAdapter.js'
 import { useAuthState } from '@/composables/useAuthState.js'
 import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
 import { usePinning } from '@/composables/usePinning.js'
+import { usePageTokenListener } from '@/composables/usePageTokenListener.js'
 import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
 import SearchOverlay from '@/pages/todobooks/components/task/SearchOverlay.vue'
 
@@ -168,6 +169,23 @@ const showSearchOverlay = ref(false) // 搜索弹窗显示状态
 
 // 置顶功能
 const { sortedItems: sortedTodoBooks, isPinned, togglePin, refreshPinnedIds } = usePinning('todobooks', todoBooks)
+
+// 页面token过期监听
+usePageTokenListener({
+	pageName: '项目册列表页',
+	redirectToLogin: false, // 不跳转，因为list页面本身就支持访客模式
+	onTokenExpired: () => {
+		// 清理页面数据
+		todoBooks.value = []
+		error.value = null
+		loading.value = false
+		console.log('项目册列表页: token过期，已清理页面数据，切换到访客模式')
+		// 刷新页面数据，以访客模式重新加载
+		setTimeout(() => {
+			loadData()
+		}, 2000)
+	}
+})
 
 // 计算属性
 const hasLogin = computed(() => {
@@ -211,6 +229,14 @@ onLoad(() => {
 	
 	// 监听全局登录状态变化事件
 	uni.$on('login-status-changed', onLoginStatusChanged)
+	
+	// 监听刷新访客数据事件
+	uni.$on('refresh-guest-data', () => {
+		console.log('收到refresh-guest-data事件，重新加载访客数据')
+		setTimeout(() => {
+			loadTodoBooksOptimized()
+		}, 500)
+	})
 })
 
 onShow(() => {
@@ -234,6 +260,7 @@ onUnload(() => {
 	uni.$off('user-switched', onUserSwitched)
 	uni.$off('user-login-status-changed', onUserLoginStatusChanged)
 	uni.$off('login-status-changed', onLoginStatusChanged)
+	uni.$off('refresh-guest-data')
 })
 
 // 数据加载方法

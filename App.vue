@@ -3,6 +3,7 @@
 	import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 	import { currentUserId } from '@/store/storage.js'
 	import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
+	import { useTokenCheck } from '@/composables/useTokenCheck.js'
 	
 	export default {
 		data() {
@@ -13,16 +14,22 @@
 		setup() {
 			// 使用todoBook操作组合式函数
 			const { onUserSwitch } = useBookData()
+			// 使用token检测组合式函数
+			const { checkTokenOnStartup } = useTokenCheck()
 			return {
-				onUserSwitch
+				onUserSwitch,
+				checkTokenOnStartup
 			}
 		},
-		onLaunch: function() {
+		onLaunch: async function() {
 			console.warn('当前组件仅支持 uni_modules 目录结构 ，请升级 HBuilderX 到 3.1.0 版本以上！')
 			console.log('App Launch')
 			
 			// 初始化全局store
 			globalStore.init()
+			
+			// 检查token是否过期（在其他操作之前）
+			await this.performTokenCheck()
 			
 			// 记录当前用户ID
 			this.currentUserIdLocal = currentUserId.value
@@ -42,6 +49,30 @@
 			console.log('App Hide')
 		},
 		methods: {
+			// 执行token过期检查
+			async performTokenCheck() {
+				try {
+					console.log('启动时执行token检查...')
+					
+					// 检查是否有用户登录
+					if (!store.hasLogin) {
+						console.log('用户未登录，跳过token检查')
+						return
+					}
+					
+					// 执行token过期检查
+					const needRelogin = await this.checkTokenOnStartup()
+					
+					if (needRelogin) {
+						console.log('token已过期，已清理用户状态')
+					} else {
+						console.log('token状态正常')
+					}
+					
+				} catch (error) {
+					console.error('启动token检查失败:', error)
+				}
+			},
 
 			// 检查用户切换
 			checkUserSwitch() {

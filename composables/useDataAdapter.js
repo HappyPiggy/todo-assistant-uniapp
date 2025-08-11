@@ -2,10 +2,12 @@
 // 根据用户登录状态动态切换本地存储和云端数据访问
 import { useAuthState } from '@/composables/useAuthState.js'
 import { useLocalStorageManager } from '@/store/localStorageManager.js'
+import { useCloudErrorHandler } from '@/composables/useCloudErrorHandler.js'
 
 export function useDataAdapter() {
   const { isGuest } = useAuthState()
   const localManager = useLocalStorageManager()
+  const { wrapCloudCall } = useCloudErrorHandler()
   
   // =================== TodoBook 数据适配 ===================
   
@@ -229,7 +231,7 @@ export function useDataAdapter() {
   
   // TodoBook云端操作
   const getCloudTodoBooks = async (options) => {
-    try {
+    return await wrapCloudCall(async () => {
       const todoBookCo = uniCloud.importObject('todobook-co')
       const result = await todoBookCo.getTodoBooks({
         include_archived: false,
@@ -243,10 +245,7 @@ export function useDataAdapter() {
       } else {
         throw new Error(result.message)
       }
-    } catch (error) {
-      console.error('加载云端项目册失败:', error)
-      throw error
-    }
+    }, '加载项目册列表')
   }
   
   const createCloudTodoBook = async (bookData) => {

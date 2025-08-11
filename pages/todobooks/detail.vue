@@ -107,6 +107,7 @@ import { useDataAdapter } from '@/composables/useDataAdapter.js'
 import { useAuthState } from '@/composables/useAuthState.js'
 import { checkFeatureAccess, guardFeature } from '@/utils/featureGuard.js'
 import { usePinning } from '@/composables/usePinning.js'
+import { usePageTokenListener } from '@/composables/usePageTokenListener.js'
 import { currentUserId } from '@/store/storage.js'
 
 // 用于存储从路由获取的 bookId，初始为 null
@@ -165,6 +166,20 @@ const {
   togglePin, 
   refreshPinnedIds 
 } = usePinning('tasks', sortedTasks)
+
+// 页面token过期监听
+usePageTokenListener({
+	pageName: 'TodoBook详情页',
+	redirectToLogin: false, // 不跳转到登录页，而是跳转到list页面
+	onTokenExpired: () => {
+		// 清理页面数据
+		allTasks.value = []
+		bookData.value = {}
+		loading.value = false
+		error.value = null
+		console.log('TodoBook详情页: token过期，已清理页面数据，准备跳转到访客模式首页')
+	}
+})
 
 // 监听availableTags变化
 watch(availableTags, (newTags) => {
