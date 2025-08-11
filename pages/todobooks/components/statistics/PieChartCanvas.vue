@@ -3,8 +3,8 @@
     <canvas 
       :id="canvasId"
       :canvas-id="canvasId"
-      type="2d"
       :style="canvasStyle"
+      :key="forceUpdate"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -43,6 +43,7 @@ const emit = defineEmits(['segment-click', 'canvas-ready'])
 // Canvas 配置
 const canvasId = `pie-chart-canvas-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 const ctx = ref(null)
+const forceUpdate = ref(0) // 用于强制更新
 
 // 绘制参数
 const centerX = computed(() => props.canvasWidth / 2)
@@ -78,46 +79,56 @@ const verifyCanvasReady = (ctx) => {
     ctx.restore()
     return true
   } catch (e) {
-    console.warn('Canvas Context验证失败:', e)
     return false
   }
 }
 
-// 初始化Canvas上下文 - iOS兼容版本
+// 初始化Canvas上下文 - 多平台兼容版本
 const initCanvas = (retryCount = 0) => {
   try {
-    console.log(`PieChartCanvas - 尝试初始化Canvas (第${retryCount + 1}次)`)
+    // 运行时平台检测：安卓端直接使用传统API
+    const systemInfo = uni.getSystemInfoSync()
+    if (systemInfo.platform === 'android') {
+      initCanvasLegacy(retryCount)
+      return
+    }
     
-    // 尝试新的Canvas 2.0 API (如果可用)
+    // iOS和其他平台尝试Canvas 2.0 API
     const query = uni.createSelectorQuery()
     query.select(`#${canvasId}`).node().exec((res) => {
       if (res[0] && res[0].node) {
-        console.log('PieChartCanvas - 使用Canvas 2.0 API')
         const canvas = res[0].node
-        const context = canvas.getContext('2d')
         
-        // 设置Canvas尺寸
-        const dpr = uni.getSystemInfoSync().pixelRatio || 1
-        canvas.width = props.canvasWidth * dpr
-        canvas.height = props.canvasHeight * dpr
-        context.scale(dpr, dpr)
-        
-        ctx.value = context
-        ctx.value.canvas = canvas
-        ctx.value.draw = () => {} // Canvas 2.0 不需要draw()方法
-        
-        console.log('PieChartCanvas - Canvas 2.0初始化成功')
-        emit('canvas-ready')
-        
-        return true
+        // 安全检查canvas.getContext方法是否存在
+        if (typeof canvas.getContext === 'function') {
+          try {
+            const context = canvas.getContext('2d')
+            
+            // 设置Canvas尺寸
+            const dpr = uni.getSystemInfoSync().pixelRatio || 1
+            canvas.width = props.canvasWidth * dpr
+            canvas.height = props.canvasHeight * dpr
+            context.scale(dpr, dpr)
+            
+            ctx.value = context
+            ctx.value.canvas = canvas
+            ctx.value.draw = () => {} // Canvas 2.0 不需要draw()方法
+            
+            emit('canvas-ready')
+            
+            return true
+          } catch (contextError) {
+            initCanvasLegacy(retryCount)
+          }
+        } else {
+          initCanvasLegacy(retryCount)
+        }
       } else {
         // 回退到传统API
-        console.log('PieChartCanvas - 回退到传统Canvas API')
         initCanvasLegacy(retryCount)
       }
     })
   } catch (error) {
-    console.log('PieChartCanvas - Canvas 2.0失败，使用传统API')
     initCanvasLegacy(retryCount)
   }
 }
@@ -128,25 +139,18 @@ const initCanvasLegacy = (retryCount = 0) => {
     ctx.value = uni.createCanvasContext(canvasId)
     
     if (ctx.value && verifyCanvasReady(ctx.value)) {
-      console.log('PieChartCanvas - 传统Canvas上下文初始化成功')
       emit('canvas-ready')
-      
       return true
     } else {
       throw new Error('createCanvasContext 返回了 null 或 Context未就绪')
     }
   } catch (error) {
-    console.error(`传统Canvas初始化失败 (第${retryCount + 1}次):`, error)
-    
     // 最多重试3次，每次间隔更长
     if (retryCount < 3) {
       const delay = (retryCount + 1) * 200 // 200ms, 400ms, 600ms
-      console.log(`PieChartCanvas - ${delay}ms后重试传统初始化`)
       setTimeout(() => {
         initCanvasLegacy(retryCount + 1)
       }, delay)
-    } else {
-      console.error('PieChartCanvas - 传统Canvas初始化重试次数用尽，放弃初始化')
     }
     return false
   }
@@ -155,26 +159,20 @@ const initCanvasLegacy = (retryCount = 0) => {
 // 绘制饼图（带防抖和动画）
 const drawPieChart = (withAnimation = false) => {
   if (!props.chartData || props.chartData.length === 0) {
-    console.log('PieChartCanvas - 无数据，绘制空图表')
     drawEmptyChart()
     return
   }
   
   if (!ctx.value) {
-    console.error('PieChartCanvas - Canvas上下文不存在，尝试重新初始化')
     // 直接重新创建上下文，不依赖initCanvas的重试逻辑
     try {
       ctx.value = uni.createCanvasContext(canvasId)
-      if (ctx.value && verifyCanvasReady(ctx.value)) {
-        console.log('PieChartCanvas - 重新初始化Canvas成功，继续绘制')
-      } else {
-        console.error('PieChartCanvas - 重新初始化失败，Canvas上下文为空或未就绪')
+      if (!ctx.value || !verifyCanvasReady(ctx.value)) {
         // iOS平台延迟重试机制
         // #ifdef APP-IOS
         setTimeout(() => {
           ctx.value = uni.createCanvasContext(canvasId)
           if (ctx.value && verifyCanvasReady(ctx.value)) {
-            console.log('PieChartCanvas - iOS延迟重试成功')
             drawPieChartCore()
           }
         }, 200)
@@ -182,7 +180,6 @@ const drawPieChart = (withAnimation = false) => {
         return
       }
     } catch (err) {
-      console.error('PieChartCanvas - 重新初始化出错:', err)
       return
     }
   }
@@ -192,9 +189,13 @@ const drawPieChart = (withAnimation = false) => {
     clearTimeout(drawTimer)
   }
   
+  // 安卓端强制跳过动画
+  const systemInfo = uni.getSystemInfoSync()
+  const forceNoAnimation = systemInfo.platform === 'android'
+  
   // 防抖处理
   drawTimer = setTimeout(() => {
-    if (withAnimation) {
+    if (withAnimation && !forceNoAnimation) {
       drawPieChartWithAnimation()
     } else {
       drawPieChartCore()
@@ -343,9 +344,19 @@ const drawPieChartCore = (animationProgress = 1) => {
   ctx.value.arc(centerX.value, centerY.value, innerRadius.value - 1, 0, 2 * Math.PI)
   ctx.value.fill()
   
-  // 绘制Canvas
+  // 绘制Canvas - 安卓端增强刷新
   if (ctx.value.draw) {
     ctx.value.draw()
+    
+    // 安卓端额外刷新机制
+    const systemInfo = uni.getSystemInfoSync()
+    if (systemInfo.platform === 'android') {
+      setTimeout(() => {
+        if (ctx.value && ctx.value.draw) {
+          ctx.value.draw(true) // 强制刷新
+        }
+      }, 50)
+    }
   }
   
 }
@@ -396,7 +407,6 @@ const detectClickedSegment = (touchX, touchY) => {
   
   // 检查点击是否在环形区域内，扩大检测范围
   if (distance < innerRadius.value || distance > outerRadius.value + 20) {
-    console.log('点击超出检测范围:', { distance, innerRadius: innerRadius.value, outerRadius: outerRadius.value })
     return null
   }
   
@@ -406,11 +416,6 @@ const detectClickedSegment = (touchX, touchY) => {
   angle = angle + Math.PI / 2
   if (angle < 0) angle += 2 * Math.PI
   
-  console.log('点击角度检测:', { 
-    angle: angle * 180 / Math.PI, 
-    segmentCount: segmentAngles.value.length 
-  })
-  
   // 查找对应的扇形
   for (const segment of segmentAngles.value) {
     let startAngle = segment.startAngle + Math.PI / 2
@@ -419,21 +424,13 @@ const detectClickedSegment = (touchX, touchY) => {
     if (startAngle < 0) startAngle += 2 * Math.PI
     if (endAngle < 0) endAngle += 2 * Math.PI
     
-    console.log(`扇形 ${segment.data.tagName} 角度范围:`, {
-      startAngle: startAngle * 180 / Math.PI,
-      endAngle: endAngle * 180 / Math.PI,
-      clickAngle: angle * 180 / Math.PI
-    })
-    
     // 处理跨越0度的情况
     if (endAngle < startAngle) {
       if (angle >= startAngle || angle <= endAngle) {
-        console.log('匹配到扇形（跨0度）:', segment.data.tagName)
         return segment
       }
     } else {
       if (angle >= startAngle && angle <= endAngle) {
-        console.log('匹配到扇形:', segment.data.tagName)
         return segment
       }
     }
@@ -460,21 +457,9 @@ const handleTouchStart = (e) => {
     touchY = touch.y || touch.clientY
   }
   
-  console.log('触摸检测:', { 
-    touchX, 
-    touchY, 
-    canvasWidth: props.canvasWidth, 
-    canvasHeight: props.canvasHeight,
-    centerX: centerX.value,
-    centerY: centerY.value
-  })
-  
   const clickedSegment = detectClickedSegment(touchX, touchY)
   if (clickedSegment) {
-    console.log('点击了扇形:', clickedSegment.data.tagName)
     emit('segment-click', clickedSegment.data)
-  } else {
-    console.log('未检测到扇形点击')
   }
 }
 
@@ -513,6 +498,42 @@ const redraw = () => {
   })
 }
 
+// 模拟触摸事件激活Canvas渲染
+const simulateTouchToActivateCanvas = () => {
+  try {
+    const query = uni.createSelectorQuery()
+    query.select(`#${canvasId}`).boundingClientRect((rect) => {
+      if (rect) {
+        // 创建模拟触摸事件数据
+        const mockTouchEvent = {
+          touches: [{
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+          }],
+          currentTarget: {
+            getBoundingClientRect: () => rect
+          }
+        }
+        
+        handleTouchStart(mockTouchEvent)
+        
+        setTimeout(() => {
+          handleTouchEnd(mockTouchEvent)
+          
+          // 触摸后重绘一次
+          setTimeout(() => {
+            drawPieChartCore(1)
+          }, 50)
+        }, 100)
+      }
+    }).exec()
+  } catch (error) {
+    // 模拟触摸失败，静默处理
+  }
+}
+
 // 组件挂载状态
 const isMounted = ref(false)
 
@@ -523,37 +544,51 @@ const canvasStyle = computed(() => {
     width: props.canvasWidth + 'px',
     height: props.canvasHeight + 'px',
     display: 'block',
+    'min-width': props.canvasWidth + 'px',
+    'min-height': props.canvasHeight + 'px',
+    'max-width': props.canvasWidth + 'px',
+    'max-height': props.canvasHeight + 'px',
   }
   
-  // iOS特定样式
-  const iosStyle = {
-    transform: 'translateZ(0)', // 强制硬件加速
-    '-webkit-transform': 'translateZ(0)',
-    'will-change': 'transform',
-    position: 'relative',
-    zIndex: 1,
+  // 平台特定样式
+  const systemInfo = uni.getSystemInfoSync()
+  let platformStyle = {}
+  
+  if (systemInfo.platform === 'android') {
+    // 安卓端样式
+    platformStyle = {
+      position: 'relative',
+      zIndex: 10,
+      backgroundColor: 'transparent',
+      opacity: 1,
+      visibility: 'visible',
+      'box-sizing': 'border-box',
+    }
+  } else {
+    // iOS和其他平台样式
+    platformStyle = {
+      transform: 'translateZ(0)',
+      '-webkit-transform': 'translateZ(0)',
+      'will-change': 'transform',
+      position: 'relative',
+      zIndex: 1,
+    }
   }
   
-  return { ...baseStyle, ...iosStyle }
+  return { ...baseStyle, ...platformStyle }
 })
 
 // 监听数据变化
 watch(() => props.chartData, (newData) => {
-  console.log('Canvas: 图表数据变化, 数据长度:', newData?.length || 0)
-  
   // 必须等组件挂载完成且Canvas初始化后才能绘制
   if (!isMounted.value || !ctx.value) {
-    console.log('Canvas: 组件未挂载或Canvas未初始化，跳过绘制', {
-      mounted: isMounted.value,
-      hasContext: !!ctx.value
-    })
     return
   }
   
   nextTick(() => {
     drawPieChart()
   })
-}, { deep: true, immediate: false }) // 改为不立即执行
+}, { deep: true, immediate: false })
 
 // 监听选中状态变化
 watch(() => props.selectedSegment, () => {
@@ -571,7 +606,6 @@ watch([() => props.canvasWidth, () => props.canvasHeight], () => {
 
 // 挂载时初始化
 onMounted(() => {
-  console.log('PieChartCanvas 挂载完成')
   isMounted.value = true
   
   // iOS平台需要更长的延迟确保DOM完全渲染
@@ -585,29 +619,63 @@ onMounted(() => {
   // 使用延迟确保DOM完全渲染
   setTimeout(() => {
     nextTick(() => {
-      console.log('PieChartCanvas - 开始初始化Canvas')
-      initCanvas() // 初始化过程中会自动处理重试和后续绘制
+      initCanvas()
       
       // Canvas初始化完成后，手动触发数据监听逻辑
       setTimeout(() => {
         if (ctx.value && props.chartData && props.chartData.length > 0) {
-          console.log('PieChartCanvas - 挂载完成后手动触发数据绘制')
-          console.log('PieChartCanvas - Context状态检查:', {
-            hasContext: !!ctx.value,
-            dataLength: props.chartData.length,
-            mounted: isMounted.value
-          })
+          // 检查Canvas DOM元素状态
+          const query = uni.createSelectorQuery()
+          query.select(`#${canvasId}`).boundingClientRect((rect) => {
+            // 如果DOM尺寸为0，强制设置Canvas样式
+            if (rect && (rect.width === 0 || rect.height === 0)) {
+              // 使用uni-app的方式强制更新Canvas尺寸
+              setTimeout(() => {
+                const updateQuery = uni.createSelectorQuery()
+                updateQuery.select(`#${canvasId}`).fields({
+                  node: true,
+                  size: true
+                }).exec((updateRes) => {
+                  // 重新创建Canvas上下文，确保尺寸正确
+                  try {
+                    ctx.value = uni.createCanvasContext(canvasId)
+                    
+                    // 立即重绘
+                    setTimeout(() => {
+                      if (ctx.value && props.chartData?.length > 0) {
+                        drawPieChartCore(1)
+                      } else {
+                        // 最后的救命方案：强制重新渲染整个Canvas元素
+                        forceUpdate.value += 1
+                        
+                        // 重新渲染后重新初始化
+                        setTimeout(() => {
+                          initCanvas()
+                        }, 300)
+                      }
+                    }, 100)
+                  } catch (recreateError) {
+                    // 静默处理错误
+                  }
+                })
+              }, 200)
+            }
+          }).exec()
           
           nextTick(() => {
             // 直接调用核心绘制函数，绕过Context检查
             if (ctx.value && verifyCanvasReady(ctx.value)) {
-              console.log('PieChartCanvas - 直接调用核心绘制函数')
-              drawPieChartWithAnimation()
+              // 安卓端首次加载跳过动画，直接绘制静态饼图
+              const systemInfo = uni.getSystemInfoSync()
+              if (systemInfo.platform === 'android') {
+                drawPieChartCore(1) // 直接绘制完整饼图，无动画
+              } else {
+                drawPieChartWithAnimation()
+              }
               
               // iOS平台额外的显示保障机制
               // #ifdef APP-IOS
               setTimeout(() => {
-                console.log('PieChartCanvas - iOS平台额外显示保障')
                 // 通过重新绘制一次确保显示
                 drawPieChartCore()
                 
@@ -619,22 +687,39 @@ onMounted(() => {
                       if (ctx.value.update) {
                         ctx.value.update()
                       }
-                      console.log('PieChartCanvas - iOS最终强制显示完成')
                     } catch (e) {
-                      console.warn('PieChartCanvas - iOS最终强制显示失败:', e)
+                      // 静默处理错误
                     }
                   }
                 }, 200)
               }, 500)
               // #endif
-            } else {
-              console.error('PieChartCanvas - 挂载后Context验证失败')
+              
+              // 安卓平台额外的显示保障机制
+              const sysInfo = uni.getSystemInfoSync()
+              if (sysInfo.platform === 'android') {
+                setTimeout(() => {
+                  // 通过重新绘制一次确保显示
+                  drawPieChartCore()
+                  
+                  // 强制调用draw方法确保渲染
+                  setTimeout(() => {
+                    if (ctx.value && ctx.value.draw) {
+                      try {
+                        ctx.value.draw(true)
+                        
+                        // 模拟触摸事件来激活Canvas渲染
+                        setTimeout(() => {
+                          simulateTouchToActivateCanvas()
+                        }, 200)
+                      } catch (e) {
+                        // 静默处理错误
+                      }
+                    }
+                  }, 300)
+                }, 600)
+              }
             }
-          })
-        } else {
-          console.log('PieChartCanvas - 挂载后条件不满足:', {
-            hasContext: !!ctx.value,
-            hasData: !!(props.chartData && props.chartData.length > 0)
           })
         }
       }, 100)
@@ -665,10 +750,10 @@ defineExpose({
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%;
   
   canvas {
     display: block;
-    // iOS强制硬件加速
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     will-change: transform;
