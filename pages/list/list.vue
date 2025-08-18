@@ -203,7 +203,7 @@ const isGuestComputed = computed(() => {
 
 // 页面标题（显示访客模式标识）
 const pageTitle = computed(() => {
-	return `${getPageTitlePrefix()}土豆记录册`
+	return `${getPageTitlePrefix()}大薯的记录册`
 })
 
 // 检查是否有搜索关键词

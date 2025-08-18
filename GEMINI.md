@@ -4,7 +4,7 @@ This document provides essential context for AI models interacting with this pro
 
 ## 1. Project Overview & Purpose
 
-* **Primary Goal:** A modern, multi-platform to-do list application named "土豆记录册". It supports hierarchical task management (TodoBook → TodoItem → SubItem), real-time cloud synchronization, and offline operations.
+* **Primary Goal:** A modern, multi-platform to-do list application named "大薯的记录册". It supports hierarchical task management (TodoBook → TodoItem → SubItem), real-time cloud synchronization, and offline operations.
 * **Business Domain:** Productivity, Task Management.
 
 ## 工作流

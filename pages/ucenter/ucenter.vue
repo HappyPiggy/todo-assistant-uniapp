@@ -118,7 +118,7 @@
 					</view>
 				</view>
 				<view class="card-content">
-					<view class="menu-item" @click="navToSettings">
+					<!-- <view class="menu-item" @click="navToSettings">
 						<view class="menu-left">
 							<view class="menu-icon">
 								<uni-icons color="#007AFF" size="18" type="settings" />
@@ -129,7 +129,7 @@
 							<text class="menu-desc">个性化配置</text>
 							<uni-icons color="#c0c4cc" size="14" type="right" />
 						</view>
-					</view>
+					</view> -->
 					<view class="menu-item" @click="toAbout">
 						<view class="menu-left">
 							<view class="menu-icon">

@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 
 /**
  * 分享数据操作组合式函数
@@ -116,7 +117,6 @@ export function useShareData() {
       if (result.code === 0) {
         // 导入成功后重新加载项目册列表并触发更新事件
         // 使用 useBookData 的方法确保数据正确更新
-        const { useBookData } = await import('@/pages/todobooks/composables/useBookData.js')
         const { refreshTodoBooks } = useBookData()
         
         try {

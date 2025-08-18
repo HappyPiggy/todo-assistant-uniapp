@@ -7,7 +7,7 @@
 					<uni-icons color="#007AFF" size="60" type="list" />
 				</view>
 			</view>
-			<text class="app-name">土豆记录册</text>
+			<text class="app-name">大薯的记录册</text>
 			<text class="app-version">v1.0.0</text>
 		</view>
 
@@ -21,7 +21,7 @@
 			</view>
 			<view class="card-content">
 				<text class="intro-text">
-					土豆记录册是一款专业的任务管理应用，采用先进的云端同步技术，让您的任务管理更加高效便捷。支持团队协作、多平台同步，让工作和生活井井有条。
+					大薯的记录册是一款专业的任务管理应用，采用先进的云端同步技术，让您的任务管理更加高效便捷。支持团队协作、多平台同步，让工作和生活井井有条。
 				</text>
 			</view>
 		</view>
@@ -66,7 +66,7 @@
 			<text class="section-title">联系我们</text>
 			<view class="contact-info">
 				<text class="contact-text">如有问题或建议，欢迎反馈</text>
-				<text class="copyright">© 2024 土豆记录册 All rights reserved.</text>
+				<text class="copyright">© 2024 大薯的记录册 All rights reserved.</text>
 			</view>
 		</view>
 	</view>
