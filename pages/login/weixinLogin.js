@@ -169,6 +169,8 @@ async function setSimpleDefaultNickname(context, loginResult) {
 		const userCo = uniCloud.importObject('user-co')
 		const result = await userCo.updateProfile({
 			nickname: defaultNickname
+		}, {
+			skipNicknameTimeLimit: true  // 默认昵称设置时跳过时间限制
 		})
 		
 		if (result.code === 0) {

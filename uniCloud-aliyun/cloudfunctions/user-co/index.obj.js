@@ -65,12 +65,16 @@ module.exports = {
 
   /**
    * 更新用户资料
+   * @param {Object} profileData - 用户资料数据
+   * @param {Object} options - 更新选项
+   * @param {Boolean} options.skipNicknameTimeLimit - 是否跳过昵称修改时间限制（用于系统自动设置默认昵称）
    */
-  async updateProfile(profileData) {
+  async updateProfile(profileData, options = {}) {
     const { uid, db } = this
     // 数据验证 - 支持description字段并映射到comment
     const { nickname, gender, email, comment, description, avatar_file, avatar } = profileData
     const actualComment = comment || description // 支持两种字段名
+    const { skipNicknameTimeLimit = false } = options
     
     if (nickname && (nickname.length < 2 || nickname.length > 20)) {
       return {
@@ -119,7 +123,8 @@ module.exports = {
       if (currentUserData && currentUserData.nickname !== nickname.trim()) {
         const lastUpdateTime = currentUserData.nickname_last_update
         
-        if (lastUpdateTime) {
+        // 只有在不跳过时间限制检查时才进行验证
+        if (!skipNicknameTimeLimit && lastUpdateTime) {
           const now = new Date()
           const timeDiff = now.getTime() - new Date(lastUpdateTime).getTime()
           const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
@@ -148,8 +153,10 @@ module.exports = {
           }
         }
         
-        // 如果昵称修改成功，记录修改时间
-        updateData.nickname_last_update = new Date()
+        // 如果昵称修改成功，只有在不跳过时间限制时才记录修改时间
+        if (!skipNicknameTimeLimit) {
+          updateData.nickname_last_update = new Date()
+        }
       }
     }
 

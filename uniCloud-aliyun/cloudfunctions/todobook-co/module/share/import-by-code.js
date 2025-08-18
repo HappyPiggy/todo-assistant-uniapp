@@ -10,18 +10,19 @@ module.exports = async function importByCode(shareCode, allowDuplicate = false) 
     const db = this.db
     const userId = this.uid
     
-    // 1. 验证分享码格式
-    if (!/^[A-Z0-9]{6}$/.test(shareCode)) {
+    // 1. 验证分享码格式（与生成器保持一致）
+    const upperShareCode = shareCode.toUpperCase()
+    if (!/^[A-Z][23456789ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/.test(upperShareCode)) {
       return {
         code: 1001,
-        message: '请输入正确格式的分享码（6位大写字母+数字）'
+        message: '请输入正确格式的分享码（6位字母数字组合）'
       }
     }
     
-    // 2. 查找分享记录 (不区分大小写)
+    // 2. 查找分享记录（精确匹配）
     const shareCollection = db.collection('todobook_shares')
     const shareResult = await shareCollection.where({
-      share_code: new db.RegExp('^' + shareCode.toUpperCase() + '$', 'i')
+      share_code: upperShareCode
     }).get()
     
     if (shareResult.data.length === 0) {
