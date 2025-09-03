@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, defineProps, defineEmits, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance } from 'vue'
 
 const props = defineProps({
   chartData: {
@@ -44,6 +44,17 @@ const emit = defineEmits(['segment-click', 'canvas-ready'])
 const canvasId = `pie-chart-canvas-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 const ctx = ref(null)
 const forceUpdate = ref(0) // 用于强制更新
+// 组件实例（用于微信小程序作用域）
+const instance = getCurrentInstance()
+const scope = instance && instance.proxy ? instance.proxy : null
+
+// 运行平台标识（条件编译判断微信小程序）
+// #ifdef MP-WEIXIN
+const isMPWeixin = true
+// #endif
+// #ifndef MP-WEIXIN
+const isMPWeixin = false
+// #endif
 
 // 绘制参数
 const centerX = computed(() => props.canvasWidth / 2)
@@ -94,7 +105,7 @@ const initCanvas = (retryCount = 0) => {
     }
     
     // iOS和其他平台尝试Canvas 2.0 API
-    const query = uni.createSelectorQuery()
+    const query = scope ? uni.createSelectorQuery().in(scope) : uni.createSelectorQuery()
     query.select(`#${canvasId}`).node().exec((res) => {
       if (res[0] && res[0].node) {
         const canvas = res[0].node
@@ -136,7 +147,7 @@ const initCanvas = (retryCount = 0) => {
 // 传统Canvas初始化方法
 const initCanvasLegacy = (retryCount = 0) => {
   try {
-    ctx.value = uni.createCanvasContext(canvasId)
+    ctx.value = scope ? uni.createCanvasContext(canvasId, scope) : uni.createCanvasContext(canvasId)
     
     if (ctx.value && verifyCanvasReady(ctx.value)) {
       emit('canvas-ready')
@@ -166,12 +177,12 @@ const drawPieChart = (withAnimation = false) => {
   if (!ctx.value) {
     // 直接重新创建上下文，不依赖initCanvas的重试逻辑
     try {
-      ctx.value = uni.createCanvasContext(canvasId)
+      ctx.value = scope ? uni.createCanvasContext(canvasId, scope) : uni.createCanvasContext(canvasId)
       if (!ctx.value || !verifyCanvasReady(ctx.value)) {
         // iOS平台延迟重试机制
         // #ifdef APP-IOS
         setTimeout(() => {
-          ctx.value = uni.createCanvasContext(canvasId)
+          ctx.value = scope ? uni.createCanvasContext(canvasId, scope) : uni.createCanvasContext(canvasId)
           if (ctx.value && verifyCanvasReady(ctx.value)) {
             drawPieChartCore()
           }
@@ -445,16 +456,18 @@ const handleTouchStart = (e) => {
   
   const touch = e.touches[0]
   
-  // 在uni-app中，可能需要使用不同的坐标计算方式
+  // 优先使用微信小程序提供的 x/y 坐标，其次再降级
   let touchX, touchY
-  if (e.currentTarget.getBoundingClientRect) {
+  if (typeof touch.x === 'number' && typeof touch.y === 'number') {
+    touchX = touch.x
+    touchY = touch.y
+  } else if (e.currentTarget && typeof e.currentTarget.getBoundingClientRect === 'function') {
     const rect = e.currentTarget.getBoundingClientRect()
-    touchX = touch.clientX - rect.left
-    touchY = touch.clientY - rect.top
+    touchX = (touch.clientX || 0) - rect.left
+    touchY = (touch.clientY || 0) - rect.top
   } else {
-    // uni-app中的备用方案
-    touchX = touch.x || touch.clientX
-    touchY = touch.y || touch.clientY
+    touchX = touch.clientX || 0
+    touchY = touch.clientY || 0
   }
   
   const clickedSegment = detectClickedSegment(touchX, touchY)
@@ -468,9 +481,15 @@ const handleTouchMove = (e) => {
   if (!e.touches || e.touches.length === 0) return
   
   const touch = e.touches[0]
-  const rect = e.currentTarget.getBoundingClientRect ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }
-  const touchX = touch.clientX - rect.left
-  const touchY = touch.clientY - rect.top
+  let touchX, touchY
+  if (typeof touch.x === 'number' && typeof touch.y === 'number') {
+    touchX = touch.x
+    touchY = touch.y
+  } else {
+    const rect = e.currentTarget && typeof e.currentTarget.getBoundingClientRect === 'function' ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }
+    touchX = (touch.clientX || 0) - rect.left
+    touchY = (touch.clientY || 0) - rect.top
+  }
   
   const hoveredSegmentData = detectClickedSegment(touchX, touchY)
   const newHoveredId = hoveredSegmentData ? hoveredSegmentData.data.id : null
@@ -501,7 +520,7 @@ const redraw = () => {
 // 模拟触摸事件激活Canvas渲染
 const simulateTouchToActivateCanvas = () => {
   try {
-    const query = uni.createSelectorQuery()
+    const query = scope ? uni.createSelectorQuery().in(scope) : uni.createSelectorQuery()
     query.select(`#${canvasId}`).boundingClientRect((rect) => {
       if (rect) {
         // 创建模拟触摸事件数据
@@ -565,13 +584,16 @@ const canvasStyle = computed(() => {
       'box-sizing': 'border-box',
     }
   } else {
-    // iOS和其他平台样式
-    platformStyle = {
+    // iOS和其他平台样式（微信小程序禁用3D transform）
+    platformStyle = isMPWeixin ? {
+      position: 'relative',
+      zIndex: 1
+    } : {
       transform: 'translateZ(0)',
       '-webkit-transform': 'translateZ(0)',
       'will-change': 'transform',
       position: 'relative',
-      zIndex: 1,
+      zIndex: 1
     }
   }
   
@@ -625,20 +647,20 @@ onMounted(() => {
       setTimeout(() => {
         if (ctx.value && props.chartData && props.chartData.length > 0) {
           // 检查Canvas DOM元素状态
-          const query = uni.createSelectorQuery()
+          const query = scope ? uni.createSelectorQuery().in(scope) : uni.createSelectorQuery()
           query.select(`#${canvasId}`).boundingClientRect((rect) => {
             // 如果DOM尺寸为0，强制设置Canvas样式
             if (rect && (rect.width === 0 || rect.height === 0)) {
               // 使用uni-app的方式强制更新Canvas尺寸
               setTimeout(() => {
-                const updateQuery = uni.createSelectorQuery()
+                const updateQuery = scope ? uni.createSelectorQuery().in(scope) : uni.createSelectorQuery()
                 updateQuery.select(`#${canvasId}`).fields({
                   node: true,
                   size: true
                 }).exec((updateRes) => {
                   // 重新创建Canvas上下文，确保尺寸正确
                   try {
-                    ctx.value = uni.createCanvasContext(canvasId)
+                    ctx.value = scope ? uni.createCanvasContext(canvasId, scope) : uni.createCanvasContext(canvasId)
                     
                     // 立即重绘
                     setTimeout(() => {
@@ -758,6 +780,13 @@ defineExpose({
     -webkit-transform: translateZ(0);
     will-change: transform;
   }
+  
+  /* #ifdef MP-WEIXIN */
+  canvas {
+    transform: none;
+    -webkit-transform: none;
+  }
+  /* #endif */
   
 }
 </style>

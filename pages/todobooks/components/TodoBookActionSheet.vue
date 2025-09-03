@@ -64,10 +64,10 @@
             </view>
 
             <!-- 导出数据 -->
-            <view class="action-item" @click="handleExportAction">
+            <!-- <view class="action-item" @click="handleExportAction">
               <uni-icons color="#17a2b8" size="20" type="download" />
               <text class="action-text">导出数据</text>
-            </view>
+            </view> -->
 
             <!-- 置顶功能 (仅列表页显示) -->
             <view v-if="showPin" class="action-item" @click="handlePinAction">

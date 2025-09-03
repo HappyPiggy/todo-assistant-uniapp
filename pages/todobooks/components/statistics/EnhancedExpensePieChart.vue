@@ -26,8 +26,7 @@
       
       <!-- 有数据时的正常显示 -->
       <template v-else>
-        <!-- 图表区域 (微信小程序隐藏) -->
-        <!-- #ifndef MP-WEIXIN -->
+        <!-- 图表区域 -->
         <view class="chart-section">
           <!-- 图表容器，使用相对定位 -->
           <view class="chart-container">
@@ -52,7 +51,6 @@
             />
           </view>
         </view>
-        <!-- #endif -->
         
         <!-- 列表区域 -->
         <view class="list-section">
