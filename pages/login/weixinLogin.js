@@ -142,9 +142,9 @@ function generateRandomString(length = 5) {
  * @param {Object} loginResult - 登录结果
  */
 export function tryGetWeixinUserInfo(context, loginResult) {
-	// 先检查用户是否已有昵称
-	if (loginResult.userInfo && loginResult.userInfo.nickname) {
-		// 已有昵称，直接跳转
+	// 检查是否为新用户注册（只有新用户才需要设置默认昵称）
+	if (loginResult.type !== 'register') {
+		// 已有用户（登录），直接跳转，不修改昵称
 		context.loginSuccess({
 			...loginResult,
 			uniIdRedirectUrl: context.uniIdRedirectUrl
@@ -152,8 +152,16 @@ export function tryGetWeixinUserInfo(context, loginResult) {
 		return
 	}
 	
-	// 直接设置默认昵称，不请求授权也不询问用户
-	setSimpleDefaultNickname(context, loginResult)
+	// 新用户且没有昵称，设置默认昵称
+	if (!loginResult.userInfo || !loginResult.userInfo.nickname) {
+		setSimpleDefaultNickname(context, loginResult)
+	} else {
+		// 新用户已有昵称（从微信获取到），直接跳转
+		context.loginSuccess({
+			...loginResult,
+			uniIdRedirectUrl: context.uniIdRedirectUrl
+		})
+	}
 }
 
 /**
