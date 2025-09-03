@@ -15,36 +15,53 @@ export function useTokenCheck() {
   const checkTokenExpired = async () => {
     try {
       isChecking.value = true
-      
-      // 获取当前用户token信息
-      const currentUserInfo = uniCloud.getCurrentUserInfo()
-      
-      // 如果没有token信息，视为过期
-      if (!currentUserInfo.uid || !currentUserInfo.token) {
-        console.log('未找到token信息，视为已过期')
+
+      // 获取当前用户token信息（可能不包含 token 字段）
+      const currentUserInfo = uniCloud.getCurrentUserInfo() || {}
+
+      // 从本地存储回退读取 token 信息（uniCloud 客户端默认使用 uni_id_token）
+      const storedToken = uni.getStorageSync('uni_id_token')
+      const storedExpired = uni.getStorageSync('uni_id_token_expired') || 0
+
+      // 兼容：某些平台 getCurrentUserInfo 不返回 token，仅返回 uid 和 tokenExpired
+      const uid = currentUserInfo.uid || null
+      let tokenExpired = currentUserInfo.tokenExpired || 0
+
+      // 若未取到 tokenExpired，使用本地持久化的过期时间
+      if (!tokenExpired && storedExpired) {
+        tokenExpired = storedExpired
+      }
+
+      // 如果既没有 uid 也没有本地持久化的 token，则视为未登录/过期
+      if (!uid && !storedToken) {
+        console.log('未找到任何登录凭据（uid/token），视为已过期')
         return {
           isExpired: true,
           tokenInfo: null
         }
       }
-      
+
       // 检查token是否过期
       const currentTime = Date.now()
-      const tokenExpired = currentUserInfo.tokenExpired || 0
-      
+
+      const isExpired = !tokenExpired || tokenExpired <= currentTime
+
       console.log('Token过期检查:', {
+        hasUid: !!uid,
+        hasStoredToken: !!storedToken,
         currentTime,
         tokenExpired,
-        isExpired: tokenExpired <= currentTime
+        isExpired
       })
-      
-      const isExpired = tokenExpired <= currentTime
-      
+
       return {
         isExpired,
-        tokenInfo: currentUserInfo
+        tokenInfo: {
+          ...currentUserInfo,
+          tokenExpired
+        }
       }
-      
+
     } catch (error) {
       console.error('检查token过期状态失败:', error)
       // 发生错误时视为过期，安全起见

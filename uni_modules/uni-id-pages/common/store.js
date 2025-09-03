@@ -146,6 +146,20 @@ export const mutations = {
 		const {
 			showToast = true, toastText = '登录成功', autoBack = true, uniIdRedirectUrl = '', passwordConfirmed
 		} = e
+
+		// 持久化保存 token，确保重启应用后仍保持登录态
+		try {
+			const { token, tokenExpired } = e || {}
+			if (token && tokenExpired) {
+				uni.setStorageSync('uni_id_token', token)
+				uni.setStorageSync('uni_id_token_expired', tokenExpired)
+				console.log('已保存登录token到本地存储')
+			} else {
+				console.log('登录结果未包含token信息，跳过本地保存')
+			}
+		} catch (err) {
+			console.error('保存登录token失败:', err)
+		}
 		// console.log({toastText,autoBack});
 		if (showToast) {
 			uni.showToast({
