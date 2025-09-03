@@ -166,6 +166,64 @@ page {
 	border-radius: 20rpx 20rpx 0 0;
 }
 
+/* 卡片纹理：细微几何图案叠加，贴近参考图 */
+/* 跨端纹理：使用内嵌三角形视图，避免伪元素在小程序/APP-NVUE不可用 */
+.card-pattern {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: var(--pat-opacity, 0.30);
+    /* #ifndef MP-WEIXIN */
+    // background-image: url('/static/textures/card-pattern-light.png');
+    /* #endif */
+    background-repeat: no-repeat;
+    /* 始终铺满卡片区域 */
+    background-size: cover;
+    background-position: calc(50% + var(--pat-pos-x, 0rpx)) calc(50% + var(--pat-pos-y, 0rpx));
+    transform: rotate(var(--pat-rotate, 0deg)) scale(var(--pat-scale, 1));
+    transform-origin: center center;
+}
+
+.card-pattern .tri {
+	position: absolute;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-left-color: transparent;
+	border-right-color: transparent;
+	border-top: 0 solid transparent;
+	filter: saturate(105%);
+	display: none; /* 有PNG时默认隐藏几何fallback */
+}
+
+.card-pattern .t1 {
+	border-left-width: 60rpx;
+	border-right-width: 60rpx;
+	border-bottom-width: 84rpx;
+	border-bottom-color: rgba(102, 126, 234, 0.08);
+	top: 16rpx; left: 24rpx;
+	transform: rotate(-12deg) scale(1.05);
+}
+
+.card-pattern .t2 {
+	border-left-width: 72rpx;
+	border-right-width: 72rpx;
+	border-bottom-width: 96rpx;
+	border-bottom-color: rgba(118, 75, 162, 0.07);
+	top: 120rpx; right: 36rpx;
+	transform: rotate(15deg) scale(0.9);
+}
+
+.card-pattern .t3 {
+	border-left-width: 80rpx;
+	border-right-width: 80rpx;
+	border-bottom-width: 110rpx;
+	border-bottom-color: rgba(103, 126, 234, 0.05);
+	bottom: 42rpx; left: 80rpx;
+	transform: rotate(28deg) scale(1.2);
+}
+
 
 
 
@@ -175,6 +233,64 @@ page {
 		0 8rpx 28rpx rgba(0, 0, 0, 0.12),
 		0 2rpx 8rpx rgba(0, 0, 0, 0.08),
 		inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 置顶卡片高亮（参考效果图的深色卡 + 金色描边） */
+.todobook-card.pinned {
+	background: #2f3b46;
+	border: 2rpx solid rgba(255, 214, 10, 0.9);
+	box-shadow:
+		0 10rpx 30rpx rgba(0, 0, 0, 0.35),
+		0 0 0 4rpx rgba(255, 214, 10, 0.25);
+}
+
+/* #ifndef MP-WEIXIN */
+.todobook-card.pinned .card-pattern { 
+    // background-image: url('/static/textures/card-pattern-dark.png');
+}
+/* #endif */
+.todobook-card.pinned .card-pattern .tri { border-bottom-color: rgba(255, 255, 255, 0.10); }
+
+/* 提升主内容层级，确保纹理在下方 */
+.card-header, .card-stats, .card-progress, .card-footer { position: relative; z-index: 1; }
+
+.todobook-card.pinned .book-title {
+	color: #ffffff;
+}
+
+.todobook-card.pinned .book-description {
+	color: rgba(255, 255, 255, 0.75);
+}
+
+/* 临时关闭卡片背景纹理（textures） */
+.card-pattern {
+	display: none !important;
+	background-image: none !important;
+}
+
+.todobook-card.pinned .card-stats {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.15);
+}
+
+.todobook-card.pinned .stat-number {
+	color: #ffffff;
+}
+
+.todobook-card.pinned .stat-label {
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.todobook-card.pinned .progress-bar {
+	background: rgba(255, 255, 255, 0.25);
+}
+
+.todobook-card.pinned .progress-fill {
+	background: linear-gradient(90deg, #ffe066 0%, #ffd43b 50%, #fcc419 100%);
+}
+
+.todobook-card.pinned .last-activity {
+	color: rgba(255, 255, 255, 0.85);
 }
 
 /* 卡片头部 - 精致设计 */
@@ -531,6 +647,3 @@ page {
 		color: rgba(236, 240, 241, 0.8);
 	}
 }
-
-
-

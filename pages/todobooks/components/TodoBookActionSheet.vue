@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import ShareDialog from './ShareDialog.vue'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { usePinning } from '@/composables/usePinning.js'
@@ -191,8 +191,15 @@ const isBookPinned = ref(false)
 const refreshPinnedStatus = () => {
   if (props.bookData?._id) {
     isBookPinned.value = isPinned(props.bookData._id)
+  } else {
+    isBookPinned.value = false
   }
 }
+
+// 监听父级传入的 bookData 变化，确保菜单文案与操作作用到当前项目册
+watch(() => props.bookData?._id, () => {
+  refreshPinnedStatus()
+})
 
 // 方法
 const open = () => {

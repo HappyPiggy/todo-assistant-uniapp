@@ -35,8 +35,15 @@
 				<view 
 					v-for="book in sortedTodoBooks" 
 					:key="book._id" 
-					class="todobook-card"
-					@click="openTodoBook(book)">
+					:class="['todobook-card', { pinned: isPinned(book._id) }]"
+					:style="[getCardStyle(book), getPatternVars(book)]"
+					@tap="openTodoBook(book)">
+					<!-- 纹理图案：跨端可见（伪元素在部分平台不可用） -->
+					<view class="card-pattern" aria-hidden="true">
+						<view class="tri t1"></view>
+						<view class="tri t2"></view>
+						<view class="tri t3"></view>
+					</view>
 					
 					<view class="card-header">
 						<view class="book-icon" :style="{ backgroundColor: book.color }">
@@ -55,8 +62,8 @@
 							</view>
 							<text class="book-description" v-if="book.description">{{ book.description }}</text>
 						</view>
-						<view class="book-actions" @click.stop="showBookActions(book)">
-							<uni-icons color="#999999" size="20" type="more-filled" />
+						<view class="book-actions" @tap.stop="showBookActions(book)">
+							<uni-icons :color="isPinned(book._id) ? '#e6e6e6' : '#999999'" size="20" type="more-filled" />
 						</view>
 					</view>
 
@@ -86,7 +93,7 @@
 					</view>
 
 					<view class="card-footer">
-						<text class="last-activity">{{ formatRelativeTime(book.last_activity_at || book.updated_at) }}</text>
+						<text class="last-activity">{{ formatDateYMD(book.last_activity_at || book.updated_at) }}</text>
 						<view class="badges-container">
 							<!-- 本地数据标识 -->
 							<view v-if="book.is_local" class="local-badge">
@@ -135,13 +142,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { onLoad, onShow, onUnload, onPullDownRefresh } from '@dcloudio/uni-app'
 import { store } from '@/uni_modules/uni-id-pages/common/store.js'
 import { useBookData } from '@/pages/todobooks/composables/useBookData.js'
 import { useDataAdapter } from '@/composables/useDataAdapter.js'
 import { useAuthState } from '@/composables/useAuthState.js'
-import { calculateProgress, formatRelativeTime } from '@/pages/todobooks/utils/bookUtils.js'
+import { calculateProgress } from '@/pages/todobooks/utils/bookUtils.js'
 import { usePinning } from '@/composables/usePinning.js'
 import { usePageTokenListener } from '@/composables/usePageTokenListener.js'
 import TodoBookActionSheet from '@/pages/todobooks/components/TodoBookActionSheet.vue'
@@ -418,8 +425,12 @@ const createTodoBook = () => {
 
 // 操作弹窗相关方法
 const showBookActions = (book) => {
-	currentBook.value = book
-	actionSheetRef.value?.open()
+    // 先更新当前项目册，再在下一个渲染周期打开弹窗，
+    // 确保子组件拿到的 props 已是最新，避免置顶状态错位。
+    currentBook.value = book
+    nextTick(() => {
+        actionSheetRef.value?.open()
+    })
 }
 
 // 处理操作完成事件
@@ -478,6 +489,103 @@ const getEmptyStateText = () => {
 	}
 	
 	return '还没有项目册，点击右下角创建吧'
+}
+
+// UI辅助：绝对日期格式 YYYY/M/D
+const formatDateYMD = (time) => {
+	if (!time) return ''
+	const d = new Date(time)
+	if (isNaN(d.getTime())) return ''
+	const y = d.getFullYear()
+	const m = d.getMonth() + 1
+	const day = d.getDate()
+	return `${y}/${m}/${day}`
+}
+
+// UI辅助：根据书本颜色为置顶卡片生成描边与发光
+const hexToRgb = (hex) => {
+	if (!hex || typeof hex !== 'string') return null
+	let h = hex.replace('#', '')
+	if (h.length === 3) {
+		// e.g. #abc -> aabbcc
+		h = h.split('').map(c => c + c).join('')
+	}
+	if (h.length !== 6) return null
+	const r = parseInt(h.substring(0, 2), 16)
+	const g = parseInt(h.substring(2, 4), 16)
+	const b = parseInt(h.substring(4, 6), 16)
+	return { r, g, b }
+}
+
+const rgbToCss = ({ r, g, b }, alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`
+
+const lighten = (hex, amount = 0.25) => {
+	const rgb = hexToRgb(hex)
+	if (!rgb) return null
+	const r = Math.round(rgb.r + (255 - rgb.r) * amount)
+	const g = Math.round(rgb.g + (255 - rgb.g) * amount)
+	const b = Math.round(rgb.b + (255 - rgb.b) * amount)
+	return { r, g, b }
+}
+
+const getCardStyle = (book) => {
+	if (!book) return {}
+	if (!isPinned(book._id)) return {}
+	const color = book.color || '#ffd60a'
+	const glow = lighten(color, 0.2) || { r: 255, g: 214, b: 10 }
+	return {
+		borderColor: color,
+		boxShadow: `0 10rpx 30rpx ${rgbToCss(glow, 0.35)}, 0 0 0 4rpx ${rgbToCss(glow, 0.25)}`,
+	}
+}
+
+// 纹理差异化：基于 _id 生成稳定的“随机”参数，驱动 CSS 变量
+const hashCode = (str = '') => {
+	let h = 0
+	for (let i = 0; i < String(str).length; i++) {
+		h = (h << 5) - h + String(str).charCodeAt(i)
+		h |= 0
+	}
+	return Math.abs(h)
+}
+
+const mapRange = (val, inMin, inMax, outMin, outMax) => {
+	if (inMax === inMin) return outMin
+	const t = (val - inMin) / (inMax - inMin)
+	return outMin + t * (outMax - outMin)
+}
+
+const getPatternVars = (book) => {
+	if (!book) return {}
+	const seed = hashCode(book._id || book.title || 'seed')
+	// 取不同位生成参数
+	const r1 = (seed % 1000) / 1000 // 0-1
+	const r2 = ((seed >> 3) % 1000) / 1000
+	const r3 = ((seed >> 6) % 1000) / 1000
+	const r4 = ((seed >> 9) % 1000) / 1000
+	const r5 = ((seed >> 12) % 1000) / 1000
+
+	// 旋转 [-12deg, 12deg]
+	const rotate = mapRange(r1, 0, 1, -12, 12).toFixed(2) + 'deg'
+    // 缩放 [1.08, 1.22]：确保旋转后仍铺满
+    const scale = mapRange(r2, 0, 1, 1.08, 1.22).toFixed(2)
+	// 背景偏移 [-60rpx, 60rpx]
+	const posX = mapRange(r3, 0, 1, -60, 60).toFixed(0) + 'rpx'
+	const posY = mapRange(r4, 0, 1, -40, 40).toFixed(0) + 'rpx'
+	// 背景尺寸 [220rpx, 340rpx]
+	const size = Math.round(mapRange(r5, 0, 1, 220, 340)) + 'rpx'
+	// 透明度：置顶更低，普通更高（在样式中会叠加基础值）
+	const baseOpacity = isPinned(book._id) ? 0.16 : 0.26
+	const dynOpacity = Math.min(0.4, Math.max(0.14, baseOpacity + (r2 - 0.5) * 0.1))
+
+	return {
+		'--pat-rotate': rotate,
+		'--pat-scale': scale,
+		'--pat-pos-x': posX,
+		'--pat-pos-y': posY,
+		'--pat-size': size,
+		'--pat-opacity': dynOpacity,
+	}
 }
 </script>
 
